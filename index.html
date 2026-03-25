@@ -14,6 +14,10 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Firebase V8 Compat (For simple single-file integration) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <!-- Tailwind Configuration -->
     <script>
         tailwind.config = {
@@ -25,6 +29,7 @@
                     },
                     animation: {
                         shimmer: 'shimmer 2s infinite',
+                        pulse_fast: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
                     keyframes: {
                         shimmer: {
@@ -38,21 +43,10 @@
     </script>
 
     <style>
-        /* 隱藏捲軸但保留滾動功能 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* 確保過渡效果平滑 */
-        body {
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { transition: background-color 0.3s, color 0.3s; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
@@ -65,9 +59,17 @@
         
         <!-- 頂部導航列 -->
         <div class="flex items-center justify-between bg-red-800 dark:bg-red-950 p-2 md:p-4 rounded-2xl shadow-md transition-colors duration-300">
-            <div class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 shrink-0 mx-2">
-                <i data-lucide="trending-up" class="text-rose-100 w-6 h-6"></i>
+            <div class="flex items-center gap-2 relative ml-2">
+                <div class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 shrink-0 relative z-10">
+                    <i data-lucide="trending-up" class="text-rose-100 w-6 h-6"></i>
+                </div>
+                <!-- 同步狀態指示燈 (Sync Badge) -->
+                <div id="sync-badge" class="absolute -bottom-2 -right-6 md:-right-8 flex items-center gap-1.5 bg-white dark:bg-stone-800 px-2 py-0.5 rounded-full shadow-md border border-stone-200 dark:border-stone-700 transition-all duration-500 opacity-0 transform scale-90 z-20">
+                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span id="sync-text" class="text-[10px] md:text-xs font-bold text-stone-600 dark:text-stone-300 whitespace-nowrap">連線中</span>
+                </div>
             </div>
+
             <div class="flex gap-2 md:gap-3 overflow-x-auto no-scrollbar pr-2 w-full justify-end" id="tabs-container">
                 <button data-tab="dashboard" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors bg-white text-red-800 shadow-sm dark:bg-stone-900 dark:text-rose-400 dark:border dark:border-stone-800" title="主頁">
                     <i data-lucide="home" class="w-5 h-5 md:w-6 md:h-6"></i>
@@ -132,7 +134,6 @@
                                 <i data-lucide="book-open" class="absolute left-3 top-2.5 md:top-3 w-4 h-4 text-stone-500 dark:text-stone-400"></i>
                                 <select id="record-source" class="w-full pl-9 pr-3 py-2 md:py-2.5 text-sm md:text-base bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none appearance-none transition-all" required>
                                     <option value="" disabled selected>請選擇學生...</option>
-                                    <!-- Options injected via JS -->
                                 </select>
                             </div>
                         </div>
@@ -177,7 +178,6 @@
                                 </select>
                             </div>
                         </div>
-                        
                         <div class="h-56 md:h-72 w-full relative">
                             <canvas id="incomeChart"></canvas>
                         </div>
@@ -209,8 +209,6 @@
         <!-- ================= 月曆 (Calendar) ================= -->
         <div id="view-calendar" class="view-section space-y-4 md:space-y-6 hidden fade-in">
             <div class="bg-white dark:bg-stone-900 p-3 sm:p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
-                
-                <!-- 月曆控制列 -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
                     <div class="flex items-center justify-between sm:justify-start gap-2 md:gap-4 w-full sm:w-auto">
                         <button id="cal-prev" class="p-1.5 md:p-2 rounded-full hover:bg-rose-50 dark:hover:bg-stone-800 text-stone-500 dark:text-stone-400 transition-colors">
@@ -226,19 +224,13 @@
                         <span id="cal-month-total" class="text-lg md:text-2xl font-bold text-red-800 dark:text-rose-400">$0</span>
                     </div>
                 </div>
-
-                <!-- 月曆網格 -->
                 <div class="w-full">
                     <div class="grid grid-cols-8 gap-1 md:gap-2 text-center text-xs md:text-sm font-bold text-stone-500 dark:text-stone-400 mb-2">
                         <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
                         <div class="text-red-700 dark:text-rose-400 bg-stone-50 dark:bg-stone-950 rounded-md md:rounded-lg py-1 text-[10px] md:text-sm flex items-center justify-center">週總</div>
                     </div>
-                    
-                    <div id="calendar-grid" class="space-y-1 md:space-y-2">
-                        <!-- Injected via JS -->
-                    </div>
+                    <div id="calendar-grid" class="space-y-1 md:space-y-2"></div>
                 </div>
-                
             </div>
         </div>
 
@@ -248,10 +240,7 @@
                 <h2 class="text-lg md:text-xl font-bold mb-4 md:mb-6 flex items-center gap-2 text-red-700 dark:text-rose-400">
                     <i data-lucide="list" class="w-5 h-5"></i> 所有歷史記錄
                 </h2>
-
-                <div id="all-records-container" class="space-y-6 md:space-y-8">
-                    <!-- Injected via JS -->
-                </div>
+                <div id="all-records-container" class="space-y-6 md:space-y-8"></div>
             </div>
         </div>
 
@@ -311,18 +300,16 @@
 
                 <div class="space-y-4 mb-8">
                     <h3 id="students-count-title" class="text-xs md:text-sm font-medium text-stone-500 dark:text-stone-400 mb-2 md:mb-3">現有學生列表 (0)</h3>
-                    <div id="students-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-                        <!-- Injected via JS -->
-                    </div>
+                    <div id="students-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4"></div>
                 </div>
 
                 <!-- 備份與恢復 (Export / Import) -->
                 <div class="mt-8 pt-6 border-t border-rose-100 dark:border-stone-800">
                     <h3 class="text-sm md:text-base font-bold text-red-700 dark:text-rose-400 mb-2 flex items-center gap-2">
-                        <i data-lucide="database" class="w-4 h-4"></i> 資料備份與恢復
+                        <i data-lucide="database" class="w-4 h-4"></i> 手動資料備份與恢復
                     </h3>
                     <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400 mb-4">
-                        將所有學生名單與補習記錄打包下載。若更換手機或清除資料，可隨時匯入恢復。
+                        將所有資料打包下載。若更換手機或清除資料，可隨時匯入恢復。
                     </p>
                     <div class="flex flex-wrap gap-3">
                         <button id="btn-export" class="flex items-center gap-2 px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium rounded-lg transition-colors border border-stone-200 dark:border-stone-700">
@@ -332,6 +319,27 @@
                             <i data-lucide="upload" class="w-4 h-4"></i> 匯入資料 (Restore)
                         </button>
                         <input type="file" id="file-import" accept=".json" class="hidden">
+                    </div>
+                </div>
+
+                <!-- Firebase 雲端同步設定 -->
+                <div class="mt-8 pt-6 border-t border-rose-100 dark:border-stone-800">
+                    <h3 class="text-sm md:text-base font-bold text-red-700 dark:text-rose-400 mb-2 flex items-center gap-2">
+                        <i data-lucide="cloud" class="w-4 h-4"></i> Firebase 雲端同步設定
+                    </h3>
+                    <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400 mb-4">
+                        請貼上您的 Firebase Config (JSON格式) 以啟用跨裝置即時同步。若留空則僅儲存於本機 LocalStorage。
+                    </p>
+                    <textarea id="firebase-config-input" rows="5" class="w-full px-3 py-2 text-xs md:text-sm bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none font-mono" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-project.firebaseapp.com",
+  "projectId": "your-project",
+  "storageBucket": "your-project.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abcde"
+}'></textarea>
+                    <div class="flex justify-end mt-3">
+                        <button id="btn-save-firebase" class="px-4 py-2 text-sm bg-stone-200 hover:bg-stone-300 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium rounded-lg transition-colors border border-stone-300 dark:border-stone-600">儲存並連線</button>
                     </div>
                 </div>
 
@@ -345,21 +353,21 @@
 
     <!-- Application Logic -->
     <script>
-        // Get dynamic today string (YYYY-MM-DD) handling local timezone
+        // Get dynamic today string (YYYY-MM-DD)
         const getTodayString = () => {
             const d = new Date();
             const offset = d.getTimezoneOffset() * 60000;
             return new Date(d.getTime() - offset).toISOString().split('T')[0];
         };
 
-        // State Management (Cleared demo data, kept 57000)
+        // State Management
         const state = {
             GOAL: 100000,
             INITIAL_AMOUNT: 57000,
             activeTab: 'dashboard',
             isDarkMode: false,
-            sources: [], // Cleared demo students
-            records: [], // Cleared demo records
+            sources: [], 
+            records: [], 
             formData: { date: getTodayString(), sourceId: '', duration: 1.5 },
             chartPeriod: 28,
             chartType: 'weekly',
@@ -369,8 +377,136 @@
         };
 
         let chartInstance = null;
+        let db = null;
+        let isFirebaseActive = false;
+        let syncTimeout = null;
+        let isCloudUpdating = false;
 
-        // Helpers
+        // --- Dual Backup & Sync Logic ---
+
+        // 1. Load from LocalStorage (Fastest, Offline support)
+        function loadLocalData() {
+            const localData = localStorage.getItem('tutoring_data');
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    state.sources = parsed.sources || [];
+                    state.records = parsed.records || [];
+                } catch (e) {
+                    console.error("Local data parse error", e);
+                }
+            }
+        }
+
+        // 2. Save State (Writes to LocalStorage AND pushes to Cloud)
+        function saveState() {
+            // Backup to LocalStorage
+            localStorage.setItem('tutoring_data', JSON.stringify({
+                sources: state.sources,
+                records: state.records,
+                lastUpdated: Date.now()
+            }));
+            
+            renderAll();
+            
+            // Push to Cloud if active
+            if (isFirebaseActive && navigator.onLine) {
+                syncToCloud();
+            } else if (!navigator.onLine) {
+                setSyncStatus('offline');
+            }
+        }
+
+        // 3. Sync UI Indicator
+        function setSyncStatus(status) {
+            const badge = document.getElementById('sync-badge');
+            const dot = document.getElementById('sync-dot');
+            const text = document.getElementById('sync-text');
+
+            badge.classList.remove('opacity-0', 'scale-90');
+            clearTimeout(syncTimeout);
+
+            if (status === 'connecting') {
+                dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse_fast';
+                text.innerText = '連線中';
+                text.className = 'text-[10px] md:text-xs font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap';
+            } else if (status === 'synced') {
+                dot.className = 'w-2 h-2 rounded-full bg-teal-500';
+                text.innerText = '已同步';
+                text.className = 'text-[10px] md:text-xs font-bold text-teal-600 dark:text-teal-400 whitespace-nowrap';
+                syncTimeout = setTimeout(() => badge.classList.add('opacity-0', 'scale-90'), 5000);
+            } else if (status === 'offline') {
+                dot.className = 'w-2 h-2 rounded-full bg-orange-600';
+                text.innerText = '離線';
+                text.className = 'text-[10px] md:text-xs font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap';
+                syncTimeout = setTimeout(() => badge.classList.add('opacity-0', 'scale-90'), 5000);
+            }
+        }
+
+        // 4. Initialize Firebase
+        function initFirebase(configStr) {
+            if (!configStr) {
+                setSyncStatus('offline');
+                return;
+            }
+            try {
+                const config = JSON.parse(configStr);
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                }
+                db = firebase.firestore();
+                isFirebaseActive = true;
+                
+                // Listen to Cloud Changes
+                db.collection('appData').doc('tutoring_tracker').onSnapshot((doc) => {
+                    if (isCloudUpdating) return; // Prevent echo
+                    if (doc.exists) {
+                        const data = doc.data();
+                        state.sources = data.sources || [];
+                        state.records = data.records || [];
+                        // Save cloud data to local backup
+                        localStorage.setItem('tutoring_data', JSON.stringify({
+                            sources: state.sources,
+                            records: state.records,
+                            lastUpdated: Date.now()
+                        }));
+                        renderAll();
+                        setSyncStatus('synced');
+                    }
+                }, (error) => {
+                    console.error("Firestore sync error:", error);
+                    setSyncStatus('offline');
+                });
+
+                setSyncStatus('connecting');
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                showToast('Firebase 設定格式錯誤或連線失敗！', 'error');
+                setSyncStatus('offline');
+            }
+        }
+
+        // 5. Push to Cloud
+        function syncToCloud() {
+            if (!db) return;
+            setSyncStatus('connecting');
+            isCloudUpdating = true;
+            
+            db.collection('appData').doc('tutoring_tracker').set({
+                sources: state.sources,
+                records: state.records,
+                lastUpdated: Date.now()
+            }).then(() => {
+                setSyncStatus('synced');
+                setTimeout(() => { isCloudUpdating = false; }, 500);
+            }).catch((error) => {
+                console.error("Error writing to cloud:", error);
+                setSyncStatus('offline');
+                isCloudUpdating = false;
+            });
+        }
+
+        // --- Helpers ---
         const formatMoney = (num) => num.toLocaleString();
         const getWeekRange = (dateString) => {
             const d = new Date(dateString);
@@ -386,7 +522,6 @@
             return studentRecords.length > 0 ? studentRecords[0].income : 0;
         };
 
-        // Custom Toast Notification
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -399,29 +534,22 @@
             container.appendChild(toast);
             lucide.createIcons();
             
-            // Animate in
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            });
-
-            // Animate out and remove
+            requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
             setTimeout(() => {
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Render Functions
+        // --- Render Functions ---
         function renderTabs() {
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                const isActive = btn.dataset.tab === state.activeTab;
-                if (isActive) {
+                if (btn.dataset.tab === state.activeTab) {
                     btn.className = "tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors bg-white text-red-800 shadow-sm dark:bg-stone-900 dark:text-rose-400 dark:border dark:border-stone-800";
                 } else {
                     btn.className = "tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50 dark:hover:text-white";
                 }
             });
-
             document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
             document.getElementById(`view-${state.activeTab}`).classList.remove('hidden');
         }
@@ -437,7 +565,6 @@
             document.getElementById('dash-remaining-text').innerText = `尚欠: $${formatMoney(Math.max(0, state.GOAL - currentTotal))}`;
             document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
 
-            // Form Updates
             document.getElementById('record-date').value = state.formData.date;
             document.getElementById('record-duration').innerText = state.formData.duration;
             
@@ -464,7 +591,6 @@
                 });
             }
 
-            // Preview
             const previewDiv = document.getElementById('record-preview');
             if (state.formData.sourceId && state.sources.find(src => src.id === state.formData.sourceId)) {
                 const s = state.sources.find(src => src.id === state.formData.sourceId);
@@ -474,7 +600,6 @@
                 previewDiv.classList.add('hidden');
             }
 
-            // Recent Records
             const tbody = document.getElementById('recent-records-body');
             tbody.innerHTML = '';
             if (state.records.length === 0) {
@@ -497,7 +622,6 @@
                     `;
                 });
             }
-
             renderChart();
         }
 
@@ -527,7 +651,6 @@
             const labels = data.map(d => d.name);
             const dataset = data.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
 
-            // Update Chart Type Buttons
             document.getElementById('chart-type-weekly').className = `chart-type-btn px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${state.chartType === 'weekly' ? 'bg-rose-50 text-red-700 dark:bg-stone-800 dark:text-rose-400' : 'text-stone-500 hover:bg-rose-50 dark:text-stone-400 dark:hover:bg-stone-800'}`;
             document.getElementById('chart-type-cumulative').className = `chart-type-btn px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${state.chartType === 'cumulative' ? 'bg-rose-50 text-red-700 dark:bg-stone-800 dark:text-rose-400' : 'text-stone-500 hover:bg-rose-50 dark:text-stone-400 dark:hover:bg-stone-800'}`;
             document.getElementById('chart-period').value = state.chartPeriod;
@@ -596,7 +719,6 @@
                 const dayRecords = state.records.filter(r => r.date === dStr);
                 const dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
                 currentWeek.push({ date: i, dateStr: dStr, income: dayIncome });
-                
                 if (currentWeek.length === 7) { weeks.push(currentWeek); currentWeek = []; }
             }
             if (currentWeek.length > 0) {
@@ -612,7 +734,6 @@
             weeks.forEach(week => {
                 let weekTotal = 0;
                 let html = `<div class="grid grid-cols-8 gap-1 md:gap-2">`;
-                
                 week.forEach(day => {
                     if (!day) {
                         html += `<div class="flex flex-col p-1 md:p-2 min-h-[50px] md:min-h-[80px] rounded-lg md:rounded-xl border border-transparent bg-stone-50/50 dark:bg-stone-950/50"></div>`;
@@ -628,16 +749,12 @@
                             <div class="${baseClasses} ${todayClasses}">
                                 <span class="text-[10px] md:text-sm font-medium ${dateColor}">${day.date}</span>
                                 <div class="flex-1 flex items-end justify-center pb-0.5 md:pb-1">
-                                    ${day.income > 0 
-                                        ? `<span class="text-[10px] sm:text-xs md:text-lg font-bold text-red-800 dark:text-rose-400 tracking-tighter leading-none">$${day.income}</span>`
-                                        : `<span class="text-stone-400/30 text-[10px] md:text-sm">-</span>`
-                                    }
+                                    ${day.income > 0 ? `<span class="text-[10px] sm:text-xs md:text-lg font-bold text-red-800 dark:text-rose-400 tracking-tighter leading-none">$${day.income}</span>` : `<span class="text-stone-400/30 text-[10px] md:text-sm">-</span>`}
                                 </div>
                             </div>
                         `;
                     }
                 });
-
                 const weekTotalColor = weekTotal > 0 ? "text-red-700 dark:text-rose-400" : "text-stone-500/50";
                 html += `
                     <div class="flex flex-col items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl border md:border-2 border-rose-100 dark:border-red-900/30 bg-rose-50/50 dark:bg-red-950/20">
@@ -647,7 +764,6 @@
                 </div>`;
                 grid.innerHTML += html;
             });
-
             document.getElementById('cal-month-total').innerText = `$${formatMoney(monthTotal)}`;
         }
 
@@ -781,11 +897,11 @@
             lucide.createIcons();
         }
 
-        // Actions
+        // --- Actions ---
         window.deleteRecord = function(id) {
             if (confirm('確定要刪除這筆記錄嗎？總收入將會相應扣除。')) {
                 state.records = state.records.filter(r => r.id !== id);
-                renderAll();
+                saveState();
             }
         };
 
@@ -793,7 +909,7 @@
             if (confirm('確定要刪除這個學生嗎？(不會影響過往記錄)')) {
                 state.sources = state.sources.filter(s => s.id !== id);
                 if (state.formData.sourceId === id) state.formData.sourceId = '';
-                renderAll();
+                saveState();
             }
         };
 
@@ -817,20 +933,17 @@
             if (!name || isNaN(rate)) return;
 
             state.sources = state.sources.map(s => s.id === state.editingSourceId ? {
-                ...s,
-                name,
-                grade: document.getElementById('edit-grade').value,
-                subject: document.getElementById('edit-subject').value,
-                rate,
+                ...s, name, grade: document.getElementById('edit-grade').value,
+                subject: document.getElementById('edit-subject').value, rate,
                 parentName: document.getElementById('edit-parent').value,
                 address: document.getElementById('edit-address').value
             } : s);
             
             state.editingSourceId = null;
-            renderAll();
+            saveState();
         };
 
-        // Event Listeners Initialization
+        // --- Event Listeners Initialization ---
         function initEvents() {
             // Tabs
             document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -842,76 +955,50 @@
 
             // Dashboard Form
             document.getElementById('record-date').addEventListener('change', (e) => { state.formData.date = e.target.value; });
-            document.getElementById('record-source').addEventListener('change', (e) => { 
-                state.formData.sourceId = e.target.value; 
-                renderDashboard(); 
-            });
-            document.getElementById('btn-duration-minus').addEventListener('click', () => {
-                state.formData.duration = Math.max(0.5, state.formData.duration - 0.5);
-                renderDashboard();
-            });
-            document.getElementById('btn-duration-plus').addEventListener('click', () => {
-                state.formData.duration += 0.5;
-                renderDashboard();
-            });
+            document.getElementById('record-source').addEventListener('change', (e) => { state.formData.sourceId = e.target.value; renderDashboard(); });
+            document.getElementById('btn-duration-minus').addEventListener('click', () => { state.formData.duration = Math.max(0.5, state.formData.duration - 0.5); renderDashboard(); });
+            document.getElementById('btn-duration-plus').addEventListener('click', () => { state.formData.duration += 0.5; renderDashboard(); });
+            
             document.getElementById('record-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 if (!state.formData.sourceId) return showToast('請先選擇學生！', 'error');
-                
                 const s = state.sources.find(src => src.id === state.formData.sourceId);
                 const newRecord = {
-                    id: Date.now(),
-                    date: state.formData.date,
-                    sourceId: s.id,
-                    sourceName: `${s.name} (${s.grade})`,
-                    duration: state.formData.duration,
+                    id: Date.now(), date: state.formData.date, sourceId: s.id,
+                    sourceName: `${s.name} (${s.grade})`, duration: state.formData.duration,
                     income: s.rate * state.formData.duration
                 };
-                
                 state.records.unshift(newRecord);
                 state.records.sort((a, b) => new Date(b.date) - new Date(a.date));
                 state.formData.sourceId = '';
                 state.formData.duration = 1.5;
-                renderAll();
+                saveState();
                 showToast('記錄已成功儲存！');
             });
 
-            // Chart Controls
+            // Chart & Calendar Controls
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
             document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
             document.getElementById('chart-period').addEventListener('change', (e) => { state.chartPeriod = Number(e.target.value); renderDashboard(); });
-
-            // Calendar Controls
-            document.getElementById('cal-prev').addEventListener('click', () => {
-                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
-                renderCalendar();
-                lucide.createIcons();
-            });
-            document.getElementById('cal-next').addEventListener('click', () => {
-                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
-                renderCalendar();
-                lucide.createIcons();
-            });
+            document.getElementById('cal-prev').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1); renderCalendar(); lucide.createIcons(); });
+            document.getElementById('cal-next').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1); renderCalendar(); lucide.createIcons(); });
 
             // Settings Form
             document.getElementById('add-student-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const newSource = {
-                    id: `s_${Date.now()}`,
-                    name: document.getElementById('new-s-name').value,
-                    grade: document.getElementById('new-s-grade').value,
-                    subject: document.getElementById('new-s-subject').value,
-                    parentName: document.getElementById('new-s-parent').value,
-                    rate: parseFloat(document.getElementById('new-s-rate').value),
+                    id: `s_${Date.now()}`, name: document.getElementById('new-s-name').value,
+                    grade: document.getElementById('new-s-grade').value, subject: document.getElementById('new-s-subject').value,
+                    parentName: document.getElementById('new-s-parent').value, rate: parseFloat(document.getElementById('new-s-rate').value),
                     address: document.getElementById('new-s-address').value
                 };
                 state.sources.push(newSource);
                 e.target.reset();
-                renderAll();
+                saveState();
                 showToast('學生資料已新增！');
             });
 
-            // Dark Mode Toggle
+            // Dark Mode
             document.getElementById('theme-toggle').addEventListener('click', () => {
                 state.isDarkMode = !state.isDarkMode;
                 if (state.isDarkMode) {
@@ -926,66 +1013,72 @@
                 renderAll();
             });
 
-            // Export & Import Logic
+            // Export & Import
             document.getElementById('btn-export').addEventListener('click', () => {
-                const backupData = {
-                    sources: state.sources,
-                    records: state.records
-                };
-                const jsonStr = JSON.stringify(backupData, null, 2);
+                const jsonStr = JSON.stringify({ sources: state.sources, records: state.records }, null, 2);
                 const blob = new Blob([jsonStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                
                 const d = new Date();
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const filename = `tutoring_backup_${yyyy}${mm}${dd}.json`;
-
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
+                const filename = `tutoring_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+                const a = document.createElement('a'); a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
                 showToast(`資料已成功匯出至 ${filename}`);
             });
 
-            document.getElementById('btn-import-trigger').addEventListener('click', () => {
-                document.getElementById('file-import').click();
-            });
-
+            document.getElementById('btn-import-trigger').addEventListener('click', () => document.getElementById('file-import').click());
             document.getElementById('file-import').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
                         const parsed = JSON.parse(event.target.result);
-                        if (parsed.sources && Array.isArray(parsed.sources) && parsed.records && Array.isArray(parsed.records)) {
+                        if (parsed.sources && parsed.records) {
                             state.sources = parsed.sources;
                             state.records = parsed.records;
-                            renderAll();
+                            saveState();
                             showToast('進度恢復成功！所有資料已載入。');
-                        } else {
-                            showToast('檔案格式不正確，無法讀取！', 'error');
-                        }
-                    } catch (error) {
-                        showToast('讀取檔案失敗，請確保選擇正確的 JSON 檔案！', 'error');
-                    }
-                    // Reset input so the same file can be selected again if needed
+                        } else showToast('檔案格式不正確！', 'error');
+                    } catch (error) { showToast('讀取失敗！', 'error'); }
                     e.target.value = '';
                 };
                 reader.readAsText(file);
             });
+
+            // Firebase Config Save
+            document.getElementById('btn-save-firebase').addEventListener('click', () => {
+                const configStr = document.getElementById('firebase-config-input').value.trim();
+                if (configStr) {
+                    localStorage.setItem('firebase_config', configStr);
+                    initFirebase(configStr);
+                    showToast('Firebase 設定已儲存並嘗試連線！');
+                } else {
+                    localStorage.removeItem('firebase_config');
+                    isFirebaseActive = false;
+                    db = null;
+                    setSyncStatus('offline');
+                    showToast('已清除 Firebase 設定，轉為離線模式。');
+                }
+            });
+
+            // Network Status Listeners
+            window.addEventListener('online', () => { if(isFirebaseActive) syncToCloud(); });
+            window.addEventListener('offline', () => setSyncStatus('offline'));
         }
 
-        // Initialize
-        initEvents();
-        renderAll();
+        // --- App Boot ---
+        loadLocalData(); // 1. Load from local first
+        initEvents();    // 2. Setup events
+        renderAll();     // 3. Render UI
+
+        // 4. Try to init Firebase if config exists
+        const savedConfig = localStorage.getItem('firebase_config');
+        if (savedConfig) {
+            document.getElementById('firebase-config-input').value = savedConfig;
+            initFirebase(savedConfig);
+        } else {
+            setSyncStatus('offline'); // Default to offline if no config
+        }
 
     </script>
 </body>
