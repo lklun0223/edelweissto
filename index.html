@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>追蹤系統</title>
+    <title>補習收入追蹤系統</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,7 +14,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Firebase V8 Compat (For simple single-file integration) -->
+    <!-- Firebase V8 Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -63,7 +63,6 @@
                 <div class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 shrink-0 relative z-10">
                     <i data-lucide="trending-up" class="text-rose-100 w-6 h-6"></i>
                 </div>
-                <!-- 同步狀態指示燈 (Sync Badge) -->
                 <div id="sync-badge" class="absolute -bottom-2 -right-6 md:-right-8 flex items-center gap-1.5 bg-white dark:bg-stone-800 px-2 py-0.5 rounded-full shadow-md border border-stone-200 dark:border-stone-700 transition-all duration-500 opacity-0 transform scale-90 z-20">
                     <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
                     <span id="sync-text" class="text-[10px] md:text-xs font-bold text-stone-600 dark:text-stone-300 whitespace-nowrap">連線中</span>
@@ -88,7 +87,6 @@
 
         <!-- ================= 主頁 (Dashboard) ================= -->
         <div id="view-dashboard" class="view-section space-y-4 md:space-y-6 fade-in">
-            <!-- 目標進度 -->
             <div class="bg-white dark:bg-stone-900 p-5 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base md:text-lg font-bold">總目標進度</h2>
@@ -114,7 +112,6 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                <!-- 左側：新增記錄表單 -->
                 <div class="lg:col-span-1 bg-white dark:bg-stone-900 p-5 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 h-fit transition-colors duration-300">
                     <h2 class="text-base md:text-lg font-bold mb-4 md:mb-5 flex items-center gap-2 text-red-700 dark:text-rose-400">
                         <i data-lucide="plus" class="w-[18px] h-[18px]"></i> 新增今日記錄
@@ -158,7 +155,6 @@
                     </form>
                 </div>
 
-                <!-- 右側：圖表與最近記錄 -->
                 <div class="lg:col-span-2 space-y-4 md:space-y-6">
                     <div class="bg-white dark:bg-stone-900 p-4 md:p-5 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
@@ -197,7 +193,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="recent-records-body" class="divide-y border-rose-100 dark:border-stone-800">
-                                    <!-- Injected via JS -->
                                 </tbody>
                             </table>
                         </div>
@@ -248,7 +243,6 @@
         <div id="view-settings" class="view-section space-y-4 md:space-y-6 hidden fade-in">
             <div class="bg-white dark:bg-stone-900 p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
                 
-                <!-- 頂部：黑暗模式切換 -->
                 <div class="flex justify-end mb-4">
                     <button id="theme-toggle" class="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm rounded-xl font-medium transition-colors border bg-white border-rose-200 text-red-700 hover:bg-rose-50 dark:bg-stone-800 dark:border-stone-600 dark:text-rose-400 dark:hover:bg-stone-700">
                         <i data-lucide="moon" class="w-4 h-4" id="theme-icon"></i>
@@ -289,8 +283,12 @@
                             <input type="number" min="0" id="new-s-rate" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址</label>
-                            <input type="text" id="new-s-address" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址簡稱 (如: 馬鞍山)</label>
+                            <input type="text" id="new-s-address-short" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3">
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">詳細地址</label>
+                            <input type="text" id="new-s-address-detail" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
                         </div>
                     </div>
                     <div class="flex justify-end pt-2">
@@ -351,14 +349,12 @@
 
     <!-- Application Logic -->
     <script>
-        // Get dynamic today string (YYYY-MM-DD)
         const getTodayString = () => {
             const d = new Date();
             const offset = d.getTimezoneOffset() * 60000;
             return new Date(d.getTime() - offset).toISOString().split('T')[0];
         };
 
-        // State Management
         const state = {
             GOAL: 100000,
             INITIAL_AMOUNT: 57000,
@@ -380,9 +376,6 @@
         let syncTimeout = null;
         let isCloudUpdating = false;
 
-        // --- Dual Backup & Sync Logic ---
-
-        // 1. Load from LocalStorage (Fastest, Offline support)
         function loadLocalData() {
             const localData = localStorage.getItem('tutoring_data');
             if (localData) {
@@ -396,18 +389,13 @@
             }
         }
 
-        // 2. Save State (Writes to LocalStorage AND pushes to Cloud)
         function saveState() {
-            // Backup to LocalStorage
             localStorage.setItem('tutoring_data', JSON.stringify({
                 sources: state.sources,
                 records: state.records,
                 lastUpdated: Date.now()
             }));
-            
             renderAll();
-            
-            // Push to Cloud if active
             if (isFirebaseActive && navigator.onLine) {
                 syncToCloud();
             } else if (!navigator.onLine) {
@@ -415,7 +403,6 @@
             }
         }
 
-        // 3. Sync UI Indicator
         function setSyncStatus(status) {
             const badge = document.getElementById('sync-badge');
             const dot = document.getElementById('sync-dot');
@@ -441,14 +428,12 @@
             }
         }
 
-        // 4. Initialize Firebase (★ 修復了格式錯誤與卡在連線中的 Bug ★)
         function initFirebase(configStr) {
             if (!configStr) {
                 setSyncStatus('offline');
                 return;
             }
             try {
-                // 修復 1：聰明地解析格式！不管使用者貼上 JSON 還是 JavaScript 物件都能讀懂
                 let cleanStr = configStr.replace(/(const|let|var)\s+firebaseConfig\s*=\s*/, '').replace(/;/g, '').trim();
                 const config = new Function("return " + cleanStr)();
 
@@ -458,14 +443,12 @@
                 db = firebase.firestore();
                 isFirebaseActive = true;
                 
-                // Listen to Cloud Changes
                 db.collection('appData').doc('tutoring_tracker').onSnapshot((doc) => {
-                    if (isCloudUpdating) return; // Prevent echo
+                    if (isCloudUpdating) return; 
                     if (doc.exists) {
                         const data = doc.data();
                         state.sources = data.sources || [];
                         state.records = data.records || [];
-                        // Save cloud data to local backup
                         localStorage.setItem('tutoring_data', JSON.stringify({
                             sources: state.sources,
                             records: state.records,
@@ -474,7 +457,6 @@
                         renderAll();
                         setSyncStatus('synced');
                     } else {
-                        // 修復 2：如果資料庫是空的，主動把本機資料推上去建立檔案，就不會卡在「連線中」了！
                         syncToCloud();
                     }
                 }, (error) => {
@@ -491,7 +473,6 @@
             }
         }
 
-        // 5. Push to Cloud
         function syncToCloud() {
             if (!db) return;
             setSyncStatus('connecting');
@@ -511,7 +492,6 @@
             });
         }
 
-        // --- Helpers ---
         const formatMoney = (num) => num.toLocaleString();
         const getWeekRange = (dateString) => {
             const d = new Date(dateString);
@@ -522,9 +502,10 @@
             sunday.setDate(monday.getDate() + 6);
             return `${monday.getMonth() + 1}/${monday.getDate()} - ${sunday.getMonth() + 1}/${sunday.getDate()}`;
         };
-        const getStudentLatestIncome = (sourceId) => {
-            const studentRecords = state.records.filter(r => r.sourceId === sourceId);
-            return studentRecords.length > 0 ? studentRecords[0].income : 0;
+        
+        // 取得該學生總收入
+        const getStudentTotalIncome = (sourceId) => {
+            return state.records.filter(r => r.sourceId === sourceId).reduce((sum, r) => sum + r.income, 0);
         };
 
         function showToast(message, type = 'success') {
@@ -546,7 +527,6 @@
             }, 3000);
         }
 
-        // --- Render Functions ---
         function renderTabs() {
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 if (btn.dataset.tab === state.activeTab) {
@@ -585,11 +565,13 @@
                 sortedSourceIds.forEach(id => {
                     const s = state.sources.find(src => src.id === id);
                     if (s) {
-                        const latestIncome = getStudentLatestIncome(s.id);
-                        const addressShort = s.address ? s.address.split(' ')[0] : '無地址';
+                        const totalIncome = getStudentTotalIncome(s.id);
+                        // 相容舊資料：如果沒有 addressShort，就拿 address 切割第一個字
+                        const addrShort = s.addressShort || (s.address ? s.address.split(' ')[0] : '無');
                         const option = document.createElement('option');
                         option.value = s.id;
-                        option.innerText = `${addressShort} ${s.name} (${latestIncome}@${s.rate})`;
+                        // 格式：地址簡稱 學生姓名 ($總收入@時薪)
+                        option.innerText = `${addrShort} ${s.name} ($${totalIncome}@${s.rate})`;
                         if (state.formData.sourceId === s.id) option.selected = true;
                         sourceSelect.appendChild(option);
                     }
@@ -850,8 +832,9 @@
                                             ${['英文','全科'].map(s => `<option ${state.editForm.subject===s?'selected':''}>${s}</option>`).join('')}
                                         </select>
                                         <input type="number" id="edit-rate" value="${state.editForm.rate}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
-                                        <input type="text" id="edit-parent" value="${state.editForm.parentName}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
-                                        <input type="text" id="edit-address" value="${state.editForm.address}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <input type="text" id="edit-parent" value="${state.editForm.parentName || ''}" placeholder="家長稱呼" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <input type="text" id="edit-address-short" value="${state.editForm.addressShort || ''}" placeholder="地址簡稱" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <input type="text" id="edit-address-detail" value="${state.editForm.addressDetail || state.editForm.address || ''}" placeholder="詳細地址" class="col-span-2 px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
                                     </div>
                                     <div class="flex justify-end gap-2 mt-2">
                                         <button onclick="cancelEdit()" class="px-3 py-1 text-xs bg-stone-50 dark:bg-stone-950 text-stone-500 dark:text-stone-400 border border-rose-100 dark:border-stone-800 rounded">取消</button>
@@ -861,6 +844,7 @@
                             </div>
                         `;
                     } else {
+                        const displayAddress = source.addressDetail || source.address || '未提供';
                         list.innerHTML += `
                             <div class="flex flex-col p-3 md:p-4 bg-white dark:bg-stone-900 rounded-xl border border-rose-100 dark:border-stone-800 shadow-sm hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors relative group">
                                 <div class="flex justify-between items-start mb-2 md:mb-3">
@@ -880,7 +864,7 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 text-xs md:text-sm text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-950 p-2 md:p-3 rounded-lg border border-rose-100 dark:border-stone-800">
                                     <div class="flex items-center gap-1.5 md:gap-2"><i data-lucide="user" class="w-3 h-3 text-rose-400 shrink-0"></i><span class="truncate">${source.parentName || '未提供'}</span></div>
-                                    <div class="flex items-center gap-1.5 md:gap-2"><i data-lucide="map-pin" class="w-3 h-3 text-rose-400 shrink-0"></i><span class="truncate">${source.address || '未提供'}</span></div>
+                                    <div class="flex items-center gap-1.5 md:gap-2"><i data-lucide="map-pin" class="w-3 h-3 text-rose-400 shrink-0"></i><span class="truncate" title="${displayAddress}">${source.addressShort || '無簡稱'}</span></div>
                                 </div>
                                 <div class="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white dark:bg-stone-900 p-1 rounded-lg shadow-sm border border-rose-100 dark:border-stone-800">
                                     <button onclick="startEdit('${source.id}')" class="p-1.5 text-stone-500 dark:text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-stone-800 rounded"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
@@ -902,7 +886,6 @@
             lucide.createIcons();
         }
 
-        // --- Actions ---
         window.deleteRecord = function(id) {
             if (confirm('確定要刪除這筆記錄嗎？總收入將會相應扣除。')) {
                 state.records = state.records.filter(r => r.id !== id);
@@ -941,16 +924,15 @@
                 ...s, name, grade: document.getElementById('edit-grade').value,
                 subject: document.getElementById('edit-subject').value, rate,
                 parentName: document.getElementById('edit-parent').value,
-                address: document.getElementById('edit-address').value
+                addressShort: document.getElementById('edit-address-short').value,
+                addressDetail: document.getElementById('edit-address-detail').value
             } : s);
             
             state.editingSourceId = null;
             saveState();
         };
 
-        // --- Event Listeners Initialization ---
         function initEvents() {
-            // Tabs
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     state.activeTab = e.currentTarget.dataset.tab;
@@ -958,7 +940,6 @@
                 });
             });
 
-            // Dashboard Form
             document.getElementById('record-date').addEventListener('change', (e) => { state.formData.date = e.target.value; });
             document.getElementById('record-source').addEventListener('change', (e) => { state.formData.sourceId = e.target.value; renderDashboard(); });
             document.getElementById('btn-duration-minus').addEventListener('click', () => { state.formData.duration = Math.max(0.5, state.formData.duration - 0.5); renderDashboard(); });
@@ -981,21 +962,20 @@
                 showToast('記錄已成功儲存！');
             });
 
-            // Chart & Calendar Controls
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
             document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
             document.getElementById('chart-period').addEventListener('change', (e) => { state.chartPeriod = Number(e.target.value); renderDashboard(); });
             document.getElementById('cal-prev').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1); renderCalendar(); lucide.createIcons(); });
             document.getElementById('cal-next').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1); renderCalendar(); lucide.createIcons(); });
 
-            // Settings Form
             document.getElementById('add-student-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const newSource = {
                     id: `s_${Date.now()}`, name: document.getElementById('new-s-name').value,
                     grade: document.getElementById('new-s-grade').value, subject: document.getElementById('new-s-subject').value,
                     parentName: document.getElementById('new-s-parent').value, rate: parseFloat(document.getElementById('new-s-rate').value),
-                    address: document.getElementById('new-s-address').value
+                    addressShort: document.getElementById('new-s-address-short').value,
+                    addressDetail: document.getElementById('new-s-address-detail').value
                 };
                 state.sources.push(newSource);
                 e.target.reset();
@@ -1003,7 +983,6 @@
                 showToast('學生資料已新增！');
             });
 
-            // Dark Mode
             document.getElementById('theme-toggle').addEventListener('click', () => {
                 state.isDarkMode = !state.isDarkMode;
                 if (state.isDarkMode) {
@@ -1018,7 +997,6 @@
                 renderAll();
             });
 
-            // Export & Import
             document.getElementById('btn-export').addEventListener('click', () => {
                 const jsonStr = JSON.stringify({ sources: state.sources, records: state.records }, null, 2);
                 const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -1050,7 +1028,6 @@
                 reader.readAsText(file);
             });
 
-            // Firebase Config Save
             document.getElementById('btn-save-firebase').addEventListener('click', () => {
                 const configStr = document.getElementById('firebase-config-input').value.trim();
                 if (configStr) {
@@ -1066,23 +1043,20 @@
                 }
             });
 
-            // Network Status Listeners
             window.addEventListener('online', () => { if(isFirebaseActive) syncToCloud(); });
             window.addEventListener('offline', () => setSyncStatus('offline'));
         }
 
-        // --- App Boot ---
-        loadLocalData(); // 1. Load from local first
-        initEvents();    // 2. Setup events
-        renderAll();     // 3. Render UI
+        loadLocalData(); 
+        initEvents();    
+        renderAll();     
 
-        // 4. Try to init Firebase if config exists
         const savedConfig = localStorage.getItem('firebase_config');
         if (savedConfig) {
             document.getElementById('firebase-config-input').value = savedConfig;
             initFirebase(savedConfig);
         } else {
-            setSyncStatus('offline'); // Default to offline if no config
+            setSyncStatus('offline'); 
         }
 
     </script>
