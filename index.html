@@ -175,6 +175,7 @@
                                     <option value="56">8 週</option>
                                     <option value="84">12 週</option>
                                     <option value="182">半年</option>
+                                    <option value="364">一年</option>
                                 </select>
                             </div>
                         </div>
@@ -289,7 +290,11 @@
                             <input type="number" min="0" id="new-s-rate" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址</label>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址簡稱</label>
+                            <input type="text" id="new-s-address-short" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">詳細地址</label>
                             <input type="text" id="new-s-address" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
                         </div>
                     </div>
@@ -586,10 +591,11 @@
                     const s = state.sources.find(src => src.id === id);
                     if (s) {
                         const latestIncome = getStudentLatestIncome(s.id);
-                        const addressShort = s.address ? s.address.split(' ')[0] : '無地址';
+                        const addrShort = s.addressShort || '無簡稱';
                         const option = document.createElement('option');
                         option.value = s.id;
-                        option.innerText = `${addressShort} ${s.name} (${latestIncome}@${s.rate})`;
+                        // 格式：地址簡稱 學生姓名 ($總收入@時薪)
+                        option.innerText = `${addrShort} ${s.name} ($${latestIncome}@${s.rate})`;
                         if (state.formData.sourceId === s.id) option.selected = true;
                         sourceSelect.appendChild(option);
                     }
@@ -851,6 +857,7 @@
                                         </select>
                                         <input type="number" id="edit-rate" value="${state.editForm.rate}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
                                         <input type="text" id="edit-parent" value="${state.editForm.parentName}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <input type="text" id="edit-address-short" value="${state.editForm.addressShort || ''}" placeholder="地址簡稱" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
                                         <input type="text" id="edit-address" value="${state.editForm.address}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
                                     </div>
                                     <div class="flex justify-end gap-2 mt-2">
@@ -912,10 +919,14 @@
 
         window.deleteSource = function(id) {
             if (confirm('確定要刪除這個學生嗎？(不會影響過往記錄)')) {
-                state.sources = state.sources.filter(s => s.id !== id);
-                if (state.formData.sourceId === id) state.formData.sourceId = '';
-                saveState();
-            }
+                
+                state.sources = state.sources.map(s => s.id === state.editingSourceId ? {
+                ...s, name, grade: document.getElementById('edit-grade').value,
+                subject: document.getElementById('edit-subject').value, rate,
+                parentName: document.getElementById('edit-parent').value,
+                addressShort: document.getElementById('edit-address-short').value,
+                address: document.getElementById('edit-address').value
+            } : s);
         };
 
         window.startEdit = function(id) {
@@ -995,6 +1006,7 @@
                     id: `s_${Date.now()}`, name: document.getElementById('new-s-name').value,
                     grade: document.getElementById('new-s-grade').value, subject: document.getElementById('new-s-subject').value,
                     parentName: document.getElementById('new-s-parent').value, rate: parseFloat(document.getElementById('new-s-rate').value),
+                    addressShort: document.getElementById('new-s-address-short').value,
                     address: document.getElementById('new-s-address').value
                 };
                 state.sources.push(newSource);
