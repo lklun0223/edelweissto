@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>補習收入追蹤系統</title>
+    <title>追蹤系統</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -328,16 +328,14 @@
                         <i data-lucide="cloud" class="w-4 h-4"></i> Firebase 雲端同步設定
                     </h3>
                     <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400 mb-4">
-                        請貼上您的 Firebase Config (JSON格式) 以啟用跨裝置即時同步。若留空則僅儲存於本機 LocalStorage。
+                        請貼上您的 Firebase Config 以啟用跨裝置即時同步。若留空則僅儲存於本機 LocalStorage。
                     </p>
-                    <textarea id="firebase-config-input" rows="5" class="w-full px-3 py-2 text-xs md:text-sm bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none font-mono" placeholder='{
-  "apiKey": "AIzaSy...",
-  "authDomain": "your-project.firebaseapp.com",
-  "projectId": "your-project",
-  "storageBucket": "your-project.appspot.com",
-  "messagingSenderId": "123456789",
-  "appId": "1:123456789:web:abcde"
-}'></textarea>
+                    <textarea id="firebase-config-input" rows="5" class="w-full px-3 py-2 text-xs md:text-sm bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none font-mono" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  ...
+};'></textarea>
                     <div class="flex justify-end mt-3">
                         <button id="btn-save-firebase" class="px-4 py-2 text-sm bg-stone-200 hover:bg-stone-300 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium rounded-lg transition-colors border border-stone-300 dark:border-stone-600">儲存並連線</button>
                     </div>
@@ -443,14 +441,17 @@
             }
         }
 
-        // 4. Initialize Firebase
+        // 4. Initialize Firebase (★ 修復了格式錯誤與卡在連線中的 Bug ★)
         function initFirebase(configStr) {
             if (!configStr) {
                 setSyncStatus('offline');
                 return;
             }
             try {
-                const config = JSON.parse(configStr);
+                // 修復 1：聰明地解析格式！不管使用者貼上 JSON 還是 JavaScript 物件都能讀懂
+                let cleanStr = configStr.replace(/(const|let|var)\s+firebaseConfig\s*=\s*/, '').replace(/;/g, '').trim();
+                const config = new Function("return " + cleanStr)();
+
                 if (!firebase.apps.length) {
                     firebase.initializeApp(config);
                 }
@@ -472,16 +473,20 @@
                         }));
                         renderAll();
                         setSyncStatus('synced');
+                    } else {
+                        // 修復 2：如果資料庫是空的，主動把本機資料推上去建立檔案，就不會卡在「連線中」了！
+                        syncToCloud();
                     }
                 }, (error) => {
                     console.error("Firestore sync error:", error);
+                    showToast('權限不足！請至 Firebase Console 開放 Firestore 讀寫權限。', 'error');
                     setSyncStatus('offline');
                 });
 
                 setSyncStatus('connecting');
             } catch (e) {
                 console.error("Firebase Init Error:", e);
-                showToast('Firebase 設定格式錯誤或連線失敗！', 'error');
+                showToast('Firebase 設定格式錯誤！請檢查是否貼上完整的內容。', 'error');
                 setSyncStatus('offline');
             }
         }
