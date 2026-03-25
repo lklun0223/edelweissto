@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-HK" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>補習收入追蹤系統</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    },
+                    animation: {
+                        shimmer: 'shimmer 2s infinite',
+                    },
+                    keyframes: {
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 隱藏捲軸但保留滾動功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* 確保過渡效果平滑 */
+        body {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-stone-50 text-stone-800 dark:bg-stone-950 dark:text-stone-100 p-2 md:p-8 selection:bg-rose-200 transition-colors duration-300">
+
+    <div class="max-w-6xl mx-auto space-y-4 md:space-y-6">
+        
+        <!-- 頂部導航列 -->
+        <div class="flex items-center justify-between bg-red-800 dark:bg-red-950 p-2 md:p-4 rounded-2xl shadow-md transition-colors duration-300">
+            <div class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 shrink-0 mx-2">
+                <i data-lucide="trending-up" class="text-rose-100 w-6 h-6"></i>
+            </div>
+            <div class="flex gap-2 md:gap-3 overflow-x-auto no-scrollbar pr-2 w-full justify-end" id="tabs-container">
+                <button data-tab="dashboard" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors bg-white text-red-800 shadow-sm dark:bg-stone-900 dark:text-rose-400 dark:border dark:border-stone-800" title="主頁">
+                    <i data-lucide="home" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </button>
+                <button data-tab="calendar" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50" title="月曆">
+                    <i data-lucide="layout-grid" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </button>
+                <button data-tab="records" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50" title="記錄">
+                    <i data-lucide="list" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </button>
+                <button data-tab="settings" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50" title="設定與學生">
+                    <i data-lucide="settings" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= 主頁 (Dashboard) ================= -->
+        <div id="view-dashboard" class="view-section space-y-4 md:space-y-6 fade-in">
+            <!-- 目標進度 -->
+            <div class="bg-white dark:bg-stone-900 p-5 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base md:text-lg font-bold">總目標進度</h2>
+                    <div class="text-right">
+                        <div class="flex items-baseline justify-end gap-1.5 md:gap-2 flex-wrap">
+                            <p id="dash-current-total" class="text-xl md:text-3xl font-bold text-red-800 dark:text-rose-400">$0</p>
+                            <p id="dash-earned-total" class="text-sm md:text-base font-bold text-emerald-600 dark:text-emerald-400">(+$0)</p>
+                        </div>
+                        <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400">/ $100,000</p>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs md:text-sm font-medium">
+                        <span id="dash-progress-text" class="text-stone-500 dark:text-stone-400">進度: 0%</span>
+                        <span id="dash-remaining-text" class="text-red-700 dark:text-rose-400">尚欠: $0</span>
+                    </div>
+                    <div class="w-full bg-stone-50 dark:bg-stone-950 rounded-full h-3 md:h-4 overflow-hidden shadow-inner">
+                        <div id="dash-progress-bar" class="bg-gradient-to-r from-rose-400 to-red-600 h-full rounded-full transition-all duration-1000 ease-out relative" style="width: 0%">
+                            <div class="absolute inset-0 bg-white/20 w-full animate-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                <!-- 左側：新增記錄表單 -->
+                <div class="lg:col-span-1 bg-white dark:bg-stone-900 p-5 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 h-fit transition-colors duration-300">
+                    <h2 class="text-base md:text-lg font-bold mb-4 md:mb-5 flex items-center gap-2 text-red-700 dark:text-rose-400">
+                        <i data-lucide="plus" class="w-[18px] h-[18px]"></i> 新增今日記錄
+                    </h2>
+                    <form id="record-form" class="space-y-4 md:space-y-5">
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">日期</label>
+                            <div class="relative">
+                                <i data-lucide="calendar" class="absolute left-3 top-2.5 md:top-3 w-4 h-4 text-stone-500 dark:text-stone-400"></i>
+                                <input type="date" id="record-date" class="w-full pl-9 pr-3 py-2 md:py-2.5 text-sm md:text-base bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none transition-all" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">學生 / 來源</label>
+                            <div class="relative">
+                                <i data-lucide="book-open" class="absolute left-3 top-2.5 md:top-3 w-4 h-4 text-stone-500 dark:text-stone-400"></i>
+                                <select id="record-source" class="w-full pl-9 pr-3 py-2 md:py-2.5 text-sm md:text-base bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none appearance-none transition-all" required>
+                                    <option value="" disabled selected>請選擇學生...</option>
+                                    <!-- Options injected via JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">時長 (小時)</label>
+                            <div class="flex items-center gap-2 md:gap-3">
+                                <button type="button" id="btn-duration-minus" class="p-2.5 md:p-3 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-xl hover:bg-rose-50 dark:hover:bg-stone-800 transition-colors text-stone-500 dark:text-stone-400"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                                <div class="flex-1 text-center bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-xl py-2 md:py-2.5 text-base md:text-lg font-bold">
+                                    <span id="record-duration">1.5</span> <span class="text-xs md:text-sm font-normal text-stone-500 dark:text-stone-400">hr</span>
+                                </div>
+                                <button type="button" id="btn-duration-plus" class="p-2.5 md:p-3 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-xl hover:bg-rose-50 dark:hover:bg-stone-800 transition-colors text-stone-500 dark:text-stone-400"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div id="record-preview" class="hidden p-3 md:p-4 bg-rose-50/30 dark:bg-stone-900/50 rounded-xl border border-rose-100 dark:border-stone-800 flex justify-between items-center">
+                            <span class="text-xs md:text-sm text-stone-500 dark:text-stone-400">預計收入:</span>
+                            <span id="record-preview-amount" class="text-lg md:text-xl font-bold text-red-800 dark:text-rose-400">$0</span>
+                        </div>
+
+                        <button type="submit" class="w-full bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-700 text-white font-medium py-2.5 md:py-3 text-sm md:text-base rounded-xl transition-colors shadow-md shadow-red-900/10">儲存記錄</button>
+                    </form>
+                </div>
+
+                <!-- 右側：圖表與最近記錄 -->
+                <div class="lg:col-span-2 space-y-4 md:space-y-6">
+                    <div class="bg-white dark:bg-stone-900 p-4 md:p-5 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+                            <h3 class="font-bold flex items-center gap-2 text-sm md:text-base">
+                                <i data-lucide="bar-chart-3" class="w-[18px] h-[18px] text-red-700 dark:text-rose-400"></i> 收入趨勢圖
+                            </h3>
+                            <div class="flex flex-wrap gap-2">
+                                <div class="flex bg-stone-50 dark:bg-stone-950 rounded-lg p-1 border border-rose-100 dark:border-stone-800">
+                                    <button id="chart-type-weekly" class="chart-type-btn px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors bg-rose-50 text-red-700 dark:bg-stone-800 dark:text-rose-400">單週</button>
+                                    <button id="chart-type-cumulative" class="chart-type-btn px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors text-stone-500 hover:bg-rose-50 dark:text-stone-400 dark:hover:bg-stone-800">累積</button>
+                                </div>
+                                <select id="chart-period" class="bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 text-xs md:text-sm rounded-lg px-2 py-1 outline-none">
+                                    <option value="28">4 週</option>
+                                    <option value="56">8 週</option>
+                                    <option value="84">12 週</option>
+                                    <option value="182">半年</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="h-56 md:h-72 w-full relative">
+                            <canvas id="incomeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 overflow-hidden transition-colors duration-300">
+                        <div class="p-4 border-b border-rose-100 dark:border-stone-800 flex justify-between items-center bg-rose-50/30 dark:bg-stone-900/50">
+                            <h3 class="font-bold text-sm md:text-base">最近記錄</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-stone-50 dark:bg-stone-950 text-stone-500 dark:text-stone-400 text-xs md:text-sm border-b border-rose-100 dark:border-stone-800">
+                                        <th class="p-3 md:p-4 font-medium whitespace-nowrap">日期</th>
+                                        <th class="p-3 md:p-4 font-medium whitespace-nowrap">來源</th>
+                                        <th class="p-3 md:p-4 font-medium whitespace-nowrap text-right">收入</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-records-body" class="divide-y border-rose-100 dark:border-stone-800">
+                                    <!-- Injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 月曆 (Calendar) ================= -->
+        <div id="view-calendar" class="view-section space-y-4 md:space-y-6 hidden fade-in">
+            <div class="bg-white dark:bg-stone-900 p-3 sm:p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
+                
+                <!-- 月曆控制列 -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+                    <div class="flex items-center justify-between sm:justify-start gap-2 md:gap-4 w-full sm:w-auto">
+                        <button id="cal-prev" class="p-1.5 md:p-2 rounded-full hover:bg-rose-50 dark:hover:bg-stone-800 text-stone-500 dark:text-stone-400 transition-colors">
+                            <i data-lucide="chevron-left" class="w-5 h-5 md:w-6 md:h-6"></i>
+                        </button>
+                        <h2 id="cal-month-title" class="text-lg md:text-2xl font-bold text-center"></h2>
+                        <button id="cal-next" class="p-1.5 md:p-2 rounded-full hover:bg-rose-50 dark:hover:bg-stone-800 text-stone-500 dark:text-stone-400 transition-colors">
+                            <i data-lucide="chevron-right" class="w-5 h-5 md:w-6 md:h-6"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-start gap-3 bg-stone-50 dark:bg-stone-950 px-4 py-2.5 rounded-xl border border-rose-100 dark:border-stone-800 w-full sm:w-auto">
+                        <span class="text-sm md:text-base text-stone-500 dark:text-stone-400 font-medium">本月總計:</span>
+                        <span id="cal-month-total" class="text-lg md:text-2xl font-bold text-red-800 dark:text-rose-400">$0</span>
+                    </div>
+                </div>
+
+                <!-- 月曆網格 -->
+                <div class="w-full">
+                    <div class="grid grid-cols-8 gap-1 md:gap-2 text-center text-xs md:text-sm font-bold text-stone-500 dark:text-stone-400 mb-2">
+                        <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+                        <div class="text-red-700 dark:text-rose-400 bg-stone-50 dark:bg-stone-950 rounded-md md:rounded-lg py-1 text-[10px] md:text-sm flex items-center justify-center">週總</div>
+                    </div>
+                    
+                    <div id="calendar-grid" class="space-y-1 md:space-y-2">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- ================= 所有記錄頁 (Records) ================= -->
+        <div id="view-records" class="view-section space-y-4 md:space-y-6 hidden fade-in">
+            <div class="bg-white dark:bg-stone-900 p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
+                <h2 class="text-lg md:text-xl font-bold mb-4 md:mb-6 flex items-center gap-2 text-red-700 dark:text-rose-400">
+                    <i data-lucide="list" class="w-5 h-5"></i> 所有歷史記錄
+                </h2>
+
+                <div id="all-records-container" class="space-y-6 md:space-y-8">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 設定頁 (Settings & Students) ================= -->
+        <div id="view-settings" class="view-section space-y-4 md:space-y-6 hidden fade-in">
+            <div class="bg-white dark:bg-stone-900 p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
+                
+                <!-- 頂部：黑暗模式切換 -->
+                <div class="flex justify-end mb-4">
+                    <button id="theme-toggle" class="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm rounded-xl font-medium transition-colors border bg-white border-rose-200 text-red-700 hover:bg-rose-50 dark:bg-stone-800 dark:border-stone-600 dark:text-rose-400 dark:hover:bg-stone-700">
+                        <i data-lucide="moon" class="w-4 h-4" id="theme-icon"></i>
+                        <span id="theme-text">切換黑暗模式</span>
+                    </button>
+                </div>
+
+                <h2 class="text-lg md:text-xl font-bold flex items-center gap-2 text-red-700 dark:text-rose-400 mb-4 md:mb-6">
+                    <i data-lucide="user-plus" class="w-5 h-5"></i> 管理學生
+                </h2>
+                
+                <form id="add-student-form" class="mb-6 md:mb-8 p-4 md:p-5 bg-stone-50 dark:bg-stone-950 rounded-xl border border-rose-100 dark:border-stone-800 space-y-4">
+                    <h3 class="text-xs md:text-sm font-bold text-red-700 dark:text-rose-400 mb-2 border-b border-rose-100 dark:border-stone-800 pb-2">新增學生資料</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">學生姓名</label>
+                            <input type="text" id="new-s-name" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">年級</label>
+                            <select id="new-s-grade" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                                <option>小一</option><option>小二</option><option>小三</option><option>小四</option><option>小五</option><option>小六</option>
+                                <option selected>中一</option><option>中二</option><option>中三</option><option>中四</option><option>中五</option><option>中六</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">科目</label>
+                            <select id="new-s-subject" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                                <option selected>英文</option><option>全科</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">家長稱呼</label>
+                            <input type="text" id="new-s-parent" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">時薪 ($/hr)</label>
+                            <input type="number" min="0" id="new-s-rate" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址</label>
+                            <input type="text" id="new-s-address" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="px-4 md:px-6 py-2 text-sm md:text-base bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-700 text-white font-medium rounded-lg transition-colors w-full sm:w-auto">新增學生</button>
+                    </div>
+                </form>
+
+                <div class="space-y-4 mb-8">
+                    <h3 id="students-count-title" class="text-xs md:text-sm font-medium text-stone-500 dark:text-stone-400 mb-2 md:mb-3">現有學生列表 (0)</h3>
+                    <div id="students-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <!-- 備份與恢復 (Export / Import) -->
+                <div class="mt-8 pt-6 border-t border-rose-100 dark:border-stone-800">
+                    <h3 class="text-sm md:text-base font-bold text-red-700 dark:text-rose-400 mb-2 flex items-center gap-2">
+                        <i data-lucide="database" class="w-4 h-4"></i> 資料備份與恢復
+                    </h3>
+                    <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400 mb-4">
+                        將所有學生名單與補習記錄打包下載。若更換手機或清除資料，可隨時匯入恢復。
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <button id="btn-export" class="flex items-center gap-2 px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium rounded-lg transition-colors border border-stone-200 dark:border-stone-700">
+                            <i data-lucide="download" class="w-4 h-4"></i> 匯出資料 (Backup)
+                        </button>
+                        <button id="btn-import-trigger" class="flex items-center gap-2 px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium rounded-lg transition-colors border border-stone-200 dark:border-stone-700">
+                            <i data-lucide="upload" class="w-4 h-4"></i> 匯入資料 (Restore)
+                        </button>
+                        <input type="file" id="file-import" accept=".json" class="hidden">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Application Logic -->
+    <script>
+        // Get dynamic today string (YYYY-MM-DD) handling local timezone
+        const getTodayString = () => {
+            const d = new Date();
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        // State Management (Cleared demo data, kept 57000)
+        const state = {
+            GOAL: 100000,
+            INITIAL_AMOUNT: 57000,
+            activeTab: 'dashboard',
+            isDarkMode: false,
+            sources: [], // Cleared demo students
+            records: [], // Cleared demo records
+            formData: { date: getTodayString(), sourceId: '', duration: 1.5 },
+            chartPeriod: 28,
+            chartType: 'weekly',
+            currentMonthDate: new Date(),
+            editingSourceId: null,
+            editForm: {}
+        };
+
+        let chartInstance = null;
+
+        // Helpers
+        const formatMoney = (num) => num.toLocaleString();
+        const getWeekRange = (dateString) => {
+            const d = new Date(dateString);
+            const day = d.getDay() || 7; 
+            const monday = new Date(d);
+            monday.setDate(d.getDate() - day + 1);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            return `${monday.getMonth() + 1}/${monday.getDate()} - ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+        };
+        const getStudentLatestIncome = (sourceId) => {
+            const studentRecords = state.records.filter(r => r.sourceId === sourceId);
+            return studentRecords.length > 0 ? studentRecords[0].income : 0;
+        };
+
+        // Custom Toast Notification
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-600 dark:bg-emerald-700' : 'bg-red-600 dark:bg-red-700';
+            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+            
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg text-sm flex items-center gap-2 transform transition-all duration-300 translate-y-10 opacity-0`;
+            toast.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Render Functions
+        function renderTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                const isActive = btn.dataset.tab === state.activeTab;
+                if (isActive) {
+                    btn.className = "tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors bg-white text-red-800 shadow-sm dark:bg-stone-900 dark:text-rose-400 dark:border dark:border-stone-800";
+                } else {
+                    btn.className = "tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50 dark:hover:text-white";
+                }
+            });
+
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`view-${state.activeTab}`).classList.remove('hidden');
+        }
+
+        function renderDashboard() {
+            const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
+            const currentTotal = state.INITIAL_AMOUNT + totalEarned;
+            const progressPercentage = Math.min((currentTotal / state.GOAL) * 100, 100);
+
+            document.getElementById('dash-current-total').innerText = `$${formatMoney(currentTotal)}`;
+            document.getElementById('dash-earned-total').innerText = `(+$${formatMoney(totalEarned)})`;
+            document.getElementById('dash-progress-text').innerText = `進度: ${progressPercentage.toFixed(1)}%`;
+            document.getElementById('dash-remaining-text').innerText = `尚欠: $${formatMoney(Math.max(0, state.GOAL - currentTotal))}`;
+            document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
+
+            // Form Updates
+            document.getElementById('record-date').value = state.formData.date;
+            document.getElementById('record-duration').innerText = state.formData.duration;
+            
+            const sourceSelect = document.getElementById('record-source');
+            sourceSelect.innerHTML = '<option value="" disabled selected>請選擇學生...</option>';
+            
+            if (state.sources.length === 0) {
+                sourceSelect.innerHTML = '<option value="" disabled selected>請先到設定頁新增學生</option>';
+            } else {
+                let sortedSourceIds = [...new Set(state.records.map(r => r.sourceId))];
+                state.sources.forEach(s => { if(!sortedSourceIds.includes(s.id)) sortedSourceIds.push(s.id); });
+                
+                sortedSourceIds.forEach(id => {
+                    const s = state.sources.find(src => src.id === id);
+                    if (s) {
+                        const latestIncome = getStudentLatestIncome(s.id);
+                        const addressShort = s.address ? s.address.split(' ')[0] : '無地址';
+                        const option = document.createElement('option');
+                        option.value = s.id;
+                        option.innerText = `${addressShort} ${s.name} (${latestIncome}@${s.rate})`;
+                        if (state.formData.sourceId === s.id) option.selected = true;
+                        sourceSelect.appendChild(option);
+                    }
+                });
+            }
+
+            // Preview
+            const previewDiv = document.getElementById('record-preview');
+            if (state.formData.sourceId && state.sources.find(src => src.id === state.formData.sourceId)) {
+                const s = state.sources.find(src => src.id === state.formData.sourceId);
+                document.getElementById('record-preview-amount').innerText = `$${formatMoney(s.rate * state.formData.duration)}`;
+                previewDiv.classList.remove('hidden');
+            } else {
+                previewDiv.classList.add('hidden');
+            }
+
+            // Recent Records
+            const tbody = document.getElementById('recent-records-body');
+            tbody.innerHTML = '';
+            if (state.records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-sm text-stone-400">尚未有任何記錄</td></tr>`;
+            } else {
+                state.records.slice(0, 5).forEach(record => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-rose-50 dark:hover:bg-stone-800 transition-colors group">
+                            <td class="p-3 md:p-4 text-xs md:text-sm text-stone-500 dark:text-stone-400 whitespace-nowrap">${record.date.slice(5)}</td>
+                            <td class="p-3 md:p-4 text-xs md:text-sm font-medium whitespace-nowrap">${record.sourceName}</td>
+                            <td class="p-3 md:p-4 text-xs md:text-sm font-bold text-red-800 dark:text-rose-400 text-right whitespace-nowrap">
+                                <div class="flex items-center justify-end gap-2 md:gap-3">
+                                    <span>+$${record.income}</span>
+                                    <button onclick="deleteRecord(${record.id})" class="p-1.5 text-stone-400 hover:text-rose-500 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100" title="刪除記錄">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const cutoffDate = new Date(getTodayString());
+            cutoffDate.setDate(cutoffDate.getDate() - state.chartPeriod);
+            const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
+            let runningCumulative = state.INITIAL_AMOUNT;
+            const weeklyDataMap = {};
+
+            sortedRecords.forEach(record => {
+                const recDate = new Date(record.date);
+                if (recDate < cutoffDate) {
+                    runningCumulative += record.income;
+                } else {
+                    const weekLabel = getWeekRange(record.date);
+                    if (!weeklyDataMap[weekLabel]) {
+                        weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative };
+                    }
+                    weeklyDataMap[weekLabel].income += record.income;
+                    runningCumulative += record.income;
+                    weeklyDataMap[weekLabel].cumulative = runningCumulative;
+                }
+            });
+
+            const data = Object.values(weeklyDataMap);
+            const labels = data.map(d => d.name);
+            const dataset = data.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
+
+            // Update Chart Type Buttons
+            document.getElementById('chart-type-weekly').className = `chart-type-btn px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${state.chartType === 'weekly' ? 'bg-rose-50 text-red-700 dark:bg-stone-800 dark:text-rose-400' : 'text-stone-500 hover:bg-rose-50 dark:text-stone-400 dark:hover:bg-stone-800'}`;
+            document.getElementById('chart-type-cumulative').className = `chart-type-btn px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${state.chartType === 'cumulative' ? 'bg-rose-50 text-red-700 dark:bg-stone-800 dark:text-rose-400' : 'text-stone-500 hover:bg-rose-50 dark:text-stone-400 dark:hover:bg-stone-800'}`;
+            document.getElementById('chart-period').value = state.chartPeriod;
+
+            const ctx = document.getElementById('incomeChart').getContext('2d');
+            const lineColor = state.isDarkMode ? '#fb7185' : '#b91c1c';
+            const gridColor = state.isDarkMode ? '#292524' : '#f5f5f4';
+            const textColor = state.isDarkMode ? '#78716c' : '#a8a29e';
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length ? labels : ['無資料'],
+                    datasets: [{
+                        label: state.chartType === 'weekly' ? '單週收入' : '累積總額',
+                        data: dataset.length ? dataset : [0],
+                        borderColor: lineColor,
+                        backgroundColor: lineColor,
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: state.isDarkMode ? '#1c1917' : '#ffffff',
+                            titleColor: state.isDarkMode ? '#f5f5f4' : '#1c1917',
+                            bodyColor: lineColor,
+                            borderColor: state.isDarkMode ? '#44403c' : '#fecdd3',
+                            borderWidth: 1,
+                            callbacks: { label: (ctx) => `$${ctx.raw}` }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, callback: (val) => `$${val}` } }
+                    }
+                }
+            });
+        }
+
+        function renderCalendar() {
+            const year = state.currentMonthDate.getFullYear();
+            const month = state.currentMonthDate.getMonth();
+            document.getElementById('cal-month-title').innerText = `${year}年 ${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            let startingDay = firstDay.getDay() - 1;
+            if (startingDay === -1) startingDay = 6;
+            
+            const daysInMonth = lastDay.getDate();
+            const weeks = [];
+            let currentWeek = [];
+            
+            for (let i = 0; i < startingDay; i++) currentWeek.push(null);
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dayRecords = state.records.filter(r => r.date === dStr);
+                const dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                currentWeek.push({ date: i, dateStr: dStr, income: dayIncome });
+                
+                if (currentWeek.length === 7) { weeks.push(currentWeek); currentWeek = []; }
+            }
+            if (currentWeek.length > 0) {
+                while (currentWeek.length < 7) currentWeek.push(null);
+                weeks.push(currentWeek);
+            }
+
+            let monthTotal = 0;
+            const todayStr = getTodayString();
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            weeks.forEach(week => {
+                let weekTotal = 0;
+                let html = `<div class="grid grid-cols-8 gap-1 md:gap-2">`;
+                
+                week.forEach(day => {
+                    if (!day) {
+                        html += `<div class="flex flex-col p-1 md:p-2 min-h-[50px] md:min-h-[80px] rounded-lg md:rounded-xl border border-transparent bg-stone-50/50 dark:bg-stone-950/50"></div>`;
+                    } else {
+                        weekTotal += day.income;
+                        monthTotal += day.income;
+                        const isToday = day.dateStr === todayStr;
+                        const baseClasses = "flex flex-col p-1 md:p-2 min-h-[50px] md:min-h-[80px] rounded-lg md:rounded-xl border transition-all justify-between bg-white dark:bg-stone-900 border-rose-100 dark:border-stone-800 hover:border-rose-300 dark:hover:border-rose-500/50";
+                        const todayClasses = isToday ? "ring-1 ring-rose-400 bg-rose-50/30 dark:ring-rose-500 dark:bg-rose-900/20" : "";
+                        const dateColor = isToday ? "text-rose-500" : "text-stone-500 dark:text-stone-400";
+                        
+                        html += `
+                            <div class="${baseClasses} ${todayClasses}">
+                                <span class="text-[10px] md:text-sm font-medium ${dateColor}">${day.date}</span>
+                                <div class="flex-1 flex items-end justify-center pb-0.5 md:pb-1">
+                                    ${day.income > 0 
+                                        ? `<span class="text-[10px] sm:text-xs md:text-lg font-bold text-red-800 dark:text-rose-400 tracking-tighter leading-none">$${day.income}</span>`
+                                        : `<span class="text-stone-400/30 text-[10px] md:text-sm">-</span>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                const weekTotalColor = weekTotal > 0 ? "text-red-700 dark:text-rose-400" : "text-stone-500/50";
+                html += `
+                    <div class="flex flex-col items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl border md:border-2 border-rose-100 dark:border-red-900/30 bg-rose-50/50 dark:bg-red-950/20">
+                        <span class="text-[8px] md:text-xs text-stone-500 dark:text-stone-400 hidden md:block mb-1">Total</span>
+                        <span class="text-[10px] sm:text-xs md:text-lg font-bold ${weekTotalColor} tracking-tighter leading-none">$${weekTotal}</span>
+                    </div>
+                </div>`;
+                grid.innerHTML += html;
+            });
+
+            document.getElementById('cal-month-total').innerText = `$${formatMoney(monthTotal)}`;
+        }
+
+        function renderRecords() {
+            const container = document.getElementById('all-records-container');
+            if (state.records.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-sm md:text-base text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-950 rounded-xl border border-rose-100 dark:border-stone-800 border-dashed">目前沒有任何記錄。</div>`;
+                return;
+            }
+
+            const groups = {};
+            state.records.forEach(record => {
+                const d = new Date(record.date);
+                const monthKey = `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+                const weekKey = getWeekRange(record.date);
+                if (!groups[monthKey]) groups[monthKey] = {};
+                if (!groups[monthKey][weekKey]) groups[monthKey][weekKey] = [];
+                groups[monthKey][weekKey].push(record);
+            });
+
+            let html = '';
+            Object.entries(groups).forEach(([month, weeks]) => {
+                html += `<div class="space-y-3 md:space-y-4">
+                    <h3 class="text-base md:text-lg font-bold border-b border-rose-100 dark:border-stone-800 pb-2">${month}</h3>
+                    <div class="space-y-3 md:space-y-4">`;
+                
+                Object.entries(weeks).forEach(([week, weekRecords]) => {
+                    const weekTotal = weekRecords.reduce((sum, r) => sum + r.income, 0);
+                    html += `
+                        <div class="bg-white dark:bg-stone-900 rounded-xl border border-rose-100 dark:border-stone-800 overflow-hidden shadow-sm">
+                            <div class="bg-rose-50/30 dark:bg-stone-900/50 px-3 md:px-4 py-2 text-xs md:text-sm font-medium flex justify-between border-b border-rose-100 dark:border-stone-800">
+                                <span class="text-stone-500 dark:text-stone-400">${week}</span>
+                                <span class="font-bold text-red-800 dark:text-rose-400">週收入: $${weekTotal}</span>
+                            </div>
+                            <div class="divide-y border-rose-100 dark:border-stone-800">
+                    `;
+                    weekRecords.forEach(record => {
+                        html += `
+                            <div class="flex items-center justify-between p-3 md:p-4 hover:bg-rose-50 dark:hover:bg-stone-800 transition-colors group">
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                                    <span class="text-xs md:text-sm text-stone-500 dark:text-stone-400 w-auto sm:w-24">${record.date}</span>
+                                    <span class="text-sm md:text-base font-medium">${record.sourceName}</span>
+                                </div>
+                                <div class="flex items-center gap-3 md:gap-4">
+                                    <span class="text-sm md:text-base font-bold text-red-800 dark:text-rose-400">+$${record.income}</span>
+                                    <button onclick="deleteRecord(${record.id})" class="p-1.5 text-stone-400 hover:text-rose-500 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100" title="刪除記錄">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div></div>`;
+                });
+                html += `</div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderSettings() {
+            document.getElementById('students-count-title').innerText = `現有學生列表 (${state.sources.length})`;
+            const list = document.getElementById('students-list');
+            list.innerHTML = '';
+
+            if (state.sources.length === 0) {
+                list.innerHTML = `<div class="col-span-1 lg:col-span-2 p-6 text-center text-sm text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-950 rounded-xl border border-rose-100 dark:border-stone-800 border-dashed">尚未新增任何學生。請在上方填寫資料新增。</div>`;
+            } else {
+                state.sources.forEach(source => {
+                    if (state.editingSourceId === source.id) {
+                        list.innerHTML += `
+                            <div class="flex flex-col p-3 md:p-4 bg-white dark:bg-stone-900 rounded-xl border border-rose-100 dark:border-stone-800 shadow-sm">
+                                <div class="space-y-2 md:space-y-3">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="text" id="edit-name" value="${state.editForm.name}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <select id="edit-grade" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                            ${['小一','小二','小三','小四','小五','小六','中一','中二','中三','中四','中五','中六'].map(g => `<option ${state.editForm.grade===g?'selected':''}>${g}</option>`).join('')}
+                                        </select>
+                                        <select id="edit-subject" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                            ${['英文','全科'].map(s => `<option ${state.editForm.subject===s?'selected':''}>${s}</option>`).join('')}
+                                        </select>
+                                        <input type="number" id="edit-rate" value="${state.editForm.rate}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <input type="text" id="edit-parent" value="${state.editForm.parentName}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                        <input type="text" id="edit-address" value="${state.editForm.address}" class="px-2 py-1 bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded text-xs md:text-sm outline-none">
+                                    </div>
+                                    <div class="flex justify-end gap-2 mt-2">
+                                        <button onclick="cancelEdit()" class="px-3 py-1 text-xs bg-stone-50 dark:bg-stone-950 text-stone-500 dark:text-stone-400 border border-rose-100 dark:border-stone-800 rounded">取消</button>
+                                        <button onclick="saveEdit()" class="px-3 py-1 text-xs bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-700 text-white rounded">儲存</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        list.innerHTML += `
+                            <div class="flex flex-col p-3 md:p-4 bg-white dark:bg-stone-900 rounded-xl border border-rose-100 dark:border-stone-800 shadow-sm hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors relative group">
+                                <div class="flex justify-between items-start mb-2 md:mb-3">
+                                    <div class="flex items-center gap-2 md:gap-3">
+                                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-rose-100 dark:bg-rose-950/50 text-red-800 dark:text-rose-400 flex items-center justify-center font-bold border border-rose-200 dark:border-rose-900/50 text-base md:text-lg shrink-0">
+                                            ${source.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-base md:text-lg leading-tight">${source.name}</h4>
+                                            <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400">${source.grade} • ${source.subject}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-lg md:text-xl font-bold text-red-800 dark:text-rose-400">$${source.rate}</span>
+                                        <span class="text-[10px] md:text-xs text-stone-500 dark:text-stone-400">/hr</span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs md:text-sm text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-950 p-2 md:p-3 rounded-lg border border-rose-100 dark:border-stone-800">
+                                    <div class="flex items-center gap-1.5 md:gap-2"><i data-lucide="user" class="w-3 h-3 text-rose-400 shrink-0"></i><span class="truncate">${source.parentName || '未提供'}</span></div>
+                                    <div class="flex items-center gap-1.5 md:gap-2"><i data-lucide="map-pin" class="w-3 h-3 text-rose-400 shrink-0"></i><span class="truncate">${source.address || '未提供'}</span></div>
+                                </div>
+                                <div class="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white dark:bg-stone-900 p-1 rounded-lg shadow-sm border border-rose-100 dark:border-stone-800">
+                                    <button onclick="startEdit('${source.id}')" class="p-1.5 text-stone-500 dark:text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-stone-800 rounded"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                                    <button onclick="deleteSource('${source.id}')" class="p-1.5 text-stone-500 dark:text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-stone-800 rounded"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+        }
+
+        function renderAll() {
+            renderTabs();
+            renderDashboard();
+            renderCalendar();
+            renderRecords();
+            renderSettings();
+            lucide.createIcons();
+        }
+
+        // Actions
+        window.deleteRecord = function(id) {
+            if (confirm('確定要刪除這筆記錄嗎？總收入將會相應扣除。')) {
+                state.records = state.records.filter(r => r.id !== id);
+                renderAll();
+            }
+        };
+
+        window.deleteSource = function(id) {
+            if (confirm('確定要刪除這個學生嗎？(不會影響過往記錄)')) {
+                state.sources = state.sources.filter(s => s.id !== id);
+                if (state.formData.sourceId === id) state.formData.sourceId = '';
+                renderAll();
+            }
+        };
+
+        window.startEdit = function(id) {
+            const source = state.sources.find(s => s.id === id);
+            state.editingSourceId = id;
+            state.editForm = { ...source };
+            renderSettings();
+            lucide.createIcons();
+        };
+
+        window.cancelEdit = function() {
+            state.editingSourceId = null;
+            renderSettings();
+            lucide.createIcons();
+        };
+
+        window.saveEdit = function() {
+            const name = document.getElementById('edit-name').value;
+            const rate = parseFloat(document.getElementById('edit-rate').value);
+            if (!name || isNaN(rate)) return;
+
+            state.sources = state.sources.map(s => s.id === state.editingSourceId ? {
+                ...s,
+                name,
+                grade: document.getElementById('edit-grade').value,
+                subject: document.getElementById('edit-subject').value,
+                rate,
+                parentName: document.getElementById('edit-parent').value,
+                address: document.getElementById('edit-address').value
+            } : s);
+            
+            state.editingSourceId = null;
+            renderAll();
+        };
+
+        // Event Listeners Initialization
+        function initEvents() {
+            // Tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    state.activeTab = e.currentTarget.dataset.tab;
+                    renderAll();
+                });
+            });
+
+            // Dashboard Form
+            document.getElementById('record-date').addEventListener('change', (e) => { state.formData.date = e.target.value; });
+            document.getElementById('record-source').addEventListener('change', (e) => { 
+                state.formData.sourceId = e.target.value; 
+                renderDashboard(); 
+            });
+            document.getElementById('btn-duration-minus').addEventListener('click', () => {
+                state.formData.duration = Math.max(0.5, state.formData.duration - 0.5);
+                renderDashboard();
+            });
+            document.getElementById('btn-duration-plus').addEventListener('click', () => {
+                state.formData.duration += 0.5;
+                renderDashboard();
+            });
+            document.getElementById('record-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!state.formData.sourceId) return showToast('請先選擇學生！', 'error');
+                
+                const s = state.sources.find(src => src.id === state.formData.sourceId);
+                const newRecord = {
+                    id: Date.now(),
+                    date: state.formData.date,
+                    sourceId: s.id,
+                    sourceName: `${s.name} (${s.grade})`,
+                    duration: state.formData.duration,
+                    income: s.rate * state.formData.duration
+                };
+                
+                state.records.unshift(newRecord);
+                state.records.sort((a, b) => new Date(b.date) - new Date(a.date));
+                state.formData.sourceId = '';
+                state.formData.duration = 1.5;
+                renderAll();
+                showToast('記錄已成功儲存！');
+            });
+
+            // Chart Controls
+            document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
+            document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
+            document.getElementById('chart-period').addEventListener('change', (e) => { state.chartPeriod = Number(e.target.value); renderDashboard(); });
+
+            // Calendar Controls
+            document.getElementById('cal-prev').addEventListener('click', () => {
+                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+                renderCalendar();
+                lucide.createIcons();
+            });
+            document.getElementById('cal-next').addEventListener('click', () => {
+                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
+                renderCalendar();
+                lucide.createIcons();
+            });
+
+            // Settings Form
+            document.getElementById('add-student-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newSource = {
+                    id: `s_${Date.now()}`,
+                    name: document.getElementById('new-s-name').value,
+                    grade: document.getElementById('new-s-grade').value,
+                    subject: document.getElementById('new-s-subject').value,
+                    parentName: document.getElementById('new-s-parent').value,
+                    rate: parseFloat(document.getElementById('new-s-rate').value),
+                    address: document.getElementById('new-s-address').value
+                };
+                state.sources.push(newSource);
+                e.target.reset();
+                renderAll();
+                showToast('學生資料已新增！');
+            });
+
+            // Dark Mode Toggle
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                state.isDarkMode = !state.isDarkMode;
+                if (state.isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                    document.getElementById('theme-text').innerText = '切換明亮模式';
+                    document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.getElementById('theme-text').innerText = '切換黑暗模式';
+                    document.getElementById('theme-icon').setAttribute('data-lucide', 'moon');
+                }
+                renderAll();
+            });
+
+            // Export & Import Logic
+            document.getElementById('btn-export').addEventListener('click', () => {
+                const backupData = {
+                    sources: state.sources,
+                    records: state.records
+                };
+                const jsonStr = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const d = new Date();
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const filename = `tutoring_backup_${yyyy}${mm}${dd}.json`;
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast(`資料已成功匯出至 ${filename}`);
+            });
+
+            document.getElementById('btn-import-trigger').addEventListener('click', () => {
+                document.getElementById('file-import').click();
+            });
+
+            document.getElementById('file-import').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        if (parsed.sources && Array.isArray(parsed.sources) && parsed.records && Array.isArray(parsed.records)) {
+                            state.sources = parsed.sources;
+                            state.records = parsed.records;
+                            renderAll();
+                            showToast('進度恢復成功！所有資料已載入。');
+                        } else {
+                            showToast('檔案格式不正確，無法讀取！', 'error');
+                        }
+                    } catch (error) {
+                        showToast('讀取檔案失敗，請確保選擇正確的 JSON 檔案！', 'error');
+                    }
+                    // Reset input so the same file can be selected again if needed
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        // Initialize
+        initEvents();
+        renderAll();
+
+    </script>
+</body>
+</html>
