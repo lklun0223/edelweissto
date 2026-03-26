@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>補習收入追蹤系統</title>
+    <title>workie</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -323,7 +323,7 @@
                             <input type="number" min="0" id="new-s-rate" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址簡稱 (如: 馬鞍山)</label>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址簡稱</label>
                             <input type="text" id="new-s-address-short" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
                         </div>
                         <div class="sm:col-span-2 lg:col-span-3">
@@ -622,14 +622,17 @@
             const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
             const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
             
-            // 目標疊加：原目標 + 總支出
+            // 目標疊加：原目標 + 總支出 (新目標)
             const effectiveGoal = state.GOAL + totalExpenses;
             const currentTotal = state.INITIAL_AMOUNT + totalEarned;
+            
+            // 確保百分比的分母使用的是 effectiveGoal (新目標)
             const progressPercentage = Math.min((currentTotal / effectiveGoal) * 100, 100);
 
             document.getElementById('dash-current-total').innerText = `$${formatMoney(currentTotal)}`;
             document.getElementById('dash-earned-total').innerText = `(+$${formatMoney(totalEarned)})`;
             document.getElementById('dash-goal-text').innerText = `/ $${formatMoney(effectiveGoal)}`;
+            // 讓進度文字更明確顯示目前的計算基準
             document.getElementById('dash-progress-text').innerText = `進度: ${progressPercentage.toFixed(1)}%`;
             document.getElementById('dash-remaining-text').innerText = `尚欠: $${formatMoney(Math.max(0, effectiveGoal - currentTotal))}`;
             document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
