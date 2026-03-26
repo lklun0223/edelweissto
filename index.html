@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>追蹤系統</title>
+    <title>補習收入追蹤系統</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -79,6 +79,9 @@
                 <button data-tab="records" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50" title="記錄">
                     <i data-lucide="list" class="w-5 h-5 md:w-6 md:h-6"></i>
                 </button>
+                <button data-tab="expenses" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50" title="支出">
+                    <i data-lucide="circle-dollar-sign" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </button>
                 <button data-tab="settings" class="tab-btn flex items-center justify-center p-2.5 md:p-3 rounded-xl transition-colors text-rose-100 hover:bg-red-900/50 hover:text-white dark:text-rose-200 dark:hover:bg-red-900/50" title="設定與學生">
                     <i data-lucide="settings" class="w-5 h-5 md:w-6 md:h-6"></i>
                 </button>
@@ -95,7 +98,7 @@
                             <p id="dash-current-total" class="text-xl md:text-3xl font-bold text-red-800 dark:text-rose-400">$0</p>
                             <p id="dash-earned-total" class="text-sm md:text-base font-bold text-emerald-600 dark:text-emerald-400">(+$0)</p>
                         </div>
-                        <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400">/ $100,000</p>
+                        <p id="dash-goal-text" class="text-xs md:text-sm text-stone-500 dark:text-stone-400">/ $100,000</p>
                     </div>
                 </div>
                 <div class="space-y-2">
@@ -114,7 +117,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 <div class="lg:col-span-1 bg-white dark:bg-stone-900 p-5 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 h-fit transition-colors duration-300">
                     <h2 class="text-base md:text-lg font-bold mb-4 md:mb-5 flex items-center gap-2 text-red-700 dark:text-rose-400">
-                        <i data-lucide="plus" class="w-[18px] h-[18px]"></i> 新增今日記錄
+                        <i data-lucide="plus" class="w-5 h-5"></i> 新增今日記錄
                     </h2>
                     <form id="record-form" class="space-y-4 md:space-y-5">
                         <div>
@@ -159,7 +162,7 @@
                     <div class="bg-white dark:bg-stone-900 p-4 md:p-5 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
                             <h3 class="font-bold flex items-center gap-2 text-sm md:text-base">
-                                <i data-lucide="bar-chart-3" class="w-[18px] h-[18px] text-red-700 dark:text-rose-400"></i> 收入趨勢圖
+                                <i data-lucide="bar-chart-3" class="w-5 h-5 text-red-700 dark:text-rose-400"></i> 收入趨勢圖
                             </h3>
                             <div class="flex flex-wrap gap-2">
                                 <div class="flex bg-stone-50 dark:bg-stone-950 rounded-lg p-1 border border-rose-100 dark:border-stone-800">
@@ -239,6 +242,43 @@
             </div>
         </div>
 
+        <!-- ================= 支出頁面 (Expenses) ================= -->
+        <div id="view-expenses" class="view-section space-y-4 md:space-y-6 hidden fade-in">
+            <div class="bg-white dark:bg-stone-900 p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
+                
+                <h2 class="text-lg md:text-xl font-bold mb-4 md:mb-6 flex items-center gap-2 text-red-700 dark:text-rose-400">
+                    <i data-lucide="circle-dollar-sign" class="w-5 h-5"></i> 特別支出項目
+                </h2>
+                
+                <form id="expense-form" class="mb-6 md:mb-8 p-4 md:p-5 bg-stone-50 dark:bg-stone-950 rounded-xl border border-rose-100 dark:border-stone-800 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">日期</label>
+                            <input type="date" id="expense-date" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">目的 (例如: 買教材)</label>
+                            <input type="text" id="expense-purpose" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">金額 ($)</label>
+                            <input type="number" min="0" id="expense-amount" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="px-4 md:px-6 py-2 text-sm md:text-base bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-700 text-white font-medium rounded-lg transition-colors w-full sm:w-auto">新增支出</button>
+                    </div>
+                </form>
+
+                <h3 class="text-base md:text-lg font-bold mb-4 border-b border-rose-100 dark:border-stone-800 pb-2 flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-5 h-5 text-stone-500 dark:text-stone-400"></i> 支出紀錄
+                </h3>
+                <div id="expenses-list" class="space-y-3">
+                    <!-- 紀錄會由 JS 生成在這裡 -->
+                </div>
+            </div>
+        </div>
+
         <!-- ================= 設定頁 (Settings & Students) ================= -->
         <div id="view-settings" class="view-section space-y-4 md:space-y-6 hidden fade-in">
             <div class="bg-white dark:bg-stone-900 p-4 md:p-6 rounded-2xl shadow-sm border border-rose-100 dark:border-stone-800 transition-colors duration-300">
@@ -283,7 +323,7 @@
                             <input type="number" min="0" id="new-s-rate" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址簡稱</label>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">地址簡稱 (如: 馬鞍山)</label>
                             <input type="text" id="new-s-address-short" class="w-full px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
                         </div>
                         <div class="sm:col-span-2 lg:col-span-3">
@@ -299,6 +339,29 @@
                 <div class="space-y-4 mb-8">
                     <h3 id="students-count-title" class="text-xs md:text-sm font-medium text-stone-500 dark:text-stone-400 mb-2 md:mb-3">現有學生列表 (0)</h3>
                     <div id="students-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4"></div>
+                </div>
+
+                <!-- 系統數值設定 -->
+                <div class="mt-8 pt-6 border-t border-rose-100 dark:border-stone-800">
+                    <h3 class="text-sm md:text-base font-bold text-red-700 dark:text-rose-400 mb-2 flex items-center gap-2">
+                        <i data-lucide="target" class="w-4 h-4"></i> 系統數值設定
+                    </h3>
+                    <p class="text-xs md:text-sm text-stone-500 dark:text-stone-400 mb-4">
+                        設定您的原始目標與起點金額。總目標會自動加上「特別支出」的總和。
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">原目標金額 ($)</label>
+                            <input type="number" id="setting-goal" class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">原起點金額 ($)</label>
+                            <input type="number" id="setting-initial" class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-rose-100 dark:border-stone-800 rounded-lg focus:ring-1 focus:ring-rose-400 outline-none">
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button id="btn-save-sys-settings" class="px-4 py-2 text-sm bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-700 text-white font-medium rounded-lg transition-colors">儲存設定</button>
+                    </div>
                 </div>
 
                 <!-- 備份與恢復 (Export / Import) -->
@@ -362,6 +425,7 @@
             isDarkMode: false,
             sources: [], 
             records: [], 
+            expenses: [],
             formData: { date: getTodayString(), sourceId: '', duration: 1.5 },
             chartPeriod: 28,
             chartType: 'weekly',
@@ -383,6 +447,9 @@
                     const parsed = JSON.parse(localData);
                     state.sources = parsed.sources || [];
                     state.records = parsed.records || [];
+                    state.expenses = parsed.expenses || [];
+                    if (parsed.GOAL !== undefined) state.GOAL = parsed.GOAL;
+                    if (parsed.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = parsed.INITIAL_AMOUNT;
                 } catch (e) {
                     console.error("Local data parse error", e);
                 }
@@ -393,6 +460,9 @@
             localStorage.setItem('tutoring_data', JSON.stringify({
                 sources: state.sources,
                 records: state.records,
+                expenses: state.expenses,
+                GOAL: state.GOAL,
+                INITIAL_AMOUNT: state.INITIAL_AMOUNT,
                 lastUpdated: Date.now()
             }));
             renderAll();
@@ -449,9 +519,16 @@
                         const data = doc.data();
                         state.sources = data.sources || [];
                         state.records = data.records || [];
+                        state.expenses = data.expenses || [];
+                        if (data.GOAL !== undefined) state.GOAL = data.GOAL;
+                        if (data.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = data.INITIAL_AMOUNT;
+                        
                         localStorage.setItem('tutoring_data', JSON.stringify({
                             sources: state.sources,
                             records: state.records,
+                            expenses: state.expenses,
+                            GOAL: state.GOAL,
+                            INITIAL_AMOUNT: state.INITIAL_AMOUNT,
                             lastUpdated: Date.now()
                         }));
                         renderAll();
@@ -481,6 +558,9 @@
             db.collection('appData').doc('tutoring_tracker').set({
                 sources: state.sources,
                 records: state.records,
+                expenses: state.expenses,
+                GOAL: state.GOAL,
+                INITIAL_AMOUNT: state.INITIAL_AMOUNT,
                 lastUpdated: Date.now()
             }).then(() => {
                 setSyncStatus('synced');
@@ -503,7 +583,6 @@
             return `${monday.getMonth() + 1}/${monday.getDate()} - ${sunday.getMonth() + 1}/${sunday.getDate()}`;
         };
         
-        // 取得該學生總收入
         const getStudentTotalIncome = (sourceId) => {
             return state.records.filter(r => r.sourceId === sourceId).reduce((sum, r) => sum + r.income, 0);
         };
@@ -541,13 +620,18 @@
 
         function renderDashboard() {
             const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
+            const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
+            
+            // 目標疊加：原目標 + 總支出
+            const effectiveGoal = state.GOAL + totalExpenses;
             const currentTotal = state.INITIAL_AMOUNT + totalEarned;
-            const progressPercentage = Math.min((currentTotal / state.GOAL) * 100, 100);
+            const progressPercentage = Math.min((currentTotal / effectiveGoal) * 100, 100);
 
             document.getElementById('dash-current-total').innerText = `$${formatMoney(currentTotal)}`;
             document.getElementById('dash-earned-total').innerText = `(+$${formatMoney(totalEarned)})`;
+            document.getElementById('dash-goal-text').innerText = `/ $${formatMoney(effectiveGoal)}`;
             document.getElementById('dash-progress-text').innerText = `進度: ${progressPercentage.toFixed(1)}%`;
-            document.getElementById('dash-remaining-text').innerText = `尚欠: $${formatMoney(Math.max(0, state.GOAL - currentTotal))}`;
+            document.getElementById('dash-remaining-text').innerText = `尚欠: $${formatMoney(Math.max(0, effectiveGoal - currentTotal))}`;
             document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
 
             document.getElementById('record-date').value = state.formData.date;
@@ -566,11 +650,9 @@
                     const s = state.sources.find(src => src.id === id);
                     if (s) {
                         const totalIncome = getStudentTotalIncome(s.id);
-                        // 相容舊資料：如果沒有 addressShort，就拿 address 切割第一個字
                         const addrShort = s.addressShort || (s.address ? s.address.split(' ')[0] : '無');
                         const option = document.createElement('option');
                         option.value = s.id;
-                        // 格式：地址簡稱 學生姓名 ($總收入@時薪)
                         option.innerText = `${addrShort} ${s.name} ($${totalIncome}@${s.rate})`;
                         if (state.formData.sourceId === s.id) option.selected = true;
                         sourceSelect.appendChild(option);
@@ -810,6 +892,45 @@
             container.innerHTML = html;
         }
 
+        function renderExpenses() {
+            const list = document.getElementById('expenses-list');
+            if (state.expenses.length === 0) {
+                list.innerHTML = `<div class="p-6 text-center text-sm text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-950 rounded-xl border border-rose-100 dark:border-stone-800 border-dashed">尚未有任何支出紀錄。</div>`;
+                return;
+            }
+            
+            const sortedExpenses = [...state.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const maxExpense = Math.max(...state.expenses.map(e => e.amount), 1); // 避免除以 0
+            
+            let html = '';
+            sortedExpenses.forEach(exp => {
+                const percentage = (exp.amount / maxExpense) * 100;
+                html += `
+                    <div class="relative overflow-hidden flex items-center justify-between p-3 md:p-4 bg-white dark:bg-stone-900 rounded-xl border border-rose-100 dark:border-stone-800 hover:border-rose-300 transition-colors group">
+                        <!-- 進度條背景 -->
+                        <div class="absolute left-0 top-0 bottom-0 bg-rose-200/40 dark:bg-rose-900/30 transition-all duration-500" style="width: ${percentage}%"></div>
+                        
+                        <!-- 內容 -->
+                        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 w-full">
+                            <span class="text-xs md:text-sm text-stone-500 dark:text-stone-400 w-auto sm:w-24">${exp.date}</span>
+                            <span class="text-sm md:text-base font-medium flex-1">${exp.purpose}</span>
+                        </div>
+                        <div class="relative z-10 flex items-center gap-3 md:gap-4 shrink-0">
+                            <span class="text-sm md:text-base font-bold text-stone-700 dark:text-stone-300">-$${formatMoney(exp.amount)}</span>
+                            <button onclick="deleteExpense(${exp.id})" class="p-1.5 text-stone-400 hover:text-rose-500 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100" title="刪除紀錄">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+            
+            if(!document.getElementById('expense-date').value) {
+                document.getElementById('expense-date').value = getTodayString();
+            }
+        }
+
         function renderSettings() {
             document.getElementById('students-count-title').innerText = `現有學生列表 (${state.sources.length})`;
             const list = document.getElementById('students-list');
@@ -875,6 +996,10 @@
                     }
                 });
             }
+
+            // 填入系統設定數值
+            document.getElementById('setting-goal').value = state.GOAL;
+            document.getElementById('setting-initial').value = state.INITIAL_AMOUNT;
         }
 
         function renderAll() {
@@ -882,6 +1007,7 @@
             renderDashboard();
             renderCalendar();
             renderRecords();
+            renderExpenses();
             renderSettings();
             lucide.createIcons();
         }
@@ -889,6 +1015,13 @@
         window.deleteRecord = function(id) {
             if (confirm('確定要刪除這筆記錄嗎？總收入將會相應扣除。')) {
                 state.records = state.records.filter(r => r.id !== id);
+                saveState();
+            }
+        };
+
+        window.deleteExpense = function(id) {
+            if (confirm('確定要刪除這筆支出紀錄嗎？')) {
+                state.expenses = state.expenses.filter(e => e.id !== id);
                 saveState();
             }
         };
@@ -962,6 +1095,21 @@
                 showToast('記錄已成功儲存！');
             });
 
+            document.getElementById('expense-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newExpense = {
+                    id: Date.now(),
+                    date: document.getElementById('expense-date').value,
+                    purpose: document.getElementById('expense-purpose').value,
+                    amount: parseFloat(document.getElementById('expense-amount').value)
+                };
+                state.expenses.push(newExpense);
+                e.target.reset();
+                document.getElementById('expense-date').value = getTodayString();
+                saveState();
+                showToast('支出紀錄已新增！目標金額已自動疊加。');
+            });
+
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
             document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
             document.getElementById('chart-period').addEventListener('change', (e) => { state.chartPeriod = Number(e.target.value); renderDashboard(); });
@@ -983,6 +1131,17 @@
                 showToast('學生資料已新增！');
             });
 
+            document.getElementById('btn-save-sys-settings').addEventListener('click', () => {
+                const newGoal = parseFloat(document.getElementById('setting-goal').value);
+                const newInitial = parseFloat(document.getElementById('setting-initial').value);
+                
+                if (!isNaN(newGoal) && newGoal >= 0) state.GOAL = newGoal;
+                if (!isNaN(newInitial) && newInitial >= 0) state.INITIAL_AMOUNT = newInitial;
+                
+                saveState();
+                showToast('系統數值設定已儲存！');
+            });
+
             document.getElementById('theme-toggle').addEventListener('click', () => {
                 state.isDarkMode = !state.isDarkMode;
                 if (state.isDarkMode) {
@@ -998,7 +1157,10 @@
             });
 
             document.getElementById('btn-export').addEventListener('click', () => {
-                const jsonStr = JSON.stringify({ sources: state.sources, records: state.records }, null, 2);
+                const jsonStr = JSON.stringify({ 
+                    sources: state.sources, records: state.records, expenses: state.expenses,
+                    GOAL: state.GOAL, INITIAL_AMOUNT: state.INITIAL_AMOUNT
+                }, null, 2);
                 const blob = new Blob([jsonStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const d = new Date();
@@ -1019,6 +1181,9 @@
                         if (parsed.sources && parsed.records) {
                             state.sources = parsed.sources;
                             state.records = parsed.records;
+                            if (parsed.expenses) state.expenses = parsed.expenses;
+                            if (parsed.GOAL !== undefined) state.GOAL = parsed.GOAL;
+                            if (parsed.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = parsed.INITIAL_AMOUNT;
                             saveState();
                             showToast('進度恢復成功！所有資料已載入。');
                         } else showToast('檔案格式不正確！', 'error');
