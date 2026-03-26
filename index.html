@@ -228,21 +228,33 @@
                         收入趨勢
                     </h3>
                     <div class="flex neu-inset p-1">
-                        <button id="chart-type-weekly" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark">單週</button>
-                        <button id="chart-type-cumulative" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted">累積</button>
+                        <button id="chart-type-weekly" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all">單週</button>
+                        <button id="chart-type-cumulative" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">累積</button>
                     </div>
                 </div>
                 <!-- 時間段切換 -->
                 <div class="flex gap-2 mb-4" id="chart-period-container">
-                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark" data-days="28">4週</button>
-                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px]" data-days="56">8週</button>
-                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px]" data-days="180">半年</button>
-                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px]" data-days="365">1年</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark transition-all" data-days="28">4週</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] transition-all" data-days="56">8週</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] transition-all" data-days="180">半年</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] transition-all" data-days="365">1年</button>
                 </div>
                 <div class="h-48 w-full relative">
                     <canvas id="incomeChart"></canvas>
                 </div>
             </div>
+
+            <!-- 最近記錄 -->
+            <div class="neu-card p-5">
+                <h3 class="font-bold text-sm mb-3 flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-muted"><i data-lucide="clock" class="w-4 h-4"></i></div>
+                    最近記錄
+                </h3>
+                <div class="space-y-2" id="recent-records-body">
+                    <!-- Records injected here -->
+                </div>
+            </div>
+        </div>
 
         <!-- ================= 月曆 (Calendar) ================= -->
         <div id="view-calendar" class="view-section space-y-5 hidden">
@@ -1145,6 +1157,7 @@
 
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
             document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
+            
             // 時間段切換按鈕事件
             document.querySelectorAll('.chart-period-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1161,6 +1174,7 @@
                     renderChart();
                 });
             });
+
             document.getElementById('cal-prev').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1); renderCalendar(); lucide.createIcons(); });
             document.getElementById('cal-next').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1); renderCalendar(); lucide.createIcons(); });
 
