@@ -220,34 +220,29 @@
                 </form>
             </div>
 
-            <!-- 圖表 (Bar Chart) -->
+            <!-- 圖表 (Bar / Line Chart) -->
             <div class="neu-card p-5">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-3">
                     <h3 class="font-bold text-sm flex items-center gap-2">
                         <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></div>
                         收入趨勢
                     </h3>
                     <div class="flex neu-inset p-1">
-                        <button id="chart-type-weekly" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand">單週</button>
+                        <button id="chart-type-weekly" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark">單週</button>
                         <button id="chart-type-cumulative" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted">累積</button>
                     </div>
+                </div>
+                <!-- 時間段切換 -->
+                <div class="flex gap-2 mb-4" id="chart-period-container">
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark" data-days="28">4週</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px]" data-days="56">8週</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px]" data-days="180">半年</button>
+                    <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px]" data-days="365">1年</button>
                 </div>
                 <div class="h-48 w-full relative">
                     <canvas id="incomeChart"></canvas>
                 </div>
             </div>
-
-            <!-- 最近記錄 -->
-            <div class="neu-card p-5">
-                <h3 class="font-bold text-sm mb-3 flex items-center gap-2">
-                    <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-muted"><i data-lucide="clock" class="w-4 h-4"></i></div>
-                    最近記錄
-                </h3>
-                <div class="space-y-2" id="recent-records-body">
-                    <!-- Records injected here -->
-                </div>
-            </div>
-        </div>
 
         <!-- ================= 月曆 (Calendar) ================= -->
         <div id="view-calendar" class="view-section space-y-5 hidden">
@@ -727,14 +722,14 @@
             const cutoffDate = new Date(getTodayString());
             cutoffDate.setDate(cutoffDate.getDate() - state.chartPeriod);
             const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
-            let runningCumulative = state.INITIAL_AMOUNT;
+            
+            // 累積模式不再包含 INITIAL_AMOUNT，從 0 開始計算該期間的累積
+            let runningCumulative = 0; 
             const weeklyDataMap = {};
 
             sortedRecords.forEach(record => {
                 const recDate = new Date(record.date);
-                if (recDate < cutoffDate) {
-                    runningCumulative += record.income;
-                } else {
+                if (recDate >= cutoffDate) {
                     const weekLabel = getWeekRange(record.date);
                     if (!weeklyDataMap[weekLabel]) {
                         weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative };
@@ -753,31 +748,40 @@
             const btnCumulative = document.getElementById('chart-type-cumulative');
             
             if (state.chartType === 'weekly') {
-                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark";
-                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted";
+                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
             } else {
-                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark";
-                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted";
+                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
             }
 
             const ctx = document.getElementById('incomeChart').getContext('2d');
-            // Use Bar Chart with Soft UI Colors
-            const barColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC'; // Mint for weekly, Lavender for cumulative
+            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC'; // Mint for bar, Lavender for line
             const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
             const textColor = state.isDarkMode ? '#9CA3AF' : '#9CA3AF';
 
             if (chartInstance) chartInstance.destroy();
 
+            // 根據模式決定圖表類型 (bar 或 line)
+            const chartConfigType = state.chartType === 'weekly' ? 'bar' : 'line';
+
             chartInstance = new Chart(ctx, {
-                type: 'bar',
+                type: chartConfigType,
                 data: {
                     labels: labels.length ? labels : ['無資料'],
                     datasets: [{
-                        label: state.chartType === 'weekly' ? '單週收入' : '累積總額',
+                        label: state.chartType === 'weekly' ? '單週收入' : '期間累積',
                         data: dataset.length ? dataset : [0],
-                        backgroundColor: barColor,
+                        backgroundColor: state.chartType === 'weekly' ? mainColor : 'rgba(165, 180, 252, 0.2)',
+                        borderColor: mainColor,
+                        borderWidth: state.chartType === 'weekly' ? 0 : 3,
+                        fill: state.chartType === 'cumulative',
+                        tension: 0.4, // 讓折線圖變平滑
+                        pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                        pointBorderColor: mainColor,
+                        pointBorderWidth: 2,
+                        pointRadius: state.chartType === 'cumulative' ? 4 : 0,
                         borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
-                        borderSkipped: false,
                         barThickness: 'flex',
                         maxBarThickness: 30
                     }]
@@ -785,12 +789,16 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 800, // 加入流暢轉場動畫
+                        easing: 'easeOutQuart'
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
                             titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
-                            bodyColor: barColor,
+                            bodyColor: mainColor,
                             borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
                             borderWidth: 1,
                             padding: 10,
@@ -1137,6 +1145,22 @@
 
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
             document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
+            // 時間段切換按鈕事件
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // 更新狀態
+                    state.chartPeriod = parseInt(e.target.dataset.days);
+                    
+                    // 更新按鈕 UI (Soft UI 凹陷效果)
+                    document.querySelectorAll('.chart-period-btn').forEach(b => {
+                        b.className = "chart-period-btn flex-1 neu-btn py-1.5 text-[10px] transition-all";
+                    });
+                    e.target.className = "chart-period-btn flex-1 neu-btn py-1.5 text-[10px] text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark transition-all";
+                    
+                    // 重新渲染圖表 (帶有動畫)
+                    renderChart();
+                });
+            });
             document.getElementById('cal-prev').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1); renderCalendar(); lucide.createIcons(); });
             document.getElementById('cal-next').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1); renderCalendar(); lucide.createIcons(); });
 
