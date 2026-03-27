@@ -1130,10 +1130,15 @@
             const container = document.getElementById('trip-categories-container');
             const masterProgressContainer = document.getElementById('trip-master-progress');
             
-            // Waterfall Calculation Base
-            const totalIncome = state.records.reduce((sum, r) => sum + r.income, 0);
-            const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
-            let availableSavings = totalIncome - totalExpenses;
+            // Waterfall Calculation Base (更新邏輯：起初金額->旅遊，後來收入->特別支出->旅遊)
+            const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
+            const specialExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
+            
+            // 後來收入先填滿「特別支出」，如果有剩餘，才撥入旅遊預算
+            const remainingEarned = Math.max(0, totalEarned - specialExpenses);
+            
+            // 旅遊預算的真正可用資金 = 起初金額 + 剩下的後來收入
+            let availableSavings = state.INITIAL_AMOUNT + remainingEarned;
             
             let totalBudget = 0;
             state.tripCategories.forEach(cat => {
