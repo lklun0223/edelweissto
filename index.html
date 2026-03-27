@@ -139,18 +139,18 @@
     </div>
 
     <!-- Reduced top padding (pt-16) and spacing (space-y-4) -->
-    <div class="max-w-4xl mx-auto px-4 pt-12 space-y-6">
+    <div class="max-w-4xl mx-auto px-4 pt-14">
         
         <!-- ================= 主頁 (Dashboard) ================= -->
-        <div id="view-dashboard" class="view-section space-y-4 card-push-enter">
+        <div id="view-dashboard" class="view-section flex flex-col gap-6 card-push-enter">
             
             <!-- 總目標進度卡片 -->
-            <div class="neu-card p-5">
-                <div class="flex justify-between items-end mb-4">
+            <div class="neu-card p-6">
+                <div class="flex justify-between items-end mb-8">
                     <div>
-                        <h2 class="text-xs font-bold text-text-muted mb-1">總目標進度</h2>
+                        <h2 class="text-s font-bold text-text-muted mb-1">總目標進度</h2>
                         <div class="flex items-baseline gap-2">
-                            <p id="dash-current-total" class="text-3xl font-extrabold tracking-tight text-text-main dark:text-text-darkMain">$0</p>
+                            <p id="dash-current-total" class="text-4xl font-extrabold tracking-tight text-text-main dark:text-text-darkMain">$0</p>
                         </div>
                     </div>
                     <div class="text-right">
@@ -161,17 +161,21 @@
                             </div>
                         </div>
                         <p id="dash-earned-total" class="text-sm font-bold text-aux-mint mb-0.5">(+$0)</p>
-                        <p id="dash-remaining-text" class="text-xs font-bold text-brand">尚欠: $0</p>
+                        <p id="dash-remaining-text" class="text-xs font-bold text-brand">$0 to go</p>
                     </div>
                 </div>
                 <div class="space-y-2">
-                    <div class="flex justify-between text-[10px] font-bold text-text-muted">
+                    <div class="flex justify-between text-[12px] font-bold text-text-muted">
                         <span id="dash-progress-text">0%</span>
                         <span id="dash-goal-text">目標: $100,000</span>
                     </div>
-                    <div class="neu-inset h-3 overflow-hidden p-0.5">
-                        <div id="dash-progress-bar" class="bg-brand h-full rounded-full transition-all duration-1000 ease-out relative shadow-brand-glow" style="width: 0%">
-                            <div class="absolute inset-0 bg-white/20 w-full animate-shimmer"></div>
+                    <div class="neu-inset h-4 overflow-hidden p-0.1">
+                        <div id="dash-progress-bar" 
+     class="bg-brand h-full rounded-full transition-all duration-1000 ease-out relative shadow-brand-glow overflow-hidden" 
+     style="width: 0%">
+     
+                                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-[200%] -translate-x-full animate-shimmer backdrop-blur-[1px]"></div>
+</div>
                         </div>
                     </div>
                 </div>
@@ -251,9 +255,9 @@
         </div>
 
         <!-- ================= 月曆 (Calendar) ================= -->
-        <div id="view-calendar" class="view-section space-y-4 hidden">
+        <div id="view-calendar" class="view-section flex flex-col justify-center min-h-[80vh] gap-6 hidden">
             <div class="neu-card p-4 md:p-6">
-                <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center justify-between mt-3 mb-7">
                     <button id="cal-prev" class="neu-btn p-2"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
                     <div class="text-center">
                         <h2 id="cal-month-title" class="text-lg font-extrabold tracking-tight text-text-main dark:text-text-darkMain"></h2>
@@ -272,10 +276,10 @@
         </div>
 
         <!-- ================= 所有記錄頁 (Records) ================= -->
-        <div id="view-records" class="view-section space-y-4 hidden">
+        <div id="view-records" class="view-section flex flex-col gap-6 hidden">
             <div class="neu-card p-5">
-                <h2 class="text-lg font-bold mb-5 flex items-center gap-2 text-text-main dark:text-text-darkMain">
-                    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-brand"><i data-lucide="list" class="w-5 h-5"></i></div>
+                <h2 class="text-lg font-bold mb-5 flex items-center gap-2 text-aux-mint">
+                    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-mint"><i data-lucide="list" class="w-5 h-5"></i></div>
                     歷史記錄
                 </h2>
                 <div id="all-records-container" class="space-y-6"></div>
@@ -283,12 +287,12 @@
         </div>
 
         <!-- ================= 支出頁面 (Expenses) ================= -->
-        <div id="view-expenses" class="view-section space-y-4 hidden">
+        <div id="view-expenses" class="view-section flex flex-col gap-6 hidden">
             
             <!-- Trip Budget Module (Trip Mode Only) -->
             <div id="trip-budget-module" class="hidden neu-card p-5">
                 <h2 class="text-lg font-bold mb-4 flex items-center justify-between text-brand">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 text-text-main dark:text-text-darkMain">
                         <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-brand"><i data-lucide="plane" class="w-5 h-5"></i></div>
                         旅遊預算
                     </div>
@@ -302,48 +306,50 @@
                 <button onclick="addTripCategory()" class="mt-4 w-full neu-btn py-2 text-sm text-brand">+ 新增目的地</button>
             </div>
 
-            <!-- Smart Expense Tracker (Always Visible) -->
             <div id="smart-expense-module" class="neu-card p-5">
-                <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-aux-lavender">
-                    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i data-lucide="smartphone" class="w-5 h-5"></i></div>
-                    支出追蹤
-                </h2>
-                <p class="text-[10px] text-text-muted mb-3 leading-relaxed">請輸入本月 1 號至今的「累積總額」。系統會自動計算日均支出。跨月時數據將自動重置。</p>
-                <form id="smart-expense-form" class="space-y-3 mb-5 neu-inset p-4">
-                    <input type="date" id="se-date" class="neu-input" required>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">八達通總消費</label>
-                            <input type="number" id="se-oct-spent" class="neu-input" min="0" required>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">八達通總增值</label>
-                            <input type="number" id="se-oct-reload" class="neu-input" min="0" required>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">E-wallet總消費</label>
-                            <input type="number" id="se-ew-spent" class="neu-input" min="0" required>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">E-wallet總轉帳</label>
-                            <input type="number" id="se-ew-transfer" class="neu-input" min="0" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full neu-btn py-2 text-sm text-brand">新增快照</button>
-                </form>
-                
-                <div class="flex neu-inset p-1 mb-3">
-                    <button id="se-tab-daily" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all">日</button>
-                    <button id="se-tab-weekly" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">週</button>
-                    <button id="se-tab-monthly" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">月</button>
-                </div>
-
-                <div class="h-48 w-full relative mb-4">
-                    <canvas id="smartExpenseChart"></canvas>
-                </div>
-                <h3 class="text-sm font-bold mb-3 text-text-muted ml-1">歷史紀錄</h3>
-                <div id="smart-expense-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar"></div>
+    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-text-main dark:text-text-darkMain">
+        <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-blue-400"><i data-lucide="smartphone" class="w-5 h-5"></i></div>
+        支出追蹤
+    </h2>
+    
+    <p class="text-[10px] text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">請輸入本月 1 號至今的「累積總額」。系統會自動計算日均支出。跨月時數據將自動重置。</p>
+    
+    <form id="smart-expense-form" class="space-y-3 mb-5 neu-inset p-4">
+        <input type="date" id="se-date" class="neu-input" required>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">八達通總消費</label>
+                <input type="number" id="se-oct-spent" class="neu-input" min="0" required>
             </div>
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">八達通總增值</label>
+                <input type="number" id="se-oct-reload" class="neu-input" min="0" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">E-wallet總消費</label>
+                <input type="number" id="se-ew-spent" class="neu-input" min="0" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">E-wallet總轉帳</label>
+                <input type="number" id="se-ew-transfer" class="neu-input" min="0" required>
+            </div>
+        </div>
+        <button type="submit" class="w-full neu-btn py-2 text-sm text-blue-600 dark:text-blue-400">新增快照</button>
+    </form>
+    
+    <div class="flex neu-inset p-1 mb-3">
+        <button id="se-tab-daily" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-blue-600 dark:text-blue-400 bg-bg-light dark:bg-bg-dark transition-all">日</button>
+        <button id="se-tab-weekly" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">週</button>
+        <button id="se-tab-monthly" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">月</button>
+    </div>
+
+    <div class="h-48 w-full relative mb-4">
+        <canvas id="smartExpenseChart"></canvas>
+    </div>
+    
+    <h3 class="text-sm font-bold mb-3 text-text-muted ml-1">歷史紀錄</h3>
+    <div id="smart-expense-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar"></div>
+</div>
 
             <!-- 特別支出 -->
             <div class="neu-card p-5">
@@ -355,7 +361,7 @@
                 <form id="expense-form" class="mb-8 neu-inset p-4 space-y-4">
                     <div class="grid grid-cols-2 gap-3">
                         <div class="col-span-2">
-                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">目的 (例如: 買教材)</label>
+                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">目的 </label>
                             <input type="text" id="expense-purpose" class="neu-input" required>
                         </div>
                         <div>
@@ -376,7 +382,7 @@
         </div>
 
         <!-- ================= 設定頁 (Settings & Students) ================= -->
-        <div id="view-settings" class="view-section space-y-4 hidden">
+        <div id="view-settings" class="view-section flex flex-col gap-6 hidden">
             <div class="neu-card p-5">
                 <h2 class="text-lg font-bold flex items-center gap-2 text-text-main dark:text-text-darkMain mb-5">
                     <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
@@ -416,8 +422,10 @@
 
                 <h3 id="students-count-title" class="text-sm font-bold text-text-muted mb-3 ml-1">現有學生 (0)</h3>
                 <div id="students-list" class="space-y-3 mb-8"></div>
+           </div>
 
                 <!-- 系統數值設定 -->
+            <div class="neu-card p-5">
                 <div class="pt-6 border-t border-black/5 dark:border-white/5">
                     <h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">系統數值設定</h3>
                     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -473,7 +481,7 @@
 
     <!-- Sticky Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-xl border-t border-white/50 dark:border-white/5 z-50 pb-[env(safe-area-inset-bottom)]">
-        <div class="max-w-4xl mx-auto px-6 py-2 flex justify-between items-center">
+        <div class="max-w-4xl mx-auto px-6 py-3 flex justify-between items-center">
             <div class="flex items-center justify-center w-12 h-12 rounded-2xl bg-brand shadow-brand-glow text-white shrink-0 mr-2">
                 <i data-lucide="wallet" class="w-6 h-6"></i>
             </div>
@@ -801,7 +809,7 @@
             document.getElementById('dash-earned-total').innerText = `(+${symbol}${formatMoney(Math.round(displayEarned))})`;
             document.getElementById('dash-goal-text').innerText = `目標: ${symbol}${formatMoney(Math.round(displayGoal))}`;
             document.getElementById('dash-progress-text').innerText = `${progressPercentage.toFixed(1)}%`;
-            document.getElementById('dash-remaining-text').innerText = `尚欠: ${symbol}${formatMoney(Math.round(displayRemaining))}`;
+            document.getElementById('dash-remaining-text').innerText = `${symbol}${formatMoney(Math.round(displayRemaining))} to go`;
             document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
 
             document.getElementById('record-date').value = state.formData.date;
@@ -1642,7 +1650,7 @@
                 e.target.reset();
                 document.getElementById('expense-date').value = getTodayString();
                 saveState();
-                showToast('支出紀錄已新增！');
+                showToast('支出紀錄已新增');
             });
 
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
