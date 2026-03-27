@@ -54,7 +54,6 @@
                         }
                     },
                     boxShadow: {
-                        // Dual-Shadow Neumorphism (Soft UI)
                         'neu-light': '-5px -5px 15px rgba(255, 255, 255, 0.8), 5px 5px 15px rgba(0, 0, 0, 0.05)',
                         'neu-dark': '-5px -5px 15px rgba(255, 255, 255, 0.02), 5px 5px 15px rgba(0, 0, 0, 0.3)',
                         'neu-inset-light': 'inset 4px 4px 8px rgba(0, 0, 0, 0.04), inset -4px -4px 8px rgba(255, 255, 255, 0.9)',
@@ -82,7 +81,6 @@
             .no-scrollbar::-webkit-scrollbar { display: none; }
             .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             
-            /* Card-Push Animation */
             .card-push-enter {
                 animation: cardPush 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
             }
@@ -93,30 +91,21 @@
         }
 
         @layer components {
-            /* Neumorphic Card: Matches background, dual shadow, overflow visible to prevent clipping */
             .neu-card {
                 @apply bg-bg-light dark:bg-bg-dark shadow-neu-light dark:shadow-neu-dark rounded-3xl transition-all duration-500 overflow-visible border border-white/40 dark:border-white/5;
             }
-            
-            /* Primary Action Button */
             .neu-btn-primary {
                 @apply bg-brand text-white font-bold rounded-2xl shadow-brand-glow hover:opacity-90 active:scale-[0.97] transition-all duration-200 flex items-center justify-center;
             }
-
-            /* Standard Neumorphic Button (Pressable) */
             .neu-btn {
                 @apply bg-bg-light dark:bg-bg-dark text-text-main dark:text-text-darkMain font-bold rounded-xl shadow-neu-light dark:shadow-neu-dark active:shadow-neu-inset-light dark:active:shadow-neu-inset-dark active:scale-[0.98] transition-all duration-200;
             }
-
-            /* Inputs & Inset Areas */
             .neu-inset {
                 @apply bg-bg-light dark:bg-bg-dark shadow-neu-inset-light dark:shadow-neu-inset-dark rounded-2xl border border-transparent dark:border-white/5;
             }
             .neu-input {
                 @apply w-full bg-bg-light dark:bg-bg-dark shadow-neu-inset-light dark:shadow-neu-inset-dark rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand/30 text-text-main dark:text-text-darkMain transition-all duration-300 text-sm;
             }
-
-            /* Bottom Nav Tab */
             .nav-tab {
                 @apply flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 text-text-muted;
             }
@@ -126,7 +115,6 @@
         }
 
         body { 
-            /* Prevent horizontal scroll and add padding for bottom nav */
             overflow-x: hidden;
             padding-bottom: calc(80px + env(safe-area-inset-bottom));
             transition: background-color 0.5s ease, color 0.5s ease; 
@@ -135,25 +123,26 @@
 </head>
 <body class="min-h-screen bg-bg-light text-text-main dark:bg-bg-dark dark:text-text-darkMain selection:bg-brand/30">
 
-    <!-- 頂部狀態列 (Sync Status & Theme) -->
-    <div class="fixed top-0 left-0 w-full z-40 bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
-        <div class="max-w-4xl mx-auto px-4 py-2 flex justify-between items-center">
-            <div id="sync-badge" class="flex items-center gap-1.5 px-3 py-1 rounded-full shadow-neu-inset-light dark:shadow-neu-inset-dark transition-all duration-500 opacity-0 transform scale-90">
-                <span id="sync-dot" class="w-2 h-2 rounded-full bg-aux-peach"></span>
-                <span id="sync-text" class="text-[10px] font-bold text-text-muted whitespace-nowrap">連線中</span>
-            </div>
-            <button id="theme-toggle" class="p-2 rounded-full shadow-neu-light dark:shadow-neu-dark text-text-muted hover:text-brand transition-colors">
-                <i data-lucide="moon" class="w-4 h-4" id="theme-icon"></i>
-            </button>
+    <!-- Dynamic Island (Floating Top Nav) -->
+    <div id="dynamic-island" class="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-4 py-2 rounded-full backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border border-black/10 dark:border-white/10 shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+        <div id="sync-badge" class="flex items-center gap-1.5 px-2 py-1 rounded-full shadow-neu-inset-light dark:shadow-neu-inset-dark transition-all duration-500 opacity-0 hidden">
+            <span id="sync-dot" class="w-2 h-2 rounded-full bg-aux-peach"></span>
         </div>
+        <button id="mode-trip-toggle" class="p-1.5 rounded-full text-text-muted hover:text-brand transition-colors" title="Trip Mode">
+            <i data-lucide="plane" class="w-4 h-4" id="trip-icon"></i>
+        </button>
+        <div class="w-px h-4 bg-black/20 dark:bg-white/20"></div>
+        <button id="theme-toggle" class="p-1.5 rounded-full text-text-muted hover:text-brand transition-colors" title="Dark Mode">
+            <i data-lucide="moon" class="w-4 h-4" id="theme-icon"></i>
+        </button>
     </div>
 
-    <div class="max-w-4xl mx-auto px-4 pt-14 space-y-5">
+    <div class="max-w-4xl mx-auto px-4 pt-20 space-y-5">
         
         <!-- ================= 主頁 (Dashboard) ================= -->
         <div id="view-dashboard" class="view-section space-y-5 card-push-enter">
             
-            <!-- 總目標進度卡片 (Compact) -->
+            <!-- 總目標進度卡片 -->
             <div class="neu-card p-5">
                 <div class="flex justify-between items-end mb-4">
                     <div>
@@ -163,6 +152,12 @@
                         </div>
                     </div>
                     <div class="text-right">
+                        <div id="currency-toggle-container" class="hidden flex justify-end mb-2">
+                            <div class="flex neu-inset p-1">
+                                <button id="curr-hkd" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all">HKD</button>
+                                <button id="curr-eur" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">EUR</button>
+                            </div>
+                        </div>
                         <p id="dash-earned-total" class="text-sm font-bold text-aux-mint mb-0.5">(+$0)</p>
                         <p id="dash-remaining-text" class="text-xs font-bold text-brand">尚欠: $0</p>
                     </div>
@@ -180,7 +175,7 @@
                 </div>
             </div>
 
-            <!-- 新增記錄表單 (Compact) -->
+            <!-- 新增記錄表單 -->
             <div class="neu-card p-5">
                 <h2 class="text-sm font-bold mb-4 flex items-center gap-2 text-text-main dark:text-text-darkMain">
                     <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand"><i data-lucide="plus" class="w-4 h-4"></i></div>
@@ -232,7 +227,6 @@
                         <button id="chart-type-cumulative" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">累積</button>
                     </div>
                 </div>
-                <!-- 時間段切換 -->
                 <div class="flex gap-2 mb-4" id="chart-period-container">
                     <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark transition-all" data-days="28">4週</button>
                     <button class="chart-period-btn flex-1 neu-btn py-1.5 text-[10px] transition-all" data-days="56">8週</button>
@@ -250,9 +244,7 @@
                     <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-muted"><i data-lucide="clock" class="w-4 h-4"></i></div>
                     最近記錄
                 </h3>
-                <div class="space-y-2" id="recent-records-body">
-                    <!-- Records injected here -->
-                </div>
+                <div class="space-y-2" id="recent-records-body"></div>
             </div>
         </div>
 
@@ -290,6 +282,64 @@
 
         <!-- ================= 支出頁面 (Expenses) ================= -->
         <div id="view-expenses" class="view-section space-y-5 hidden">
+            
+            <!-- Trip Budget Module (Trip Mode Only) -->
+            <div id="trip-budget-module" class="hidden neu-card p-5">
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-brand">
+                    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-brand"><i data-lucide="plane" class="w-5 h-5"></i></div>
+                    Trip Budget Tracker
+                </h2>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">Departure Date</label>
+                        <input type="date" id="trip-departure-date" class="neu-input">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">Current Savings (HKD)</label>
+                        <input type="number" id="trip-current-savings" class="neu-input">
+                    </div>
+                </div>
+                <div id="trip-master-progress" class="mb-5"></div>
+                <div id="trip-categories-container" class="space-y-3"></div>
+                <button onclick="addTripCategory()" class="mt-4 w-full neu-btn py-2 text-sm text-brand">+ Add Destination</button>
+            </div>
+
+            <!-- Smart Expense Tracker (Trip Mode Only) -->
+            <div id="smart-expense-module" class="hidden neu-card p-5">
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-aux-lavender">
+                    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i data-lucide="smartphone" class="w-5 h-5"></i></div>
+                    Smart Expense Tracker
+                </h2>
+                <form id="smart-expense-form" class="space-y-3 mb-5 neu-inset p-4">
+                    <input type="date" id="se-date" class="neu-input" required>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">Octopus Spent</label>
+                            <input type="number" id="se-oct-spent" class="neu-input" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">Octopus Reload</label>
+                            <input type="number" id="se-oct-reload" class="neu-input" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">E-Wallet Spent</label>
+                            <input type="number" id="se-ew-spent" class="neu-input" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">E-Wallet Transfer</label>
+                            <input type="number" id="se-ew-transfer" class="neu-input" min="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full neu-btn py-2 text-sm text-brand">Add Snapshot</button>
+                </form>
+                <div class="h-48 w-full relative mb-4">
+                    <canvas id="smartExpenseChart"></canvas>
+                </div>
+                <h3 class="text-sm font-bold mb-3 text-text-muted ml-1">History</h3>
+                <div id="smart-expense-list" class="space-y-2"></div>
+            </div>
+
+            <!-- 特別支出 -->
             <div class="neu-card p-5">
                 <h2 class="text-lg font-bold mb-5 flex items-center gap-2 text-text-main dark:text-text-darkMain">
                     <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-peach"><i data-lucide="circle-dollar-sign" class="w-5 h-5"></i></div>
@@ -377,6 +427,15 @@
                     <button id="btn-save-sys-settings" class="w-full neu-btn py-2 text-sm">儲存設定</button>
                 </div>
 
+                <!-- Trip Mode 設定 -->
+                <div id="trip-settings-container" class="hidden pt-6 mt-6 border-t border-black/5 dark:border-white/5">
+                    <h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">Trip Mode 設定</h3>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">匯率 (1 EUR = ? HKD)</label>
+                        <input type="number" id="setting-exchange-rate" class="neu-input" step="0.01">
+                    </div>
+                </div>
+
                 <!-- 備份與恢復 -->
                 <div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
                     <h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">手動備份</h3>
@@ -402,12 +461,10 @@
     <nav class="fixed bottom-0 left-0 w-full bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-xl border-t border-white/50 dark:border-white/5 z-50 pb-[env(safe-area-inset-bottom)]">
         <div class="max-w-4xl mx-auto px-6 py-2 flex justify-between items-center">
             
-            <!-- Brand Icon -->
             <div class="flex items-center justify-center w-12 h-12 rounded-2xl bg-brand shadow-brand-glow text-white shrink-0 mr-2">
                 <i data-lucide="wallet" class="w-6 h-6"></i>
             </div>
 
-            <!-- Tabs -->
             <div class="flex flex-1 justify-between max-w-sm" id="tabs-container">
                 <button data-tab="dashboard" class="nav-tab active">
                     <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
@@ -434,7 +491,7 @@
     </nav>
 
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed top-14 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm"></div>
+    <div id="toast-container" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm"></div>
 
     <!-- Application Logic -->
     <script>
@@ -449,6 +506,19 @@
             INITIAL_AMOUNT: 57000,
             activeTab: 'dashboard',
             isDarkMode: false,
+            isTripMode: false,
+            displayCurrency: 'HKD',
+            exchangeRate: 8.5,
+            tripSavings: 0,
+            departureDate: '',
+            tripCategories: [
+                { id: 'cat_transport', name: 'Transport', type: 'base', items: [] },
+                { id: 'cat_housing', name: 'Housing', type: 'base', items: [] },
+                { id: 'cat_food', name: 'Food', type: 'base', items: [] },
+                { id: 'cat_misc', name: 'Miscellaneous', type: 'base', items: [] },
+                { id: 'cat_dest_vienna', name: 'Travel 1: Vienna', type: 'dest', items: [] }
+            ],
+            smartExpenses: [],
             sources: [], 
             records: [], 
             expenses: [],
@@ -461,6 +531,7 @@
         };
 
         let chartInstance = null;
+        let smartChartInstance = null;
         let db = null;
         let isFirebaseActive = false;
         let syncTimeout = null;
@@ -476,6 +547,18 @@
                     state.expenses = parsed.expenses || [];
                     if (parsed.GOAL !== undefined) state.GOAL = parsed.GOAL;
                     if (parsed.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = parsed.INITIAL_AMOUNT;
+                    if (parsed.isDarkMode !== undefined) state.isDarkMode = parsed.isDarkMode;
+                    if (parsed.isTripMode !== undefined) state.isTripMode = parsed.isTripMode;
+                    if (parsed.exchangeRate !== undefined) state.exchangeRate = parsed.exchangeRate;
+                    if (parsed.tripSavings !== undefined) state.tripSavings = parsed.tripSavings;
+                    if (parsed.departureDate !== undefined) state.departureDate = parsed.departureDate;
+                    if (parsed.tripCategories !== undefined) state.tripCategories = parsed.tripCategories;
+                    if (parsed.smartExpenses !== undefined) state.smartExpenses = parsed.smartExpenses;
+                    
+                    if (state.isDarkMode) {
+                        document.documentElement.classList.add('dark');
+                        document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+                    }
                 } catch (e) {
                     console.error("Local data parse error", e);
                 }
@@ -489,6 +572,13 @@
                 expenses: state.expenses,
                 GOAL: state.GOAL,
                 INITIAL_AMOUNT: state.INITIAL_AMOUNT,
+                isDarkMode: state.isDarkMode,
+                isTripMode: state.isTripMode,
+                exchangeRate: state.exchangeRate,
+                tripSavings: state.tripSavings,
+                departureDate: state.departureDate,
+                tripCategories: state.tripCategories,
+                smartExpenses: state.smartExpenses,
                 lastUpdated: Date.now()
             }));
             renderAll();
@@ -502,22 +592,18 @@
         function setSyncStatus(status) {
             const badge = document.getElementById('sync-badge');
             const dot = document.getElementById('sync-dot');
-            const text = document.getElementById('sync-text');
 
-            badge.classList.remove('opacity-0', 'scale-90');
+            badge.classList.remove('hidden', 'opacity-0');
             clearTimeout(syncTimeout);
 
             if (status === 'connecting') {
                 dot.className = 'w-2 h-2 rounded-full bg-aux-peach animate-pulse_fast';
-                text.innerText = '連線中';
             } else if (status === 'synced') {
                 dot.className = 'w-2 h-2 rounded-full bg-aux-mint';
-                text.innerText = '已同步';
-                syncTimeout = setTimeout(() => badge.classList.add('opacity-0', 'scale-90'), 5000);
+                syncTimeout = setTimeout(() => badge.classList.add('opacity-0', 'hidden'), 5000);
             } else if (status === 'offline') {
                 dot.className = 'w-2 h-2 rounded-full bg-brand';
-                text.innerText = '離線';
-                syncTimeout = setTimeout(() => badge.classList.add('opacity-0', 'scale-90'), 5000);
+                syncTimeout = setTimeout(() => badge.classList.add('opacity-0', 'hidden'), 5000);
             }
         }
 
@@ -545,15 +631,10 @@
                         state.expenses = data.expenses || [];
                         if (data.GOAL !== undefined) state.GOAL = data.GOAL;
                         if (data.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = data.INITIAL_AMOUNT;
+                        if (data.tripCategories !== undefined) state.tripCategories = data.tripCategories;
+                        if (data.smartExpenses !== undefined) state.smartExpenses = data.smartExpenses;
                         
-                        localStorage.setItem('tutoring_data', JSON.stringify({
-                            sources: state.sources,
-                            records: state.records,
-                            expenses: state.expenses,
-                            GOAL: state.GOAL,
-                            INITIAL_AMOUNT: state.INITIAL_AMOUNT,
-                            lastUpdated: Date.now()
-                        }));
+                        localStorage.setItem('tutoring_data', JSON.stringify(state));
                         renderAll();
                         setSyncStatus('synced');
                     } else {
@@ -584,6 +665,8 @@
                 expenses: state.expenses,
                 GOAL: state.GOAL,
                 INITIAL_AMOUNT: state.INITIAL_AMOUNT,
+                tripCategories: state.tripCategories,
+                smartExpenses: state.smartExpenses,
                 lastUpdated: Date.now()
             }).then(() => {
                 setSyncStatus('synced');
@@ -648,11 +731,10 @@
 
             const activeSec = document.getElementById(`view-${state.activeTab}`);
             activeSec.classList.remove('hidden');
-            // Trigger reflow to restart animation
             void activeSec.offsetWidth;
             activeSec.classList.add('card-push-enter');
             
-            renderAll(false); // Render without resetting tabs
+            renderAll(false); 
         }
 
         function renderDashboard() {
@@ -663,11 +745,25 @@
             const currentTotal = state.INITIAL_AMOUNT + totalEarned;
             const progressPercentage = Math.min((currentTotal / effectiveGoal) * 100, 100);
 
-            document.getElementById('dash-current-total').innerText = `$${formatMoney(currentTotal)}`;
-            document.getElementById('dash-earned-total').innerText = `(+$${formatMoney(totalEarned)})`;
-            document.getElementById('dash-goal-text').innerText = `目標: $${formatMoney(effectiveGoal)}`;
+            let displayTotal = currentTotal;
+            let displayEarned = totalEarned;
+            let displayGoal = effectiveGoal;
+            let displayRemaining = Math.max(0, effectiveGoal - currentTotal);
+            let symbol = '$';
+
+            if (state.isTripMode && state.displayCurrency === 'EUR') {
+                displayTotal = currentTotal / state.exchangeRate;
+                displayEarned = totalEarned / state.exchangeRate;
+                displayGoal = effectiveGoal / state.exchangeRate;
+                displayRemaining = displayRemaining / state.exchangeRate;
+                symbol = '€';
+            }
+
+            document.getElementById('dash-current-total').innerText = `${symbol}${formatMoney(Math.round(displayTotal))}`;
+            document.getElementById('dash-earned-total').innerText = `(+${symbol}${formatMoney(Math.round(displayEarned))})`;
+            document.getElementById('dash-goal-text').innerText = `目標: ${symbol}${formatMoney(Math.round(displayGoal))}`;
             document.getElementById('dash-progress-text').innerText = `${progressPercentage.toFixed(1)}%`;
-            document.getElementById('dash-remaining-text').innerText = `尚欠: $${formatMoney(Math.max(0, effectiveGoal - currentTotal))}`;
+            document.getElementById('dash-remaining-text').innerText = `尚欠: ${symbol}${formatMoney(Math.round(displayRemaining))}`;
             document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
 
             document.getElementById('record-date').value = state.formData.date;
@@ -699,7 +795,9 @@
             const previewDiv = document.getElementById('record-preview');
             if (state.formData.sourceId && state.sources.find(src => src.id === state.formData.sourceId)) {
                 const s = state.sources.find(src => src.id === state.formData.sourceId);
-                document.getElementById('record-preview-amount').innerText = `$${formatMoney(s.rate * state.formData.duration)}`;
+                let amt = s.rate * state.formData.duration;
+                if(state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                document.getElementById('record-preview-amount').innerText = `${symbol}${formatMoney(Math.round(amt))}`;
                 previewDiv.classList.remove('hidden');
             } else {
                 previewDiv.classList.add('hidden');
@@ -711,6 +809,8 @@
                 tbody.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">尚未有任何記錄</div>`;
             } else {
                 state.records.slice(0, 5).forEach(record => {
+                    let recAmt = record.income;
+                    if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
                     tbody.innerHTML += `
                         <div class="neu-inset p-3 flex items-center justify-between">
                             <div class="flex flex-col">
@@ -718,7 +818,7 @@
                                 <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
                             </div>
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-extrabold text-aux-mint">+$${record.income}</span>
+                                <span class="text-sm font-extrabold text-aux-mint">+${symbol}${Math.round(recAmt)}</span>
                                 <button onclick="deleteRecord(${record.id})" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="刪除">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
@@ -735,7 +835,6 @@
             cutoffDate.setDate(cutoffDate.getDate() - state.chartPeriod);
             const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
             
-            // 累積模式不再包含 INITIAL_AMOUNT，從 0 開始計算該期間的累積
             let runningCumulative = 0; 
             const weeklyDataMap = {};
 
@@ -746,8 +845,10 @@
                     if (!weeklyDataMap[weekLabel]) {
                         weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative };
                     }
-                    weeklyDataMap[weekLabel].income += record.income;
-                    runningCumulative += record.income;
+                    let amt = record.income;
+                    if(state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                    weeklyDataMap[weekLabel].income += amt;
+                    runningCumulative += amt;
                     weeklyDataMap[weekLabel].cumulative = runningCumulative;
                 }
             });
@@ -768,13 +869,13 @@
             }
 
             const ctx = document.getElementById('incomeChart').getContext('2d');
-            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC'; // Mint for bar, Lavender for line
+            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC'; 
             const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
             const textColor = state.isDarkMode ? '#9CA3AF' : '#9CA3AF';
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
 
             if (chartInstance) chartInstance.destroy();
 
-            // 根據模式決定圖表類型 (bar 或 line)
             const chartConfigType = state.chartType === 'weekly' ? 'bar' : 'line';
 
             chartInstance = new Chart(ctx, {
@@ -788,7 +889,7 @@
                         borderColor: mainColor,
                         borderWidth: state.chartType === 'weekly' ? 0 : 3,
                         fill: state.chartType === 'cumulative',
-                        tension: 0.4, // 讓折線圖變平滑
+                        tension: 0.4, 
                         pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
                         pointBorderColor: mainColor,
                         pointBorderWidth: 2,
@@ -801,10 +902,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: {
-                        duration: 800, // 加入流暢轉場動畫
-                        easing: 'easeOutQuart'
-                    },
+                    animation: { duration: 800, easing: 'easeOutQuart' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -816,14 +914,14 @@
                             padding: 10,
                             cornerRadius: 12,
                             displayColors: false,
-                            callbacks: { label: (ctx) => `$${formatMoney(ctx.raw)}` }
+                            callbacks: { label: (ctx) => `${symbol}${formatMoney(Math.round(ctx.raw))}` }
                         }
                     },
                     scales: {
                         x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } } },
                         y: { 
                             grid: { color: gridColor, drawBorder: false }, 
-                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' }, callback: (val) => `$${val}` },
+                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' }, callback: (val) => `${symbol}${val}` },
                             beginAtZero: true
                         }
                     }
@@ -847,23 +945,22 @@
             
             let monthTotal = 0;
             const todayStr = getTodayString();
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
 
-            // Empty slots
             for (let i = 0; i < startingDay; i++) {
                 grid.innerHTML += `<div class="min-h-[50px]"></div>`;
             }
 
-            // Days
             for (let i = 1; i <= daysInMonth; i++) {
                 const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 const dayRecords = state.records.filter(r => r.date === dStr);
-                const dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                let dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                if(state.isTripMode && state.displayCurrency === 'EUR') dayIncome = dayIncome / state.exchangeRate;
                 monthTotal += dayIncome;
 
                 const isToday = dStr === todayStr;
                 const hasIncome = dayIncome > 0;
                 
-                // Styling logic based on Soft UI
                 let baseClasses = "neu-inset p-1.5 min-h-[50px] flex flex-col justify-between transition-all";
                 let dateColor = "text-text-muted";
                 let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
@@ -874,9 +971,8 @@
                 }
                 
                 if (hasIncome) {
-                    // Give a soft mint tint to the background if there's income
                     baseClasses += " bg-aux-mint/10 dark:bg-aux-mint/5";
-                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none">$${dayIncome}</span>`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none">${symbol}${Math.round(dayIncome)}</span>`;
                 }
 
                 grid.innerHTML += `
@@ -889,7 +985,7 @@
                 `;
             }
             
-            document.getElementById('cal-month-total').innerText = `$${formatMoney(monthTotal)}`;
+            document.getElementById('cal-month-total').innerText = `${symbol}${formatMoney(Math.round(monthTotal))}`;
         }
 
         function renderRecords() {
@@ -909,6 +1005,7 @@
                 groups[monthKey][weekKey].push(record);
             });
 
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
             let html = '';
             Object.entries(groups).forEach(([month, weeks]) => {
                 html += `<div class="space-y-3">
@@ -916,16 +1013,20 @@
                     <div class="space-y-4">`;
                 
                 Object.entries(weeks).forEach(([week, weekRecords]) => {
-                    const weekTotal = weekRecords.reduce((sum, r) => sum + r.income, 0);
+                    let weekTotal = weekRecords.reduce((sum, r) => sum + r.income, 0);
+                    if(state.isTripMode && state.displayCurrency === 'EUR') weekTotal = weekTotal / state.exchangeRate;
+                    
                     html += `
                         <div class="neu-inset overflow-hidden">
                             <div class="bg-black/5 dark:bg-white/5 px-4 py-2 text-[10px] font-bold flex justify-between items-center">
                                 <span class="text-text-muted">${week}</span>
-                                <span class="text-aux-mint bg-aux-mint/10 px-2 py-0.5 rounded-md">週收入: $${weekTotal}</span>
+                                <span class="text-aux-mint bg-aux-mint/10 px-2 py-0.5 rounded-md">週收入: ${symbol}${Math.round(weekTotal)}</span>
                             </div>
                             <div class="flex flex-col p-2 space-y-1">
                     `;
                     weekRecords.forEach((record) => {
+                        let recAmt = record.income;
+                        if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
                         html += `
                             <div class="flex items-center justify-between p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
                                 <div class="flex flex-col">
@@ -933,7 +1034,7 @@
                                     <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <span class="text-sm font-extrabold text-aux-mint">+$${record.income}</span>
+                                    <span class="text-sm font-extrabold text-aux-mint">+${symbol}${Math.round(recAmt)}</span>
                                     <button onclick="deleteRecord(${record.id})" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="刪除記錄">
                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -952,39 +1053,283 @@
             const list = document.getElementById('expenses-list');
             if (state.expenses.length === 0) {
                 list.innerHTML = `<div class="p-6 text-center text-sm font-bold text-text-muted neu-inset">尚未有任何支出紀錄。</div>`;
-                return;
+            } else {
+                const sortedExpenses = [...state.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const maxExpense = Math.max(...state.expenses.map(e => e.amount), 1);
+                
+                let html = '';
+                sortedExpenses.forEach(exp => {
+                    const percentage = (exp.amount / maxExpense) * 100;
+                    html += `
+                        <div class="relative overflow-hidden flex items-center justify-between p-3 neu-inset group">
+                            <div class="absolute left-0 top-0 bottom-0 bg-aux-peach/20 transition-all duration-500 rounded-l-xl" style="width: ${percentage}%"></div>
+                            <div class="relative z-10 flex flex-col">
+                                <span class="text-[10px] font-bold text-text-muted">${exp.date}</span>
+                                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${exp.purpose}</span>
+                            </div>
+                            <div class="relative z-10 flex items-center gap-3">
+                                <span class="text-sm font-extrabold text-aux-peach">-$${formatMoney(exp.amount)}</span>
+                                <button onclick="deleteExpense(${exp.id})" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
             }
-            
-            const sortedExpenses = [...state.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const maxExpense = Math.max(...state.expenses.map(e => e.amount), 1);
-            
-            let html = '';
-            sortedExpenses.forEach(exp => {
-                const percentage = (exp.amount / maxExpense) * 100;
-                html += `
-                    <div class="relative overflow-hidden flex items-center justify-between p-3 neu-inset group">
-                        <!-- Soft Peach Progress Background -->
-                        <div class="absolute left-0 top-0 bottom-0 bg-aux-peach/20 transition-all duration-500 rounded-l-xl" style="width: ${percentage}%"></div>
-                        
-                        <div class="relative z-10 flex flex-col">
-                            <span class="text-[10px] font-bold text-text-muted">${exp.date}</span>
-                            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${exp.purpose}</span>
-                        </div>
-                        <div class="relative z-10 flex items-center gap-3">
-                            <span class="text-sm font-extrabold text-aux-peach">-$${formatMoney(exp.amount)}</span>
-                            <button onclick="deleteExpense(${exp.id})" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-            list.innerHTML = html;
             
             if(!document.getElementById('expense-date').value) {
                 document.getElementById('expense-date').value = getTodayString();
             }
         }
+
+        function renderTripBudget() {
+            if (!state.isTripMode) return;
+            
+            document.getElementById('trip-departure-date').value = state.departureDate;
+            document.getElementById('trip-current-savings').value = state.tripSavings;
+
+            const container = document.getElementById('trip-categories-container');
+            const masterProgressContainer = document.getElementById('trip-master-progress');
+            
+            let totalBudget = 0;
+            state.tripCategories.forEach(cat => {
+                cat.total = cat.items.reduce((sum, item) => sum + item.amount, 0);
+                totalBudget += cat.total;
+            });
+            
+            let savings = parseFloat(state.tripSavings) || 0;
+            let remainingSavings = savings;
+            
+            let html = '';
+            state.tripCategories.forEach((cat) => {
+                let allocated = Math.min(cat.total, remainingSavings);
+                remainingSavings = Math.max(0, remainingSavings - allocated);
+                let progress = cat.total > 0 ? (allocated / cat.total) * 100 : 0;
+                
+                let itemsHtml = cat.items.map(item => `
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-black/5 dark:border-white/5">
+                        <span class="text-text-main dark:text-text-darkMain">${item.name}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-text-main dark:text-text-darkMain">$${item.amount}</span>
+                            <button onclick="deleteTripItem('${cat.id}', '${item.id}')" class="text-brand hover:opacity-70"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                html += `
+                    <div class="neu-inset p-3">
+                        <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="toggleAccordion('${cat.id}')">
+                            <span class="font-bold text-sm flex items-center gap-2 text-text-main dark:text-text-darkMain">
+                                ${cat.name} 
+                                ${cat.type === 'dest' ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+                            </span>
+                            <span class="text-xs font-bold text-text-muted">$${allocated} / $${cat.total}</span>
+                        </div>
+                        <div class="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden mb-1">
+                            <div class="h-full bg-brand transition-all duration-500 shadow-brand-glow" style="width: ${progress}%"></div>
+                        </div>
+                        <div id="acc-${cat.id}" class="hidden mt-3 space-y-1">
+                            ${itemsHtml}
+                            <div class="flex gap-2 mt-3">
+                                <input type="text" id="new-item-name-${cat.id}" placeholder="Item Name" class="neu-input py-1.5 text-xs flex-1">
+                                <input type="number" id="new-item-amt-${cat.id}" placeholder="$" class="neu-input py-1.5 text-xs w-20">
+                                <button onclick="addTripItem('${cat.id}')" class="neu-btn px-3 text-xs text-brand font-extrabold">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            let totalRemaining = Math.max(0, totalBudget - savings);
+            let daysRemaining = 0;
+            if (state.departureDate) {
+                let diff = new Date(state.departureDate) - new Date();
+                daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            }
+            let dailyTarget = daysRemaining > 0 ? (totalRemaining / daysRemaining).toFixed(1) : 0;
+            let masterProgress = totalBudget > 0 ? Math.min((savings / totalBudget) * 100, 100) : 0;
+            
+            masterProgressContainer.innerHTML = `
+                <div class="flex justify-between text-xs font-bold text-text-muted mb-1.5">
+                    <span>Overall Progress: ${masterProgress.toFixed(1)}%</span>
+                    <span class="text-aux-mint">Target: $${dailyTarget}/day</span>
+                </div>
+                <div class="h-2.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden shadow-neu-inset-light dark:shadow-neu-inset-dark">
+                    <div class="h-full bg-aux-mint transition-all duration-500 relative" style="width: ${masterProgress}%">
+                        <div class="absolute inset-0 bg-white/20 w-full animate-shimmer"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[10px] font-bold text-text-muted mt-1.5">
+                    <span>Savings: $${savings}</span>
+                    <span>Total: $${totalBudget}</span>
+                </div>
+            `;
+        }
+
+        window.toggleAccordion = function(id) {
+            const el = document.getElementById(`acc-${id}`);
+            el.classList.toggle('hidden');
+        };
+
+        window.addTripItem = function(catId) {
+            const name = document.getElementById(`new-item-name-${catId}`).value;
+            const amount = parseFloat(document.getElementById(`new-item-amt-${catId}`).value);
+            if (!name || isNaN(amount)) return;
+            
+            const cat = state.tripCategories.find(c => c.id === catId);
+            if (cat) {
+                cat.items.push({ id: Date.now().toString(), name, amount });
+                saveState();
+            }
+        };
+
+        window.deleteTripItem = function(catId, itemId) {
+            const cat = state.tripCategories.find(c => c.id === catId);
+            if (cat) {
+                cat.items = cat.items.filter(i => i.id !== itemId);
+                saveState();
+            }
+        };
+
+        window.addTripCategory = function() {
+            const name = prompt('Enter Destination Name (e.g. Prague):');
+            if (name) {
+                state.tripCategories.push({
+                    id: `cat_dest_${Date.now()}`,
+                    name: name,
+                    type: 'dest',
+                    items: []
+                });
+                saveState();
+            }
+        };
+
+        window.deleteTripCategory = function(catId) {
+            if (confirm('Are you sure you want to delete this destination?')) {
+                state.tripCategories = state.tripCategories.filter(c => c.id !== catId);
+                saveState();
+            }
+        };
+
+        function renderSmartExpenses() {
+            if (!state.isTripMode) return;
+            
+            if(!document.getElementById('se-date').value) {
+                document.getElementById('se-date').value = getTodayString();
+            }
+
+            const listContainer = document.getElementById('smart-expense-list');
+            let sorted = [...state.smartExpenses].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            let chartData = [];
+            let html = '';
+
+            if (sorted.length === 0) {
+                listContainer.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">No records yet.</div>`;
+            } else {
+                for (let i = 0; i < sorted.length; i++) {
+                    let curr = sorted[i];
+                    let dailyAvg = 0;
+                    let realExpense = 0;
+                    let label = curr.date.slice(5);
+
+                    if (i > 0) {
+                        let prev = sorted[i-1];
+                        let isReset = curr.octSpent < prev.octSpent || curr.ewSpent < prev.ewSpent;
+                        
+                        let octSpentDiff = isReset ? curr.octSpent : curr.octSpent - prev.octSpent;
+                        let octReloadDiff = isReset ? curr.octReload : curr.octReload - prev.octReload;
+                        let ewSpentDiff = isReset ? curr.ewSpent : curr.ewSpent - prev.ewSpent;
+                        let ewTransferDiff = isReset ? curr.ewTransfer : curr.ewTransfer - prev.ewTransfer;
+                        
+                        realExpense = octSpentDiff + (ewSpentDiff - ewTransferDiff) + Math.max(0, ewTransferDiff - octReloadDiff);
+                        
+                        let days = (new Date(curr.date) - new Date(prev.date)) / (1000 * 60 * 60 * 24);
+                        if (days === 0) days = 1; 
+                        dailyAvg = realExpense / days;
+                        label = `${prev.date.slice(5)} to ${curr.date.slice(5)}`;
+                        
+                        chartData.push({ label, avg: dailyAvg });
+                    }
+
+                    html = `
+                        <div class="neu-inset p-3 flex justify-between items-center">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-bold text-text-muted">${curr.date}</span>
+                                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">
+                                    Oct: $${curr.octSpent} | EW: $${curr.ewSpent}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                ${i > 0 ? `<span class="text-xs font-extrabold text-aux-peach">Avg: $${dailyAvg.toFixed(1)}/d</span>` : '<span class="text-[10px] text-text-muted">Start</span>'}
+                                <button onclick="deleteSmartExpense('${curr.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    ` + html; 
+                }
+                listContainer.innerHTML = html;
+            }
+
+            const ctx = document.getElementById('smartExpenseChart').getContext('2d');
+            const textColor = state.isDarkMode ? '#9CA3AF' : '#9CA3AF';
+            const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+            if (smartChartInstance) smartChartInstance.destroy();
+            
+            smartChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.length ? chartData.map(d => d.label) : ['No Data'],
+                    datasets: [{
+                        label: 'Daily Avg ($)',
+                        data: chartData.length ? chartData.map(d => d.avg) : [0],
+                        backgroundColor: '#A5B4FC',
+                        borderRadius: 4,
+                        barThickness: 'flex',
+                        maxBarThickness: 30
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                            titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
+                            bodyColor: '#A5B4FC',
+                            borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 12,
+                            displayColors: false,
+                            callbacks: { label: (ctx) => `$${ctx.raw.toFixed(1)}/day` }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } } },
+                        y: { 
+                            grid: { color: gridColor, drawBorder: false }, 
+                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' }, callback: (val) => `$${val}` },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        window.deleteSmartExpense = function(id) {
+            if (confirm('Delete this snapshot?')) {
+                state.smartExpenses = state.smartExpenses.filter(e => e.id !== id);
+                saveState();
+            }
+        };
 
         function renderSettings() {
             document.getElementById('students-count-title').innerText = `現有學生 (${state.sources.length})`;
@@ -1040,6 +1385,7 @@
 
             document.getElementById('setting-goal').value = state.GOAL;
             document.getElementById('setting-initial').value = state.INITIAL_AMOUNT;
+            document.getElementById('setting-exchange-rate').value = state.exchangeRate;
         }
 
         function renderAll(updateTabs = true) {
@@ -1052,11 +1398,36 @@
                 document.getElementById(`view-${state.activeTab}`).classList.remove('hidden');
             }
             
+            const tripIcon = document.getElementById('trip-icon');
+            if (state.isTripMode) {
+                tripIcon.classList.add('text-brand');
+                document.getElementById('trip-budget-module').classList.remove('hidden');
+                document.getElementById('smart-expense-module').classList.remove('hidden');
+                document.getElementById('currency-toggle-container').classList.remove('hidden');
+                document.getElementById('trip-settings-container').classList.remove('hidden');
+                
+                if(state.displayCurrency === 'HKD') {
+                    document.getElementById('curr-hkd').className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                    document.getElementById('curr-eur').className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                } else {
+                    document.getElementById('curr-eur').className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                    document.getElementById('curr-hkd').className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                }
+            } else {
+                tripIcon.classList.remove('text-brand');
+                document.getElementById('trip-budget-module').classList.add('hidden');
+                document.getElementById('smart-expense-module').classList.add('hidden');
+                document.getElementById('currency-toggle-container').classList.add('hidden');
+                document.getElementById('trip-settings-container').classList.add('hidden');
+            }
+
             renderDashboard();
             renderCalendar();
             renderRecords();
             renderExpenses();
             renderSettings();
+            renderTripBudget();
+            renderSmartExpenses();
             lucide.createIcons();
         }
 
@@ -1112,6 +1483,18 @@
         };
 
         function initEvents() {
+            // Dynamic Island Scroll Logic
+            let lastScrollY = window.scrollY;
+            window.addEventListener('scroll', () => {
+                const island = document.getElementById('dynamic-island');
+                if (window.scrollY > lastScrollY && window.scrollY > 50) {
+                    island.style.transform = 'translate(-50%, -150%)';
+                } else {
+                    island.style.transform = 'translate(-50%, 0)';
+                }
+                lastScrollY = window.scrollY;
+            });
+
             document.querySelectorAll('.nav-tab').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     switchTab(e.currentTarget.dataset.tab);
@@ -1127,6 +1510,7 @@
                 e.preventDefault();
                 if (!state.formData.sourceId) return showToast('請先選擇學生！', 'error');
                 const s = state.sources.find(src => src.id === state.formData.sourceId);
+                
                 const newRecord = {
                     id: Date.now(), date: state.formData.date, sourceId: s.id,
                     sourceName: `${s.name} (${s.grade})`, duration: state.formData.duration,
@@ -1158,19 +1542,13 @@
             document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
             document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
             
-            // 時間段切換按鈕事件
             document.querySelectorAll('.chart-period-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    // 更新狀態
                     state.chartPeriod = parseInt(e.target.dataset.days);
-                    
-                    // 更新按鈕 UI (Soft UI 凹陷效果)
                     document.querySelectorAll('.chart-period-btn').forEach(b => {
                         b.className = "chart-period-btn flex-1 neu-btn py-1.5 text-[10px] transition-all";
                     });
                     e.target.className = "chart-period-btn flex-1 neu-btn py-1.5 text-[10px] text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark transition-all";
-                    
-                    // 重新渲染圖表 (帶有動畫)
                     renderChart();
                 });
             });
@@ -1195,12 +1573,14 @@
             document.getElementById('btn-save-sys-settings').addEventListener('click', () => {
                 const newGoal = parseFloat(document.getElementById('setting-goal').value);
                 const newInitial = parseFloat(document.getElementById('setting-initial').value);
+                const newRate = parseFloat(document.getElementById('setting-exchange-rate').value);
                 
                 if (!isNaN(newGoal) && newGoal >= 0) state.GOAL = newGoal;
                 if (!isNaN(newInitial) && newInitial >= 0) state.INITIAL_AMOUNT = newInitial;
+                if (!isNaN(newRate) && newRate > 0) state.exchangeRate = newRate;
                 
                 saveState();
-                showToast('系統數值設定已儲存！');
+                showToast('設定已儲存！');
             });
 
             document.getElementById('theme-toggle').addEventListener('click', () => {
@@ -1212,14 +1592,40 @@
                     document.documentElement.classList.remove('dark');
                     document.getElementById('theme-icon').setAttribute('data-lucide', 'moon');
                 }
-                renderAll();
+                saveState();
+            });
+
+            document.getElementById('mode-trip-toggle').addEventListener('click', () => {
+                state.isTripMode = !state.isTripMode;
+                saveState();
+                showToast(state.isTripMode ? 'Trip Mode 已開啟' : 'Trip Mode 已關閉');
+            });
+
+            document.getElementById('curr-hkd').addEventListener('click', () => { state.displayCurrency = 'HKD'; renderAll(); });
+            document.getElementById('curr-eur').addEventListener('click', () => { state.displayCurrency = 'EUR'; renderAll(); });
+
+            document.getElementById('trip-departure-date').addEventListener('change', (e) => { state.departureDate = e.target.value; saveState(); });
+            document.getElementById('trip-current-savings').addEventListener('change', (e) => { state.tripSavings = parseFloat(e.target.value) || 0; saveState(); });
+
+            document.getElementById('smart-expense-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newRecord = {
+                    id: Date.now().toString(),
+                    date: document.getElementById('se-date').value,
+                    octSpent: parseFloat(document.getElementById('se-oct-spent').value),
+                    octReload: parseFloat(document.getElementById('se-oct-reload').value),
+                    ewSpent: parseFloat(document.getElementById('se-ew-spent').value),
+                    ewTransfer: parseFloat(document.getElementById('se-ew-transfer').value)
+                };
+                state.smartExpenses.push(newRecord);
+                e.target.reset();
+                document.getElementById('se-date').value = getTodayString();
+                saveState();
+                showToast('Snapshot Added!');
             });
 
             document.getElementById('btn-export').addEventListener('click', () => {
-                const jsonStr = JSON.stringify({ 
-                    sources: state.sources, records: state.records, expenses: state.expenses,
-                    GOAL: state.GOAL, INITIAL_AMOUNT: state.INITIAL_AMOUNT
-                }, null, 2);
+                const jsonStr = JSON.stringify(state, null, 2);
                 const blob = new Blob([jsonStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const d = new Date();
@@ -1238,11 +1644,7 @@
                     try {
                         const parsed = JSON.parse(event.target.result);
                         if (parsed.sources && parsed.records) {
-                            state.sources = parsed.sources;
-                            state.records = parsed.records;
-                            if (parsed.expenses) state.expenses = parsed.expenses;
-                            if (parsed.GOAL !== undefined) state.GOAL = parsed.GOAL;
-                            if (parsed.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = parsed.INITIAL_AMOUNT;
+                            Object.assign(state, parsed);
                             saveState();
                             showToast('進度恢復成功！');
                         } else showToast('檔案格式不正確！', 'error');
