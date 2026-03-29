@@ -43,10 +43,11 @@
                             dark: '#1A1B1E',
                         },
                         text: {
-                            main: '#4A4A4A',
-                            muted: '#9CA3AF',
-                            darkMain: '#E5E7EB',
-                        },
+    main: '#4A4A4A',
+    muted: '#6B7280',
+    darkMain: '#E5E7EB',
+    darkMuted: '#9CA3AF',
+},
                         aux: {
                             mint: '#7BC67E',
                             lavender: '#A5B4FC',
@@ -56,7 +57,7 @@
                     boxShadow: {
                         'neu-light': '-5px -5px 15px rgba(255, 255, 255, 0.8), 5px 5px 15px rgba(0, 0, 0, 0.05)',
                         'neu-dark': '-5px -5px 15px rgba(255, 255, 255, 0.02), 5px 5px 15px rgba(0, 0, 0, 0.3)',
-                        'neu-inset-light': 'inset 4px 4px 8px rgba(0, 0, 0, 0.04), inset -4px -4px 8px rgba(255, 255, 255, 0.9)',
+                        'neu-inset-light': 'inset 4px 4px 8px rgba(0, 0, 0, 0.07), inset -4px -4px 8px rgba(255, 255, 255, 0.9)',
                         'neu-inset-dark': 'inset 4px 4px 8px rgba(0, 0, 0, 0.4), inset -4px -4px 8px rgba(255, 255, 255, 0.02)',
                         'brand-glow': '0 4px 15px rgba(255, 107, 107, 0.4)',
                     },
@@ -81,26 +82,81 @@
         @layer utilities {
             .no-scrollbar::-webkit-scrollbar { display: none; }
             .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.stagger-item {
+    opacity: 0;
+    animation: staggerFadeUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes staggerFadeUp {
+    0% { opacity: 0; transform: translateY(16px) scale(0.99); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
             
             .card-push-enter {
-                animation: cardPush 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-            }
-            @keyframes cardPush {
-                0% { opacity: 0; transform: translateX(20px) scale(0.98); }
-                100% { opacity: 1; transform: translateX(0) scale(1); }
-            }
+    animation: cardPushRight 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.card-push-enter-left {
+    animation: cardPushLeft 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.modal-slide-up {
+    animation: modalSlideUp 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.modal-slide-down {
+    animation: modalSlideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.modal-backdrop-in {
+    animation: backdropFadeIn 0.38s ease forwards;
+}
+.modal-backdrop-out {
+    animation: backdropFadeOut 0.3s ease forwards;
+}
+@keyframes modalSlideUp {
+    0% { opacity: 0; transform: translateY(100%); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes modalSlideDown {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(100%); }
+}
+@keyframes backdropFadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+@keyframes backdropFadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+@keyframes cardPushRight {
+    0% { opacity: 0; transform: translateX(40px) scale(0.97); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes cardPushLeft {
+    0% { opacity: 0; transform: translateX(-40px) scale(0.97); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
         }
 
         @layer components {
             .neu-card {
-                @apply bg-bg-light dark:bg-bg-dark shadow-neu-light dark:shadow-neu-dark rounded-3xl transition-all duration-500 overflow-visible border border-white/40 dark:border-white/5;
-            }
+    @apply bg-bg-light dark:bg-bg-dark shadow-neu-light dark:shadow-neu-dark rounded-3xl transition-all duration-500 overflow-visible border-2 border-white/70 dark:border-white/5;
+}
             .neu-btn-primary {
-                @apply bg-brand text-white font-bold rounded-2xl shadow-brand-glow hover:opacity-90 active:scale-[0.97] transition-all duration-200 flex items-center justify-center;
-            }
-            .neu-btn {
-                @apply bg-bg-light dark:bg-bg-dark text-text-main dark:text-text-darkMain font-bold rounded-xl shadow-neu-light dark:shadow-neu-dark active:shadow-neu-inset-light dark:active:shadow-neu-inset-dark active:scale-[0.98] transition-all duration-200;
-            }
+    @apply bg-brand text-white font-bold rounded-2xl shadow-brand-glow hover:opacity-90 transition-all duration-200 flex items-center justify-center;
+}
+.neu-btn-primary:active {
+    animation: btnSpring 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.neu-btn {
+    @apply bg-bg-light dark:bg-bg-dark text-text-main dark:text-text-darkMain font-bold rounded-xl shadow-neu-light dark:shadow-neu-dark active:shadow-neu-inset-light dark:active:shadow-neu-inset-dark transition-all duration-200;
+}
+.neu-btn:active {
+    animation: btnSpring 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes btnSpring {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(0.95); }
+    70%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
             .neu-inset {
                 @apply bg-bg-light dark:bg-bg-dark shadow-neu-inset-light dark:shadow-neu-inset-dark rounded-2xl border border-transparent dark:border-white/5;
             }
@@ -120,6 +176,13 @@
             padding-bottom: calc(80px + env(safe-area-inset-bottom));
             transition: background-color 0.5s ease, color 0.5s ease; 
         }
+
+
+.form-label {
+    @apply block text-[11px] font-bold text-text-muted mb-1 ml-1;
+}
+
+
     </style>
 </head>
 <body class="min-h-screen bg-bg-light text-text-main dark:bg-bg-dark dark:text-text-darkMain selection:bg-brand/30">
@@ -142,7 +205,7 @@
     <div class="max-w-4xl mx-auto px-4 pt-14">
         
         <!-- ================= 主頁 (Dashboard) ================= -->
-        <div id="view-dashboard" class="view-section card-push-enter">
+        <div id="view-dashboard" class="view-section card-push-enter-left">
     
     <div class="flex flex-col gap-6">
         
@@ -170,7 +233,7 @@
                     <span id="dash-progress-text">0%</span>
                     <span id="dash-goal-text">目標: $100,000</span>
                 </div>
-                <div class="neu-inset h-4 overflow-hidden p-0.1">
+                <div class="neu-inset h-4 overflow-hidden p-0.1 bg-black/5 dark:bg-white/5">
                     <div id="dash-progress-bar" 
                          class="bg-brand h-full rounded-full transition-all duration-1000 ease-out relative shadow-brand-glow overflow-hidden" 
                          style="width: 0%">
@@ -317,24 +380,43 @@
             
             <form id="smart-expense-form" class="space-y-3 mb-5 neu-inset p-4">
                 <input type="date" id="se-date" class="neu-input" required>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">八達通總消費</label>
-                        <input type="number" id="se-oct-spent" class="neu-input" min="0" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">八達通總增值</label>
-                        <input type="number" id="se-oct-reload" class="neu-input" min="0" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">E-wallet總消費</label>
-                        <input type="number" id="se-ew-spent" class="neu-input" min="0" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">E-wallet總轉帳</label>
-                        <input type="number" id="se-ew-transfer" class="neu-input" min="0" required>
-                    </div>
-                </div>
+                <div class="space-y-3">
+    <!-- 八達通 group -->
+    <div>
+        <div class="flex items-center gap-1.5 mb-2">
+            <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+            <span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">八達通</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
+                <input type="number" id="se-oct-spent" class="neu-input" min="0" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總增值</label>
+                <input type="number" id="se-oct-reload" class="neu-input" min="0" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-wallet group -->
+    <div>
+        <div class="flex items-center gap-1.5 mb-2">
+            <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+            <span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">E-wallet</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
+                <input type="number" id="se-ew-spent" class="neu-input" min="0" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總轉帳</label>
+                <input type="number" id="se-ew-transfer" class="neu-input" min="0" required>
+            </div>
+        </div>
+    </div>
+</div>
                 <button type="submit" class="w-full neu-btn py-2 text-sm text-blue-600 dark:text-blue-400">新增快照</button>
             </form>
             
@@ -479,34 +561,56 @@
 
     <!-- Sticky Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-xl border-t border-white/50 dark:border-white/5 z-50 pb-[env(safe-area-inset-bottom)]">
-        <div class="max-w-4xl mx-auto px-6 py-3 flex justify-between items-center">
-            <div class="flex items-center justify-center w-12 h-12 rounded-2xl bg-brand shadow-brand-glow text-white shrink-0 mr-2">
-                <i data-lucide="wallet" class="w-6 h-6"></i>
-            </div>
-            <div class="flex flex-1 justify-between max-w-sm" id="tabs-container">
-                <button data-tab="dashboard" class="nav-tab active">
-                    <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
-                    <span class="text-[9px] font-bold">主頁</span>
-                </button>
-                <button data-tab="calendar" class="nav-tab">
-                    <i data-lucide="calendar-days" class="w-5 h-5 mb-0.5"></i>
-                    <span class="text-[9px] font-bold">月曆</span>
-                </button>
-                <button data-tab="records" class="nav-tab">
-                    <i data-lucide="list" class="w-5 h-5 mb-0.5"></i>
-                    <span class="text-[9px] font-bold">記錄</span>
-                </button>
-                <button data-tab="expenses" class="nav-tab">
-                    <i data-lucide="receipt" class="w-5 h-5 mb-0.5"></i>
-                    <span class="text-[9px] font-bold">支出</span>
-                </button>
-                <button data-tab="settings" class="nav-tab">
-                    <i data-lucide="settings" class="w-5 h-5 mb-0.5"></i>
-                    <span class="text-[9px] font-bold">設定</span>
-                </button>
-            </div>
+    <div class="max-w-4xl mx-auto px-4 py-3">
+        <div class="flex justify-around items-center" id="tabs-container">
+            <button data-tab="dashboard" class="nav-tab active">
+                <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[9px] font-bold">主頁</span>
+            </button>
+            <button data-tab="calendar" class="nav-tab">
+                <i data-lucide="calendar-days" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[9px] font-bold">月曆</span>
+            </button>
+            <button data-tab="records" class="nav-tab">
+                <i data-lucide="list" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[9px] font-bold">記錄</span>
+            </button>
+            <button data-tab="expenses" class="nav-tab">
+                <i data-lucide="receipt" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[9px] font-bold">支出</span>
+            </button>
+            <button data-tab="settings" class="nav-tab">
+                <i data-lucide="settings" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[9px] font-bold">設定</span>
+            </button>
         </div>
-    </nav>
+    </div>
+</nav>
+
+<!-- ===================== Confirm Modal ===================== -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4">
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="confirm-modal-backdrop"></div>
+    <div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
+        <p id="confirm-modal-msg" class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed"></p>
+        <div class="flex gap-3">
+            <button id="confirm-modal-cancel" class="flex-1 neu-btn py-2.5 text-sm text-text-muted">取消</button>
+            <button id="confirm-modal-ok" class="flex-1 neu-btn-primary py-2.5 text-sm">確認刪除</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== Input Modal ===================== -->
+<div id="input-modal" class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4">
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="input-modal-backdrop"></div>
+    <div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
+        <p id="input-modal-msg" class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed"></p>
+        <input type="text" id="input-modal-field" class="neu-input text-sm">
+        <div class="flex gap-3">
+            <button id="input-modal-cancel" class="flex-1 neu-btn py-2.5 text-sm text-text-muted">取消</button>
+            <button id="input-modal-ok" class="flex-1 neu-btn-primary py-2.5 text-sm">確認</button>
+        </div>
+    </div>
+</div>
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm"></div>
@@ -737,49 +841,140 @@
             return state.records.filter(r => r.sourceId === sourceId).reduce((sum, r) => sum + r.income, 0);
         };
 
+// ===================== Modal Utilities =====================
+function openModal(modalEl) {
+    modalEl.classList.remove('hidden');
+    const card = modalEl.querySelector('.neu-card');
+    const backdrop = modalEl.querySelector('[id$="-backdrop"]');
+    if (card) { card.classList.remove('modal-slide-down'); card.classList.add('modal-slide-up'); }
+    if (backdrop) { backdrop.classList.remove('modal-backdrop-out'); backdrop.classList.add('modal-backdrop-in'); }
+}
+
+function closeModal(modalEl, callback) {
+    const card = modalEl.querySelector('.neu-card');
+    const backdrop = modalEl.querySelector('[id$="-backdrop"]');
+    if (card) { card.classList.remove('modal-slide-up'); card.classList.add('modal-slide-down'); }
+    if (backdrop) { backdrop.classList.remove('modal-backdrop-in'); backdrop.classList.add('modal-backdrop-out'); }
+    setTimeout(() => {
+        modalEl.classList.add('hidden');
+        if (callback) callback();
+    }, 300);
+}
+
+function showConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('confirm-modal');
+    document.getElementById('confirm-modal-msg').textContent = message;
+    openModal(modal);
+
+    const ok = document.getElementById('confirm-modal-ok');
+    const cancel = document.getElementById('confirm-modal-cancel');
+    const backdrop = document.getElementById('confirm-modal-backdrop');
+
+    function cleanup() {
+        ok.removeEventListener('click', handleOk);
+        cancel.removeEventListener('click', handleCancel);
+        backdrop.removeEventListener('click', handleCancel);
+    }
+    function handleOk() { closeModal(modal, () => { cleanup(); onConfirm(); }); }
+    function handleCancel() { closeModal(modal, cleanup); }
+
+    ok.addEventListener('click', handleOk);
+    cancel.addEventListener('click', handleCancel);
+    backdrop.addEventListener('click', handleCancel);
+}
+
+function showInputModal(message, placeholder, onConfirm) {
+    const modal = document.getElementById('input-modal');
+    document.getElementById('input-modal-msg').textContent = message;
+    const field = document.getElementById('input-modal-field');
+    field.value = '';
+    field.placeholder = placeholder || '';
+    openModal(modal);
+    setTimeout(() => field.focus(), 150);
+
+    const ok = document.getElementById('input-modal-ok');
+    const cancel = document.getElementById('input-modal-cancel');
+    const backdrop = document.getElementById('input-modal-backdrop');
+
+    function cleanup() {
+        ok.removeEventListener('click', handleOk);
+        cancel.removeEventListener('click', handleCancel);
+        backdrop.removeEventListener('click', handleCancel);
+        field.removeEventListener('keydown', handleKey);
+    }
+    function handleOk() {
+        const val = field.value.trim();
+        if (!val) return;
+        closeModal(modal, () => { cleanup(); onConfirm(val); });
+    }
+    function handleCancel() { closeModal(modal, cleanup); }
+    function handleKey(e) { if (e.key === 'Enter') handleOk(); }
+
+    ok.addEventListener('click', handleOk);
+    cancel.addEventListener('click', handleCancel);
+    backdrop.addEventListener('click', handleCancel);
+    field.addEventListener('keydown', handleKey);
+}
+
         function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const bgColor = type === 'success' ? 'bg-bg-light dark:bg-bg-dark text-aux-mint' : 'bg-bg-light dark:bg-bg-dark text-brand';
-            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
-            
-            toast.className = `${bgColor} px-4 py-3 rounded-2xl shadow-neu-light dark:shadow-neu-dark border border-white/50 dark:border-white/5 text-sm font-bold flex items-center gap-3 transform transition-all duration-400 -translate-y-10 opacity-0`;
-            toast.innerHTML = `<i data-lucide="${iconName}" class="w-5 h-5"></i> <span class="text-text-main dark:text-text-darkMain">${message}</span>`;
-            
-            container.appendChild(toast);
-            lucide.createIcons();
-            
-            requestAnimationFrame(() => toast.classList.remove('-translate-y-10', 'opacity-0'));
-            setTimeout(() => {
-                toast.classList.add('-translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 400);
-            }, 3500);
-        }
+    const container = document.getElementById('toast-container');
+
+    // Cap: remove oldest toast if already 3 showing
+    while (container.children.length >= 3) {
+        container.firstChild.remove();
+    }
+
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? `bg-bg-light dark:bg-bg-dark text-aux-mint` : `bg-bg-light dark:bg-bg-dark text-brand`;
+    const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+    toast.className = `${bgColor} px-4 py-3 rounded-2xl shadow-neu-light dark:shadow-neu-dark border border-white/50 dark:border-white/5 text-sm font-bold flex items-center gap-3 transform transition-all duration-400 -translate-y-10 opacity-0`;
+    toast.innerHTML = `<i data-lucide="${iconName}" class="w-5 h-5"></i><span class="text-text-main dark:text-text-darkMain">${message}</span>`;
+    container.appendChild(toast);
+    lucide.createIcons();
+    requestAnimationFrame(() => {
+        toast.classList.remove('-translate-y-10', 'opacity-0');
+    });
+    setTimeout(() => {
+        toast.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 400);
+    }, 3500);
+}
 
         function switchTab(newTab) {
-            if (state.activeTab === newTab) return;
-            state.activeTab = newTab;
-            
-            document.querySelectorAll('.nav-tab').forEach(btn => {
-                if (btn.dataset.tab === state.activeTab) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
+    if (state.activeTab === newTab) return;
 
-            document.querySelectorAll('.view-section').forEach(sec => {
-                sec.classList.add('hidden');
-                sec.classList.remove('card-push-enter');
-            });
+    const TAB_ORDER = ['dashboard', 'calendar', 'records', 'expenses', 'settings'];
+    const oldIndex = TAB_ORDER.indexOf(state.activeTab);
+    const newIndex = TAB_ORDER.indexOf(newTab);
+    const goingRight = newIndex > oldIndex;
 
-            const activeSec = document.getElementById(`view-${state.activeTab}`);
-            activeSec.classList.remove('hidden');
-            void activeSec.offsetWidth;
-            activeSec.classList.add('card-push-enter');
-            
-            renderAll(false); 
-        }
+    state.activeTab = newTab;
+
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+        if (btn.dataset.tab === state.activeTab) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    document.querySelectorAll('.view-section').forEach(sec => {
+        sec.classList.add('hidden');
+        sec.classList.remove('card-push-enter', 'card-push-enter-left');
+    });
+
+    const activeSec = document.getElementById(`view-${state.activeTab}`);
+activeSec.classList.remove('hidden');
+void activeSec.offsetWidth;
+activeSec.classList.add(goingRight ? 'card-push-enter' : 'card-push-enter-left');
+renderAll(false);
+
+// Stagger neu-cards within the new tab
+const cards = activeSec.querySelectorAll('.neu-card');
+cards.forEach((card, i) => {
+    card.classList.remove('stagger-item');
+    void card.offsetWidth;
+    card.style.animationDelay = `${i * 0.06}s`;
+    card.classList.add('stagger-item');
+});
+}
 
         function renderDashboard() {
             const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
@@ -807,8 +1002,14 @@
             document.getElementById('dash-earned-total').innerText = `(+${symbol}${formatMoney(Math.round(displayEarned))})`;
             document.getElementById('dash-goal-text').innerText = `目標: ${symbol}${formatMoney(Math.round(displayGoal))}`;
             document.getElementById('dash-progress-text').innerText = `${progressPercentage.toFixed(1)}%`;
+document.getElementById('dash-progress-text').style.color = progressPercentage < 5
+    ? 'var(--color-brand, #FF6B6B)'
+    : '';
             document.getElementById('dash-remaining-text').innerText = `${symbol}${formatMoney(Math.round(displayRemaining))} to go`;
-            document.getElementById('dash-progress-bar').style.width = `${progressPercentage}%`;
+            const progressBar = document.getElementById('dash-progress-bar');
+const progressPercentageClamped = Math.max(progressPercentage, progressPercentage > 0 ? 4 : 0);
+progressBar.style.width = `${progressPercentageClamped}%`;
+progressBar.style.opacity = progressPercentage > 0 ? '1' : '0';
 
             document.getElementById('record-date').value = state.formData.date;
             document.getElementById('record-duration').innerText = state.formData.duration;
@@ -850,8 +1051,16 @@
             const tbody = document.getElementById('recent-records-body');
             tbody.innerHTML = '';
             if (state.records.length === 0) {
-                tbody.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">尚未有任何記錄</div>`;
-            } else {
+    tbody.innerHTML = `
+        <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
+            <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                <i data-lucide="inbox" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
+            <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
+        </div>`;
+    lucide.createIcons();
+} else {
                 state.records.slice(0, 5).forEach(record => {
                     let recAmt = record.income;
                     if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
@@ -1005,7 +1214,7 @@
                 const isToday = dStr === todayStr;
                 const hasIncome = dayIncome > 0;
                 
-                let baseClasses = "neu-inset p-1.5 min-h-[50px] flex flex-col justify-between transition-all";
+                let baseClasses = `neu-inset p-1.5 min-h-[50px] flex flex-col justify-between transition-all cursor-pointer active:scale-[0.95] active:shadow-neu-inset-light dark:active:shadow-neu-inset-dark select-none`;
                 let dateColor = "text-text-muted";
                 let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
 
@@ -1015,8 +1224,8 @@
                 }
                 
                 if (hasIncome) {
-                    baseClasses += " bg-aux-mint/10 dark:bg-aux-mint/5";
-                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none">${symbol}${Math.round(dayIncome)}</span>`;
+                    baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
+incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
                 }
 
                 grid.innerHTML += `
@@ -1186,14 +1395,15 @@
                         <div class="absolute left-0 top-0 bottom-0 bg-blue-100 dark:bg-blue-900/40 transition-all duration-700 ease-out" style="width: ${progress}%"></div>
                         
                         <div class="relative z-10 p-3">
-                            <div class="flex justify-between items-center cursor-pointer" onclick="toggleAccordion('${cat.id}')">
-                                <span class="font-bold text-sm flex items-center gap-2 text-text-main dark:text-text-darkMain">
-                                    ${cat.name} 
-                                    ${cat.type === 'dest' ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
-                                </span>
-                                <span class="text-xs font-bold text-text-muted">$${allocated.toFixed(0)} / $${cat.total}</span>
-                            </div>
-                            <div id="acc-${cat.id}" class="hidden mt-3 space-y-1 bg-white/50 dark:bg-black/20 p-2 rounded-xl backdrop-blur-sm">
+                            <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleAccordion('${cat.id}')">
+    <span class="font-bold text-sm flex items-center gap-2 text-text-main dark:text-text-darkMain">
+        <i data-lucide="chevron-down" id="chevron-${cat.id}" class="w-3.5 h-3.5 text-text-muted transition-transform duration-300"></i>
+        ${cat.name}
+        ${cat.type === 'dest' ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+    </span>
+    <span class="text-xs font-bold text-text-muted">${allocated.toFixed(0)} / ${cat.total}</span>
+</div>
+                            <div id="acc-${cat.id}" class="hidden mt-3 space-y-1 bg-white/50 dark:bg-black/20 p-2 rounded-xl backdrop-blur-sm overflow-hidden" style="transition: max-height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;">
                                 ${itemsHtml}
                                 <div class="flex gap-2 mt-3">
                                     <input type="text" id="new-item-name-${cat.id}" placeholder="Item Name" class="neu-input py-1.5 text-xs flex-1 bg-white dark:bg-black/50">
@@ -1234,10 +1444,33 @@
             `;
         }
 
-        window.toggleAccordion = function(id) {
-            const el = document.getElementById(`acc-${id}`);
-            el.classList.toggle('hidden');
-        };
+        window.toggleAccordion = function(catId) {
+    const el = document.getElementById(`acc-${catId}`);
+    const chevron = document.getElementById(`chevron-${catId}`);
+    const isOpen = !el.classList.contains('hidden');
+
+    if (isOpen) {
+        el.style.maxHeight = el.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+            el.style.maxHeight = '0px';
+            el.style.opacity = '0';
+        });
+        setTimeout(() => el.classList.add('hidden'), 300);
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+        el.classList.remove('hidden');
+        el.style.maxHeight = '0px';
+        el.style.opacity = '0';
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.maxHeight = el.scrollHeight + 'px';
+                el.style.opacity = '1';
+            });
+        });
+        setTimeout(() => el.style.maxHeight = 'none', 300);
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    }
+};
 
         window.addTripItem = function(catId) {
             const name = document.getElementById(`new-item-name-${catId}`).value;
@@ -1260,24 +1493,27 @@
         };
 
         window.addTripCategory = function() {
-            const name = prompt('輸入目的地名稱 (例如: Prague):');
-            if (name) {
-                state.tripCategories.push({
-                    id: `cat_dest_${Date.now()}`,
-                    name: name,
-                    type: 'dest',
-                    items: []
-                });
-                saveState();
-            }
-        };
+    showInputModal('輸入目的地名稱', '例：Travel 2: Prague', (name) => {
+        state.tripCategories.push({
+            id: 'cat_dest_' + Date.now(),
+            name: name.trim(),
+            type: 'dest',
+            items: []
+        });
+        saveState();
+        showToast(`「${name.trim()}」已新增`);
+    });
+};
 
         window.deleteTripCategory = function(catId) {
-            if (confirm('確定要刪除這個目的地嗎？')) {
-                state.tripCategories = state.tripCategories.filter(c => c.id !== catId);
-                saveState();
-            }
-        };
+    const cat = state.tripCategories.find(c => c.id === catId);
+    if (!cat) return;
+    showConfirmModal(`確定要刪除「${cat.name}」及其所有項目？`, () => {
+        state.tripCategories = state.tripCategories.filter(c => c.id !== catId);
+        saveState();
+        showToast(`「${cat.name}」已刪除`);
+    });
+};
 
         function renderSmartExpenses() {
             if(!document.getElementById('se-date').value) {
@@ -1433,11 +1669,12 @@
         }
 
         window.deleteSmartExpense = function(id) {
-            if (confirm('確定要刪除這筆快照嗎？')) {
-                state.smartExpenses = state.smartExpenses.filter(e => e.id !== id);
-                saveState();
-            }
-        };
+    showConfirmModal('確定要刪除這筆快照嗎？', () => {
+        state.smartExpenses = state.smartExpenses.filter(e => e.id !== id);
+        saveState();
+        showToast('快照已刪除');
+    });
+};
 
         function renderSettings() {
             document.getElementById('students-count-title').innerText = `現有學生 (${state.sources.length})`;
@@ -1544,26 +1781,31 @@
         }
 
         window.deleteRecord = function(id) {
-            if (confirm('確定要刪除這筆記錄嗎？總收入將會相應扣除。')) {
-                state.records = state.records.filter(r => r.id !== id);
-                saveState();
-            }
-        };
+    showConfirmModal('確定要刪除這筆記錄嗎？\n總收入將會相應扣除。', () => {
+        state.records = state.records.filter(r => r.id !== id);
+        saveState();
+        showToast('記錄已刪除');
+    });
+};
 
         window.deleteExpense = function(id) {
-            if (confirm('確定要刪除這筆支出紀錄嗎？')) {
-                state.expenses = state.expenses.filter(e => e.id !== id);
-                saveState();
-            }
-        };
+    showConfirmModal('確定要刪除這筆支出紀錄嗎？', () => {
+        state.expenses = state.expenses.filter(e => e.id !== id);
+        saveState();
+        showToast('支出已刪除');
+    });
+};
 
         window.deleteSource = function(id) {
-            if (confirm('確定要刪除這個學生嗎？(不會影響過往記錄)')) {
-                state.sources = state.sources.filter(s => s.id !== id);
-                if (state.formData.sourceId === id) state.formData.sourceId = '';
-                saveState();
-            }
-        };
+    const source = state.sources.find(s => s.id === id);
+    if (!source) return;
+    showConfirmModal(`確定要刪除學生「${source.name}」？\n相關記錄不會被刪除。`, () => {
+        state.sources = state.sources.filter(s => s.id !== id);
+        if (state.formData.sourceId === id) state.formData.sourceId = '';
+        saveState();
+        showToast(`學生「${source.name}」已刪除`);
+    });
+};
 
         window.startEdit = function(id) {
             const source = state.sources.find(s => s.id === id);
