@@ -86,6 +86,17 @@
     opacity: 0;
     animation: staggerFadeUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(28px) scale(0.99);
+    transition: opacity 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition-delay: var(--reveal-delay, 0ms);
+}
+.scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
 @keyframes staggerFadeUp {
     0% { opacity: 0; transform: translateY(16px) scale(0.99); }
     100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -179,6 +190,27 @@
 
 
 /* ===== Desktop Layout ===== */
+@media (max-width: 1023px) {
+    #view-calendar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 72px; /* 底部 nav bar 高度 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        overflow: hidden;
+    }
+    #view-calendar.hidden {
+        display: none !important;
+    }
+    #view-calendar > div {
+        width: 100%;
+        max-width: 480px;
+    }
+}
 @media (min-width: 1024px) {
     body {
         padding-bottom: 0;
@@ -316,7 +348,7 @@
         
         
     <!-- Mobile: original layout / Desktop: 3-col grid -->
-<div id="mobile-container" class="max-w-4xl mx-auto px-4 pt-14 lg:hidden">
+<div id="mobile-container" class="max-w-4xl mx-auto px-4 pt-0 lg:hidden">
 </div>
 
 <div id="desktop-container" class="desktop-main hidden lg:grid">
@@ -449,7 +481,7 @@
 
         <!-- ================= 月曆 (Calendar) ================= -->
         <div id="view-calendar" class="view-section hidden">
-    <div class="flex flex-col gap-6 min-h-[vh] justify-center">
+    <div class="flex flex-col gap-6">
         
         <div class="neu-card p-4 md:p-6">
             <div class="flex items-center justify-between mt-3 mb-7">
@@ -465,9 +497,31 @@
                 <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-text-muted mb-2">
                     <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
                 </div>
-                <div id="calendar-grid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
+                                <div id="calendar-grid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
             </div>
         </div>
+
+        <!-- 底部資訊欄 -->
+        <div class="flex justify-around items-center px-2 pt-4 pb-1">
+            <div class="text-center">
+                <p class="text-[10px] font-bold text-text-muted mb-0.5">還有</p>
+                <p id="cal-days-remaining" class="text-xl font-extrabold text-brand">--</p>
+                <p class="text-[10px] font-bold text-text-muted">天出發</p>
+            </div>
+            <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+            <div class="text-center">
+    <p class="text-[10px] font-bold text-text-muted mb-0.5">每天需</p>
+    <p id="cal-goal-amount" class="text-xl font-extrabold text-brand">$--</p>
+    <p class="text-[10px] font-bold text-text-muted">達標</p>
+</div>
+            <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+            <div class="text-center">
+                <p class="text-[10px] font-bold text-text-muted mb-0.5">已儲</p>
+                <p id="cal-saved-amount" class="text-xl font-extrabold text-aux-mint">$--</p>
+                <p class="text-[10px] font-bold text-text-muted">累積收入</p>
+            </div>
+        </div>
+
         </div> </div>
 
         <!-- ================= 所有記錄頁 (Records) ================= -->
@@ -845,6 +899,7 @@
                 lastUpdated: Date.now()
             }));
             renderAll();
+                updateCalendarFooter();
             if (isFirebaseActive && navigator.onLine) {
                 syncToCloud();
             } else if (!navigator.onLine) {
@@ -1101,23 +1156,22 @@ function isDesktop() {
     return window.innerWidth >= 1024;
 }
 
-function updateSidebarState() {
-    document.querySelectorAll('.sidebar-tab').forEach(btn => {
-        if (btn.dataset.tab === state.activeTab) btn.classList.add('active');
-        else btn.classList.remove('active');
+function initScrollReveal() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.view-section:not(.hidden) .neu-card').forEach((card, i) => {
+        card.classList.remove('revealed');
+        card.classList.add('scroll-reveal');
+        card.style.setProperty('--reveal-delay', `${i * 80}ms`);
+        observer.observe(card);
     });
-
-    const tripIcon = document.getElementById('sidebar-trip-icon');
-    if (tripIcon) {
-        tripIcon.setAttribute('data-lucide', state.isTripMode ? 'plane-off' : 'plane');
-    }
-
-    const themeIcon = document.getElementById('sidebar-theme-icon');
-    if (themeIcon) {
-        themeIcon.setAttribute('data-lucide', state.isDarkMode ? 'sun' : 'moon');
-    }
-
-    lucide.createIcons();
 }
 
 function updateSidebarState() {
@@ -1139,11 +1193,11 @@ function updateSidebarState() {
         themeIcon.setAttribute('data-lucide', state.isDarkMode ? 'sun' : 'moon');
     }
 
-    lucide.createIcons();
+    setTimeout(() => lucide.createIcons(), 50);
 }
 
         function switchTab(newTab) {
-    if (state.activeTab === newTab) return;
+    if (!newTab || state.activeTab === newTab) return;
 
     const TAB_ORDER = ['dashboard', 'calendar', 'records', 'expenses', 'settings'];
     const oldIndex = TAB_ORDER.indexOf(state.activeTab);
@@ -1152,9 +1206,8 @@ function updateSidebarState() {
 
     state.activeTab = newTab;
 
-    document.querySelectorAll('.nav-tab').forEach(btn => {
-        if (btn.dataset.tab === state.activeTab) btn.classList.add('active');
-        else btn.classList.remove('active');
+    document.querySelectorAll('.nav-tab, .sidebar-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
     });
 
     document.querySelectorAll('.view-section').forEach(sec => {
@@ -1163,20 +1216,23 @@ function updateSidebarState() {
     });
 
     const activeSec = document.getElementById(`view-${state.activeTab}`);
-activeSec.classList.remove('hidden');
-void activeSec.offsetWidth;
-activeSec.classList.add(goingRight ? 'card-push-enter' : 'card-push-enter-left');
-renderAll(false);
-updateSidebarState();
+    if (!activeSec) return;
 
-// Stagger neu-cards within the new tab
-const cards = activeSec.querySelectorAll('.neu-card');
-cards.forEach((card, i) => {
-    card.classList.remove('stagger-item');
-    void card.offsetWidth;
-    card.style.animationDelay = `${i * 0.06}s`;
-    card.classList.add('stagger-item');
-});
+    activeSec.classList.remove('hidden');
+    void activeSec.offsetWidth;
+    activeSec.classList.add(goingRight ? 'card-push-enter' : 'card-push-enter-left');
+
+    renderAll(false);
+    updateSidebarState();
+
+    const cards = activeSec.querySelectorAll('.neu-card');
+    cards.forEach((card, i) => {
+        card.classList.remove('stagger-item');
+        void card.offsetWidth;
+        card.style.animationDelay = `${i * 0.06}s`;
+        card.classList.add('stagger-item');
+    });
+lucide.createIcons();
 }
 
         function renderDashboard() {
@@ -1442,14 +1498,77 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
             }
             
             document.getElementById('cal-month-total').innerText = `${symbol}${formatMoney(Math.round(monthTotal))}`;
+        updateCalendarFooter();
+updateCalendarFooter();
         }
+
+        function updateCalendarFooter() {
+    // 還有多少天
+    const depDate = state.departureDate;
+    const daysEl = document.getElementById('cal-days-remaining');
+    if (depDate && daysEl) {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const dep = new Date(depDate);
+        const diff = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+        daysEl.textContent = diff > 0 ? diff : '已出發';
+    } else if (daysEl) {
+        daysEl.textContent = '--';
+    }
+
+    // 每天仍需金額
+const goalEl = document.getElementById('cal-goal-amount');
+if (goalEl) {
+    const depDate = state.departureDate;
+    if (depDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dep = new Date(depDate);
+        const daysLeft = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+        if (daysLeft <= 0) {
+            goalEl.textContent = '--';
+        } else {
+            const totalEarned = state.records.reduce((sum, r) => sum + (r.income || 0), 0);
+            const specialExpenses = state.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+            const remainingEarned = Math.max(0, totalEarned - specialExpenses);
+            const availableSavings = state.INITIAL_AMOUNT + remainingEarned;
+            let totalBudget = 0;
+            state.tripCategories.forEach(cat => {
+                cat.items.forEach(item => { totalBudget += (item.amount || 0); });
+            });
+            if (totalBudget === 0) totalBudget = state.GOAL;
+            const totalRemaining = Math.max(0, totalBudget - availableSavings);
+            const perDay = (totalRemaining / daysLeft).toFixed(1);
+            goalEl.textContent = perDay;
+        }
+    } else {
+        goalEl.textContent = '--';
+    }
+}
+
+// 已儲金額（總儲蓄減起初金額）
+const savedEl = document.getElementById('cal-saved-amount');
+if (savedEl) {
+    const totalEarned = state.records.reduce((sum, r) => sum + (r.income || 0), 0);
+    savedEl.textContent = '$' + totalEarned.toLocaleString();
+}
+}
 
         function renderRecords() {
             const container = document.getElementById('all-records-container');
             if (state.records.length === 0) {
-                container.innerHTML = `<div class="p-6 text-center text-sm font-bold text-text-muted neu-inset">目前沒有任何記錄。</div>`;
-                return;
-            }
+    container.innerHTML = `
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+            <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                <i data-lucide="clipboard-list" class="w-8 h-8"></i>
+            </div>
+            <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有記錄</p>
+            <p class="text-xs font-bold text-text-muted">返回主頁新增第一筆記錄</p>
+            <button onclick="switchTab('dashboard')" class="mt-1 px-5 py-2 neu-btn text-xs text-brand">前往新增 →</button>
+        </div>`;
+    lucide.createIcons();
+    return;
+}
 
             const groups = {};
             state.records.forEach(record => {
@@ -1508,7 +1627,15 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
         function renderExpenses() {
             const list = document.getElementById('expenses-list');
             if (state.expenses.length === 0) {
-                list.innerHTML = `<div class="p-6 text-center text-sm font-bold text-text-muted neu-inset">尚未有任何支出紀錄。</div>`;
+    list.innerHTML = `
+        <div class="flex flex-col items-center gap-3 py-10 text-center">
+            <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                <i data-lucide="receipt" class="w-8 h-8"></i>
+            </div>
+            <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有支出記錄</p>
+            <p class="text-xs font-bold text-text-muted">喺上方表格新增第一筆支出</p>
+        </div>`;
+    lucide.createIcons();
             } else {
                 const sortedExpenses = [...state.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
                 const maxExpense = Math.max(...state.expenses.map(e => e.amount), 1);
@@ -1620,6 +1747,7 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
             });
             
             container.innerHTML = html;
+            
             
             let totalRemaining = Math.max(0, totalBudget - availableSavings);
             let daysRemaining = 0;
@@ -1978,6 +2106,7 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
             renderRecords();
             renderExpenses();
             renderSettings();
+            updateCalendarFooter();
             renderTripBudget();
             renderSmartExpenses();
             lucide.createIcons();
@@ -2052,11 +2181,12 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
                 lastScrollY = window.scrollY;
             });
 
-            document.querySelectorAll('.nav-tab').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    switchTab(e.currentTarget.dataset.tab);
-                });
-            });
+            document.querySelectorAll('.nav-tab, .sidebar-tab').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const tab = e.currentTarget.dataset.tab;
+        if (tab) switchTab(tab);
+    });
+});
 
             document.getElementById('record-date').addEventListener('change', (e) => { state.formData.date = e.target.value; });
             document.getElementById('record-source').addEventListener('change', (e) => { state.formData.sourceId = e.target.value; renderDashboard(); });
@@ -2109,6 +2239,7 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
                     renderChart();
                 });
             });
+
 
             document.getElementById('cal-prev').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1); renderCalendar(); lucide.createIcons(); });
             document.getElementById('cal-next').addEventListener('click', () => { state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1); renderCalendar(); lucide.createIcons(); });
@@ -2265,9 +2396,6 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
         renderAll();     
 
 // Sidebar button events
-document.querySelectorAll('.sidebar-tab').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-});
 
 document.getElementById('sidebar-theme-toggle').addEventListener('click', () => {
     document.getElementById('theme-toggle').click();
