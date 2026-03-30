@@ -88,10 +88,11 @@
 }
 .scroll-reveal {
     opacity: 0;
-    transform: translateY(28px) scale(0.99);
-    transition: opacity 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform: translateY(48px) scale(0.97);
+    transition: opacity 0.55s cubic-bezier(0.34, 1.45, 0.64, 1),
+                transform 0.55s cubic-bezier(0.34, 1.45, 0.64, 1);
     transition-delay: var(--reveal-delay, 0ms);
+    will-change: transform, opacity;
 }
 .scroll-reveal.revealed {
     opacity: 1;
@@ -1157,6 +1158,8 @@ function isDesktop() {
 }
 
 function initScrollReveal() {
+    const cards = document.querySelectorAll('.view-section:not(.hidden) .neu-card');
+    
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -1164,12 +1167,17 @@ function initScrollReveal() {
                 observer.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.08 });
+    }, {
+        threshold: 0,
+        rootMargin: '0px 0px -40px 0px'  // 距底部 40px 先觸發，有「被吸上來」感
+    });
 
-    document.querySelectorAll('.view-section:not(.hidden) .neu-card').forEach((card, i) => {
-        card.classList.remove('revealed');
+    cards.forEach((card, i) => {
+        card.classList.remove('revealed', 'scroll-reveal');
+        void card.offsetWidth; // 強制 reflow 重置動畫
         card.classList.add('scroll-reveal');
-        card.style.setProperty('--reveal-delay', `${i * 80}ms`);
+        // 每張卡延遲遞增，製造跟車感：前車動了後車跟著動
+        card.style.setProperty('--reveal-delay', `${i * 65}ms`);
         observer.observe(card);
     });
 }
@@ -1233,6 +1241,7 @@ function updateSidebarState() {
         card.classList.add('stagger-item');
     });
 lucide.createIcons();
+setTimeout(() => initScrollReveal(), 80); 
 }
 
         function renderDashboard() {
@@ -1307,6 +1316,7 @@ progressBar.style.opacity = progressPercentage > 0 ? '1' : '0';
                 previewDiv.classList.add('hidden');
             }
 
+            
             const tbody = document.getElementById('recent-records-body');
             tbody.innerHTML = '';
             if (state.records.length === 0) {
