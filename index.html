@@ -1095,6 +1095,14 @@ nav.nav-idle .max-w-4xl {
                         if (data.tripCategories !== undefined) state.tripCategories = data.tripCategories;
                         if (data.smartExpenses !== undefined) state.smartExpenses = data.smartExpenses;
                         
+                        // 新增：接收雲端的出發日期
+                        if (data.tripDate !== undefined) {
+                            state.tripDate = data.tripDate;
+                            // 嘗試即時更新 UI 上的輸入框 (請確認你的 input ID，若有不同可自行調整)
+                            const dateInput = document.getElementById('trip-date-input');
+                            if (dateInput) dateInput.value = data.tripDate;
+                        }
+                        
                         localStorage.setItem('tutoring_data', JSON.stringify(state));
                         renderAll();
                         setSyncStatus('synced');
@@ -1128,6 +1136,7 @@ nav.nav-idle .max-w-4xl {
                 INITIAL_AMOUNT: state.INITIAL_AMOUNT,
                 tripCategories: state.tripCategories,
                 smartExpenses: state.smartExpenses,
+                tripDate: state.tripDate, // 新增：同步出發日期到雲端
                 lastUpdated: Date.now()
             }).then(() => {
                 setSyncStatus('synced');
