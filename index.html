@@ -1077,45 +1077,75 @@ nav.nav-idle .max-w-4xl {
                 let cleanStr = configStr.replace(/(const|let|var)\s+firebaseConfig\s*=\s*/, '').replace(/;/g, '').trim();
                 const config = new Function("return " + cleanStr)();
 
-                if (!firebase.apps.length) {
+                // 【防呆機制】：偵測到使用者換了不同的 Firebase 專案，強制重載以套用，避免舊連線卡死
+                if (firebase.apps.length > 0) {
+                    if (firebase.app().options.projectId !== config.projectId) {
+                        console.warn("偵測到不同專案，正在重新整理以套用...");
+                        localStorage.setItem('firebase_config', configStr);
+                        location.reload();
+                        return;
+                    }
+                } else {
                     firebase.initializeApp(config);
                 }
-                db = firebase.firestore();
-                isFirebaseActive = true;
-                
-                db.collection('appData').doc('tutoring_tracker').onSnapshot((doc) => {
-                    if (isCloudUpdating) return; 
-                    if (doc.exists) {
-                        const data = doc.data();
-                        state.sources = data.sources || [];
-                        state.records = data.records || [];
-                        state.expenses = data.expenses || [];
-                        if (data.GOAL !== undefined) state.GOAL = data.GOAL;
-                        if (data.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = data.INITIAL_AMOUNT;
-                        if (data.tripCategories !== undefined) state.tripCategories = data.tripCategories;
-                        if (data.smartExpenses !== undefined) state.smartExpenses = data.smartExpenses;
-                        
-                        // 新增：接收雲端的出發日期
-                        if (data.tripDate !== undefined) {
-                            state.tripDate = data.tripDate;
-                            // 嘗試即時更新 UI 上的輸入框 (請確認你的 input ID，若有不同可自行調整)
-                            const dateInput = document.getElementById('trip-date-input');
-                            if (dateInput) dateInput.value = data.tripDate;
-                        }
-                        
-                        localStorage.setItem('tutoring_data', JSON.stringify(state));
-                        renderAll();
-                        setSyncStatus('synced');
-                    } else {
-                        syncToCloud();
-                    }
-                }, (error) => {
-                    console.error("Firestore sync error:", error);
-                    showToast('權限不足！', 'error');
-                    setSyncStatus('offline');
-                });
 
-                setSyncStatus('connecting');
+                db = firebase.firestore();
+
+                // 將同步邏輯包裝成一個函數，確保在快取清除後才開始執行
+                const startSync = () => {
+                    isFirebaseActive = true;
+                    setSyncStatus('connecting');
+                    
+                    db.collection('appData').doc('tutoring_tracker').onSnapshot((doc) => {
+                        if (isCloudUpdating) return; 
+                        if (doc.exists) {
+                            const data = doc.data();
+                            state.sources = data.sources || [];
+                            state.records = data.records || [];
+                            state.expenses = data.expenses || [];
+                            if (data.GOAL !== undefined) state.GOAL = data.GOAL;
+                            if (data.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = data.INITIAL_AMOUNT;
+                            if (data.tripCategories !== undefined) state.tripCategories = data.tripCategories;
+                            if (data.smartExpenses !== undefined) state.smartExpenses = data.smartExpenses;
+                            if (data.tripDate !== undefined) {
+                                state.tripDate = data.tripDate;
+                                const dateInput = document.getElementById('trip-date-input');
+                                if (dateInput) dateInput.value = data.tripDate;
+                            }
+                            
+                            localStorage.setItem('tutoring_data', JSON.stringify(state));
+                            renderAll();
+                            setSyncStatus('synced'); // 成功獲取資料，設定為已同步
+                        } else {
+                            syncToCloud(); // 如果雲端沒資料，以上傳本地資料為主
+                        }
+                    }, (error) => {
+                        console.error("Firestore sync error:", error);
+                        showToast('資料庫連線被阻擋或權限不足！', 'error');
+                        setSyncStatus('offline');
+                    });
+                };
+
+                // 【核心修復】：自動為所有舊用戶執行一次「深度清除快取」
+                // 使用 localStorage 記錄，確保每台設備只會執行一次，不會拖慢以後的載入速度
+                if (!localStorage.getItem('firebase_cache_cleared_v1')) {
+                    db.clearPersistence()
+                        .then(() => {
+                            console.log("✅ 已自動幫用戶清除舊的 Firebase 快取！");
+                            localStorage.setItem('firebase_cache_cleared_v1', 'true');
+                            startSync(); 
+                        })
+                        .catch((err) => {
+                            // 如果用戶剛好開了多個分頁，清除動作可能會被阻擋，但我們依然讓他繼續連線
+                            console.warn("快取清除略過 (可能多個分頁同時開啟):", err);
+                            localStorage.setItem('firebase_cache_cleared_v1', 'true');
+                            startSync(); 
+                        });
+                } else {
+                    // 已經清過快取的用戶，直接進入正常的連線流程
+                    startSync(); 
+                }
+
             } catch (e) {
                 console.error("Firebase Init Error:", e);
                 showToast('Firebase 設定格式錯誤！', 'error');
@@ -1124,29 +1154,32 @@ nav.nav-idle .max-w-4xl {
         }
 
         function syncToCloud() {
-            if (!db) return;
-            setSyncStatus('connecting');
-            isCloudUpdating = true;
-            
-            db.collection('appData').doc('tutoring_tracker').set({
-                sources: state.sources,
-                records: state.records,
-                expenses: state.expenses,
-                GOAL: state.GOAL,
-                INITIAL_AMOUNT: state.INITIAL_AMOUNT,
-                tripCategories: state.tripCategories,
-                smartExpenses: state.smartExpenses,
-                tripDate: state.tripDate, // 新增：同步出發日期到雲端
-                lastUpdated: Date.now()
-            }).then(() => {
-                setSyncStatus('synced');
-                setTimeout(() => { isCloudUpdating = false; }, 500);
-            }).catch((error) => {
-                console.error("Error writing to cloud:", error);
-                setSyncStatus('offline');
-                isCloudUpdating = false;
-            });
-        }
+    if (!isFirebaseActive || !navigator.onLine) return;
+    isCloudUpdating = true;
+    setSyncStatus('connecting');
+
+    // 【核心修復】：過濾掉物件中所有的 undefined 值
+    // 使用 JSON 的特性，它會自動把值為 undefined 的屬性完全剃除，產出一個乾淨的物件
+    let dataToSave = JSON.parse(JSON.stringify(state));
+
+    // 多加一層保險：明確處理 tripDate，如果還是沒有值，給它空字串或 null
+    if (dataToSave.tripDate === undefined) {
+        dataToSave.tripDate = ""; 
+    }
+
+    db.collection('appData').doc('tutoring_tracker').set(dataToSave)
+        .then(() => {
+            isCloudUpdating = false;
+            setSyncStatus('synced');
+            console.log("✅ 雲端同步成功！");
+        })
+        .catch((error) => {
+            console.error("Firestore sync error:", error);
+            showToast('同步至雲端失敗！', 'error');
+            isCloudUpdating = false;
+            setSyncStatus('offline');
+        });
+}
 
         const formatMoney = (num) => num.toLocaleString();
         const getWeekRange = (dateString) => {
@@ -1716,14 +1749,35 @@ attachSwipeToDelete(tbody, id => deleteRecord(id));
             const todayStr = getTodayString();
             const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
 
-            // 1. 產生上個月的最後幾天填補 1 號前的位置
+            // 1. 產生上個月的最後幾天填補 1 號前的位置，並計算收入
+            const prevMonthDateObj = new Date(year, month - 1, 1);
+            const prevY = prevMonthDateObj.getFullYear();
+            const prevM = prevMonthDateObj.getMonth();
             const prevMonthDays = new Date(year, month, 0).getDate();
+
             for (let i = 0; i < startingDay; i++) {
                 const prevDay = prevMonthDays - startingDay + i + 1;
+                const dStr = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(prevDay).padStart(2, '0')}`;
+                
+                const dayRecords = state.records.filter(r => r.date === dStr);
+                let dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                if(state.isTripMode && state.displayCurrency === 'EUR') dayIncome = dayIncome / state.exchangeRate;
+
+                const hasIncome = dayIncome > 0;
+                let baseClasses = `neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none`;
+                let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
+
+                if (hasIncome) {
+                    baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
+                }
+
                 grid.innerHTML += `
-                    <div class="neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none">
+                    <div class="${baseClasses}">
                         <span class="text-[10px] font-bold text-text-muted/50">${prevDay}</span>
-                        <div class="flex-1 flex items-end justify-center pb-0.5"></div>
+                        <div class="flex-1 flex items-end justify-center pb-0.5">
+                            ${incomeHtml}
+                        </div>
                     </div>
                 `;
             }
@@ -1762,14 +1816,35 @@ attachSwipeToDelete(tbody, id => deleteRecord(id));
                 `;
             }
 
-            // 3. 產生下個月的前幾天以填滿 42 格 (6 行)
+            // 3. 產生下個月的前幾天以填滿 42 格 (6 行)，並計算收入
+            const nextMonthDateObj = new Date(year, month + 1, 1);
+            const nextY = nextMonthDateObj.getFullYear();
+            const nextM = nextMonthDateObj.getMonth();
             const totalFilledCells = startingDay + daysInMonth;
             const nextMonthDaysToFill = 42 - totalFilledCells;
+
             for (let i = 1; i <= nextMonthDaysToFill; i++) {
+                const dStr = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                const dayRecords = state.records.filter(r => r.date === dStr);
+                let dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                if(state.isTripMode && state.displayCurrency === 'EUR') dayIncome = dayIncome / state.exchangeRate;
+
+                const hasIncome = dayIncome > 0;
+                let baseClasses = `neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none`;
+                let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
+
+                if (hasIncome) {
+                    baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
+                }
+
                 grid.innerHTML += `
-                    <div class="neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none">
+                    <div class="${baseClasses}">
                         <span class="text-[10px] font-bold text-text-muted/50">${i}</span>
-                        <div class="flex-1 flex items-end justify-center pb-0.5"></div>
+                        <div class="flex-1 flex items-end justify-center pb-0.5">
+                            ${incomeHtml}
+                        </div>
                     </div>
                 `;
             }
