@@ -277,24 +277,6 @@ nav.nav-idle .max-w-4xl {
 }
 
 
-/* --- 頂部固定的便條紙 3D 捲曲效果 --- */
-.calendar-perspective {
-    /* 加深透視距離，讓捲曲更加立體但不誇張 */
-    perspective: 1500px; 
-    position: relative;
-}
-
-#calendar-card {
-    background-color: #ffffff; 
-    transform-style: preserve-3d;
-    /* 核心：將物理支點固定在頂部中央，模擬頂部塗膠的便條紙 */
-    transform-origin: top center; 
-}
-.dark #calendar-card {
-    background-color: #1a1b1e;
-}
-
-
 /* --- 底層新頁面浮現：陰影散去，微微放大 --- */
 @keyframes paperReveal {
     0% { transform: scale(0.96) translateY(5px); opacity: 0; filter: brightness(0.85); }
@@ -986,65 +968,113 @@ function animateCalendarTransition(isNext, updateDOMCallback) {
     const parent = card.parentElement;
     if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
 
-    // Clone 舊內容先，再更新 DOM
-    const clone = card.cloneNode(true);
-    clone.removeAttribute('id');
     const rect = card.getBoundingClientRect();
     const pRect = parent.getBoundingClientRect();
-
-    // 邊緣高光 overlay
-    const hl = document.createElement('div');
-    const hlDir = isNext ? 'to right' : 'to left';
-    Object.assign(hl.style, {
-        position: 'absolute', inset: '0', borderRadius: 'inherit',
-        pointerEvents: 'none', zIndex: '100',
-        background: `linear-gradient(${hlDir}, transparent 65%, rgba(255,255,255,0.13) 85%, rgba(255,255,255,0.05) 100%)`
-    });
-    clone.style.overflow = 'hidden';
-    clone.appendChild(hl);
-
-    Object.assign(clone.style, {
-        position: 'absolute',
-        top: (rect.top - pRect.top + parent.scrollTop) + 'px',
-        left: (rect.left - pRect.left) + 'px',
-        width: rect.width + 'px',
-        height: rect.height + 'px',
-        margin: '0', boxSizing: 'border-box',
-        pointerEvents: 'none',
-        transformOrigin: 'top center',
-        zIndex: '20',
-        willChange: 'transform, filter, box-shadow, opacity',
-        transition: 'none'
-    });
-    parent.appendChild(clone);
-
-    // 更新底層 card 為新月份
-    updateDOMCallback();
-    card.style.transition = 'none';
-    card.style.transform = 'scale(0.96)';
-    card.style.filter = 'brightness(0.88)';
-    card.style.zIndex = '10';
-
+    const top  = rect.top  - pRect.top  + parent.scrollTop;
+    const left = rect.left - pRect.left;
+    const W = rect.width, H = rect.height;
     const dir = isNext ? 1 : -1;
-    const DUR = 640;
-    const EASE = 'cubic-bezier(0.28, 0.84, 0.38, 1)';
+    const isDark = document.documentElement.classList.contains('dark');
+    const br = getComputedStyle(card).borderRadius;
 
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-        clone.style.transition = `transform ${DUR}ms ${EASE}, filter ${DUR}ms ease, opacity ${Math.round(DUR*0.55)}ms ease ${Math.round(DUR*0.35)}ms, box-shadow ${DUR}ms ease`;
-        clone.style.transform = `perspective(1400px) rotateX(112deg) rotateY(${dir * -38}deg) rotateZ(${dir * -14}deg) translateY(-40px)`;
-        clone.style.filter = 'brightness(1.08)';
-        clone.style.opacity = '0';
-        clone.style.boxShadow = `${-dir * 24}px 44px 44px rgba(0,0,0,0.06)`;
+    // — Layer 1: clone 舊內容 —
+    const oldClone = card.cloneNode(true);
+    oldClone.removeAttribute('id');
+    Object.assign(oldClone.style, {
+        position: 'absolute', top: top + 'px', left: left + 'px',
+        width: W + 'px', height: H + 'px', margin: '0',
+        pointerEvents: 'none', zIndex: '20',
+        boxSizing: 'border-box', overflow: 'hidden',
+        borderRadius: br
+    });
+    parent.appendChild(oldClone);
 
-        card.style.transition = `transform ${DUR}ms ${EASE}, filter ${DUR}ms ease`;
-        card.style.transform = 'scale(1)';
-        card.style.filter = 'brightness(1)';
-    }));
+    // — Layer 2: Canvas overlay —
+    const cvs = document.createElement('canvas');
+    cvs.width = Math.round(W * devicePixelRatio);
+    cvs.height = Math.round(H * devicePixelRatio);
+    Object.assign(cvs.style, {
+        position: 'absolute', top: top + 'px', left: left + 'px',
+        width: W + 'px', height: H + 'px',
+        pointerEvents: 'none', zIndex: '25',
+        borderRadius: br,
+        clipPath: `inset(0 round ${br})`
+    });
+    const ctx = cvs.getContext('2d');
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    parent.appendChild(cvs);
 
-    setTimeout(() => {
-        clone.remove();
-        ['transform','filter','transition','zIndex'].forEach(p => card.style[p] = '');
-    }, DUR + 80);
+    // 更新底層 DOM
+    updateDOMCallback();
+    card.style.cssText += ';z-index:10;filter:brightness(0.88);transition:none;';
+
+    function drawFrame(progress) {
+        ctx.clearRect(0, 0, W, H);
+        const foldX = dir === 1 ? W * (1 - progress) : W * progress;
+        const SHADOW_W = Math.min(55, W * 0.11);
+        const EDGE_W   = 18;
+
+        // ① 背面紙
+        const bg = dir === 1
+            ? ctx.createLinearGradient(0, 0, foldX, 0)
+            : ctx.createLinearGradient(foldX, 0, W, 0);
+        if (dir === 1) {
+            bg.addColorStop(0,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
+            bg.addColorStop(0.75, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
+            bg.addColorStop(1,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, foldX, H);
+        } else {
+            bg.addColorStop(0,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
+            bg.addColorStop(0.25, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
+            bg.addColorStop(1,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(foldX, 0, W - foldX, H);
+        }
+
+        // ② 翻頁投影（落在新月份上）
+        const sh = dir === 1
+            ? ctx.createLinearGradient(foldX, 0, foldX + SHADOW_W, 0)
+            : ctx.createLinearGradient(foldX, 0, foldX - SHADOW_W, 0);
+        sh.addColorStop(0,   'rgba(0,0,0,0.24)');
+        sh.addColorStop(0.35,'rgba(0,0,0,0.09)');
+        sh.addColorStop(1,   'rgba(0,0,0,0.00)');
+        ctx.fillStyle = sh;
+        if (dir === 1) ctx.fillRect(foldX, 0, SHADOW_W, H);
+        else           ctx.fillRect(Math.max(0, foldX - SHADOW_W), 0, SHADOW_W, H);
+
+        // ③ 折邊高光
+        const hl = dir === 1
+            ? ctx.createLinearGradient(Math.max(0, foldX - EDGE_W), 0, foldX, 0)
+            : ctx.createLinearGradient(foldX, 0, Math.min(W, foldX + EDGE_W), 0);
+        hl.addColorStop(0, 'rgba(255,255,255,0.00)');
+        hl.addColorStop(0.55, isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)');
+        hl.addColorStop(1,   isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.36)');
+        ctx.fillStyle = hl;
+        if (dir === 1) ctx.fillRect(Math.max(0, foldX - EDGE_W), 0, EDGE_W, H);
+        else           ctx.fillRect(foldX, 0, EDGE_W, H);
+
+        // ④ 舊頁 clip（只露出未翻部份）
+        oldClone.style.clipPath = dir === 1
+            ? `inset(0 0 0 ${foldX}px round ${br})`
+            : `inset(0 ${W - foldX}px 0 0 round ${br})`;
+
+        card.style.filter = `brightness(${0.88 + 0.12 * progress})`;
+    }
+
+    const DUR = 600;
+    const start = performance.now();
+    function tick(now) {
+        const t = Math.min((now - start) / DUR, 1);
+        const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t); // ease-out expo
+        drawFrame(ease);
+        if (t < 1) { requestAnimationFrame(tick); return; }
+        oldClone.remove(); cvs.remove();
+        card.style.filter = card.style.zIndex = card.style.transition = '';
+        card.style.animation = 'paperReveal 0.28s cubic-bezier(0.28,0.84,0.38,1) forwards';
+        setTimeout(() => card.style.animation = '', 280);
+    }
+    requestAnimationFrame(tick);
 }
 
 
@@ -2783,104 +2813,155 @@ function initCalendarSwipe() {
 
     let startX = 0, startY = 0;
     let isDragging = false, swipeDir = 0;
-    let peelClone = null, isAnimating = false;
+    let oldClone = null, cvs = null, ctx = null;
+    let isAnimating = false, rafId = null;
+    let currentProgress = 0;
+    let dims = null; // { W, H, br }
     const THRESHOLD = 0.40;
-    const PERSP = 1400;
 
-    function buildClone() {
-        const rect = card.getBoundingClientRect();
+    function setupLayers() {
+        const rect  = card.getBoundingClientRect();
         const pRect = parent.getBoundingClientRect();
-        peelClone = card.cloneNode(true);
-        peelClone.removeAttribute('id');
+        const top  = rect.top  - pRect.top  + parent.scrollTop;
+        const left = rect.left - pRect.left;
+        const W = rect.width, H = rect.height;
+        const br = getComputedStyle(card).borderRadius;
+        const isDark = document.documentElement.classList.contains('dark');
 
-        // 邊緣高光
-        const hl = document.createElement('div');
-        Object.assign(hl.style, {
-            position: 'absolute', inset: '0', borderRadius: 'inherit',
-            pointerEvents: 'none', zIndex: '100', opacity: '0',
-            transition: 'opacity 0.2s ease',
-            background: `linear-gradient(to ${swipeDir > 0 ? 'right' : 'left'}, transparent 65%, rgba(255,255,255,0.13) 85%, rgba(255,255,255,0.05) 100%)`
+        oldClone = card.cloneNode(true);
+        oldClone.removeAttribute('id');
+        Object.assign(oldClone.style, {
+            position: 'absolute', top: top + 'px', left: left + 'px',
+            width: W + 'px', height: H + 'px', margin: '0',
+            pointerEvents: 'none', zIndex: '20',
+            boxSizing: 'border-box', overflow: 'hidden', borderRadius: br
         });
-        peelClone.style.overflow = 'hidden';
-        peelClone.appendChild(hl);
+        parent.appendChild(oldClone);
 
-        Object.assign(peelClone.style, {
-            position: 'absolute',
-            top: (rect.top - pRect.top + parent.scrollTop) + 'px',
-            left: (rect.left - pRect.left) + 'px',
-            width: rect.width + 'px',
-            height: rect.height + 'px',
-            margin: '0', boxSizing: 'border-box',
-            pointerEvents: 'none',
-            transformOrigin: 'top center',
-            zIndex: '15',
-            willChange: 'transform, filter, box-shadow',
-            transition: 'none'
+        cvs = document.createElement('canvas');
+        cvs.width  = Math.round(W * devicePixelRatio);
+        cvs.height = Math.round(H * devicePixelRatio);
+        Object.assign(cvs.style, {
+            position: 'absolute', top: top + 'px', left: left + 'px',
+            width: W + 'px', height: H + 'px',
+            pointerEvents: 'none', zIndex: '25',
+            borderRadius: br, clipPath: `inset(0 round ${br})`
         });
-        parent.appendChild(peelClone);
+        ctx = cvs.getContext('2d');
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+        parent.appendChild(cvs);
+
+        card.style.cssText += ';z-index:10;filter:brightness(0.88);transition:none;';
+        dims = { W, H, br, isDark };
     }
 
-    function setPeel(progress, dir) {
-        if (!peelClone) return;
-        // ease-in-out quad 令頭尾更自然
-        const e = progress < 0.5
-            ? 2 * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+    function drawFrame(progress) {
+        if (!ctx || !dims) return;
+        const { W, H, br, isDark } = dims;
+        ctx.clearRect(0, 0, W, H);
+        const foldX = swipeDir === 1 ? W * (1 - progress) : W * progress;
+        const SHADOW_W = Math.min(55, W * 0.11);
+        const EDGE_W   = 18;
 
-        peelClone.style.transform = `perspective(${PERSP}px) rotateX(${e*108}deg) rotateY(${dir*e*-30}deg) rotateZ(${dir*e*-10}deg) translateY(${e*-38}px)`;
-        peelClone.style.filter = `brightness(${1 + e*0.07})`;
-        peelClone.style.boxShadow = `${-dir*e*20}px ${18+e*28}px ${10+e*32}px rgba(0,0,0,${e*0.16})`;
+        // ① 背面紙
+        const bg = swipeDir === 1
+            ? ctx.createLinearGradient(0, 0, foldX, 0)
+            : ctx.createLinearGradient(foldX, 0, W, 0);
+        if (swipeDir === 1) {
+            bg.addColorStop(0,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
+            bg.addColorStop(0.75, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
+            bg.addColorStop(1,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, foldX, H);
+        } else {
+            bg.addColorStop(0,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
+            bg.addColorStop(0.25, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
+            bg.addColorStop(1,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(foldX, 0, W - foldX, H);
+        }
 
-        // 邊緣高光：拖過 30% 先出現
-        const hlEl = peelClone.querySelector('div:last-child');
-        if (hlEl) hlEl.style.opacity = progress > 0.3 ? String((progress - 0.3) / 0.7) : '0';
+        // ② 投影
+        const sh = swipeDir === 1
+            ? ctx.createLinearGradient(foldX, 0, foldX + SHADOW_W, 0)
+            : ctx.createLinearGradient(foldX, 0, foldX - SHADOW_W, 0);
+        sh.addColorStop(0,    'rgba(0,0,0,0.24)');
+        sh.addColorStop(0.35, 'rgba(0,0,0,0.09)');
+        sh.addColorStop(1,    'rgba(0,0,0,0.00)');
+        ctx.fillStyle = sh;
+        if (swipeDir === 1) ctx.fillRect(foldX, 0, SHADOW_W, H);
+        else                ctx.fillRect(Math.max(0, foldX - SHADOW_W), 0, SHADOW_W, H);
 
-        // 底層 card 隨進度浮現
-        card.style.transform = `scale(${0.96 + progress*0.04})`;
-        card.style.filter = `brightness(${0.88 + progress*0.12})`;
-        card.style.transition = 'none';
+        // ③ 折邊高光
+        const hl = swipeDir === 1
+            ? ctx.createLinearGradient(Math.max(0, foldX - EDGE_W), 0, foldX, 0)
+            : ctx.createLinearGradient(foldX, 0, Math.min(W, foldX + EDGE_W), 0);
+        hl.addColorStop(0,    'rgba(255,255,255,0.00)');
+        hl.addColorStop(0.55, isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)');
+        hl.addColorStop(1,    isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.36)');
+        ctx.fillStyle = hl;
+        if (swipeDir === 1) ctx.fillRect(Math.max(0, foldX - EDGE_W), 0, EDGE_W, H);
+        else                ctx.fillRect(foldX, 0, EDGE_W, H);
+
+        // ④ 裁剪舊頁
+        if (oldClone) {
+            oldClone.style.clipPath = swipeDir === 1
+                ? `inset(0 0 0 ${foldX}px round ${br})`
+                : `inset(0 ${W - foldX}px 0 0 round ${br})`;
+        }
+        card.style.filter = `brightness(${0.88 + 0.12 * progress})`;
+    }
+
+    function cleanup() {
+        cancelAnimationFrame(rafId);
+        oldClone?.remove(); oldClone = null;
+        cvs?.remove();      cvs = null; ctx = null;
+        card.style.filter = card.style.zIndex = card.style.transition = '';
+        dims = null;
     }
 
     function snapBack() {
-        if (!peelClone) return;
-        const D = 420, S = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
-        peelClone.style.transition = `transform ${D}ms ${S}, filter ${D}ms ease, box-shadow ${D}ms ease`;
-        peelClone.style.transform = `perspective(${PERSP}px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0px)`;
-        peelClone.style.filter = 'brightness(1)';
-        peelClone.style.boxShadow = '';
-        card.style.transition = `transform ${D}ms ${S}, filter ${D}ms ease`;
-        card.style.transform = 'scale(1)';
-        card.style.filter = 'brightness(1)';
-        setTimeout(() => {
-            peelClone?.remove(); peelClone = null;
-            ['transform','filter','transition','zIndex'].forEach(p => card.style[p] = '');
-        }, D + 20);
+        const from = currentProgress;
+        const start = performance.now();
+        const DUR = 360;
+        // 月份還原
+        if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+        else                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
+        renderCalendar(); lucide.createIcons();
+
+        function tick(now) {
+            const t = Math.min((now - start) / DUR, 1);
+            const ease = 1 - Math.pow(1 - t, 3);   // ease-out cubic
+            drawFrame(from * (1 - ease));
+            if (t < 1) { rafId = requestAnimationFrame(tick); return; }
+            cleanup(); isAnimating = false;
+        }
+        rafId = requestAnimationFrame(tick);
     }
 
-    function completePeel(dir) {
-        if (!peelClone) return;
-        const D = 480, E = 'cubic-bezier(0.28, 0.84, 0.38, 1)';
-        peelClone.style.transition = `transform ${D}ms ${E}, filter ${D}ms ease, box-shadow ${D}ms ease, opacity ${Math.round(D*0.55)}ms ease ${Math.round(D*0.35)}ms`;
-        peelClone.style.transform = `perspective(${PERSP}px) rotateX(112deg) rotateY(${dir*-42}deg) rotateZ(${dir*-16}deg) translateY(-42px)`;
-        peelClone.style.filter = 'brightness(1.08)';
-        peelClone.style.opacity = '0';
-        peelClone.style.boxShadow = `${-dir*26}px 46px 46px rgba(0,0,0,0.05)`;
-        card.style.transition = `transform ${D}ms ${E}, filter ${D}ms ease`;
-        card.style.transform = 'scale(1)';
-        card.style.filter = 'brightness(1)';
-        setTimeout(() => {
-            peelClone?.remove(); peelClone = null;
-            ['transform','filter','transition','zIndex'].forEach(p => card.style[p] = '');
-            card.style.animation = 'paperReveal 0.3s cubic-bezier(0.28,0.84,0.38,1) forwards';
-            setTimeout(() => { card.style.animation = ''; }, 300);
-        }, D + 40);
+    function completePeel() {
+        const from  = currentProgress;
+        const start = performance.now();
+        const DUR   = 480;
+
+        function tick(now) {
+            const t = Math.min((now - start) / DUR, 1);
+            const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t); // ease-out expo
+            drawFrame(from + (1 - from) * ease);
+            if (t < 1) { rafId = requestAnimationFrame(tick); return; }
+            cleanup();
+            card.style.animation = 'paperReveal 0.28s cubic-bezier(0.28,0.84,0.38,1) forwards';
+            setTimeout(() => card.style.animation = '', 280);
+            isAnimating = false;
+        }
+        rafId = requestAnimationFrame(tick);
     }
 
     card.addEventListener('touchstart', e => {
         if (isAnimating) return;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
-        isDragging = false; swipeDir = 0;
+        isDragging = false; swipeDir = 0; currentProgress = 0;
     }, { passive: true });
 
     card.addEventListener('touchmove', e => {
@@ -2892,52 +2973,29 @@ function initCalendarSwipe() {
             if (Math.abs(dy) >= Math.abs(dx) || Math.abs(dx) < 10) return;
             isDragging = true;
             swipeDir = dx < 0 ? 1 : -1;
-
-            // 先 clone 舊內容，再更新 DOM
-            buildClone();
+            setupLayers();   // ← clone 舊內容先
             if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
-            else state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
-            renderCalendar();
-            lucide.createIcons();
-
-            card.style.transform = 'scale(0.96)';
-            card.style.filter = 'brightness(0.88)';
-            card.style.transition = 'none';
-            card.style.zIndex = '1';
+            else                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+            renderCalendar(); lucide.createIcons();
             return;
         }
-
         e.preventDefault();
-        const progress = Math.min(1, Math.abs(dx) / (card.getBoundingClientRect().width * 0.85));
-        setPeel(progress, swipeDir);
+        if (!dims) return;
+        currentProgress = Math.min(1, Math.abs(dx) / (dims.W * 0.85));
+        drawFrame(currentProgress);
     }, { passive: false });
 
     card.addEventListener('touchend', e => {
         if (!isDragging || isAnimating) { isDragging = false; return; }
         isDragging = false;
-        const dx = e.changedTouches[0].clientX - startX;
-        const progress = Math.min(1, Math.abs(dx) / (card.getBoundingClientRect().width * 0.85));
-
-        if (progress >= THRESHOLD) {
-            isAnimating = true;
-            completePeel(swipeDir);
-            setTimeout(() => { isAnimating = false; }, 560);
-        } else {
-            // 未過 threshold，還原月份
-            if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
-            else state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
-            renderCalendar();
-            lucide.createIcons();
-            snapBack();
-        }
+        if (!dims) return;
+        isAnimating = true;
+        currentProgress >= THRESHOLD ? completePeel() : snapBack();
     }, { passive: true });
 
     card.addEventListener('touchcancel', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
-        else state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
-        renderCalendar();
+        if (!isDragging || !dims) return;
+        isDragging = false; isAnimating = true;
         snapBack();
     }, { passive: true });
 })();
