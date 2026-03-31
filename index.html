@@ -1707,10 +1707,19 @@ attachSwipeToDelete(tbody, id => deleteRecord(id));
             const todayStr = getTodayString();
             const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
 
+            // 1. 產生上個月的最後幾天填補 1 號前的位置
+            const prevMonthDays = new Date(year, month, 0).getDate();
             for (let i = 0; i < startingDay; i++) {
-                grid.innerHTML += `<div class="min-h-[50px]"></div>`;
+                const prevDay = prevMonthDays - startingDay + i + 1;
+                grid.innerHTML += `
+                    <div class="neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none">
+                        <span class="text-[10px] font-bold text-text-muted/50">${prevDay}</span>
+                        <div class="flex-1 flex items-end justify-center pb-0.5"></div>
+                    </div>
+                `;
             }
 
+            // 2. 產生當月的日期 (完全保留原文邏輯與設計)
             for (let i = 1; i <= daysInMonth; i++) {
                 const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 const dayRecords = state.records.filter(r => r.date === dStr);
@@ -1732,7 +1741,7 @@ attachSwipeToDelete(tbody, id => deleteRecord(id));
                 
                 if (hasIncome) {
                     baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
-incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
                 }
 
                 grid.innerHTML += `<div class="${baseClasses}" data-date="${dStr}" onclick="openCalendarDay('${dStr}')">
@@ -1740,6 +1749,18 @@ incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint t
                         <div class="flex-1 flex items-end justify-center pb-0.5">
                             ${incomeHtml}
                         </div>
+                    </div>
+                `;
+            }
+
+            // 3. 產生下個月的前幾天以填滿 42 格 (6 行)
+            const totalFilledCells = startingDay + daysInMonth;
+            const nextMonthDaysToFill = 42 - totalFilledCells;
+            for (let i = 1; i <= nextMonthDaysToFill; i++) {
+                grid.innerHTML += `
+                    <div class="neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none">
+                        <span class="text-[10px] font-bold text-text-muted/50">${i}</span>
+                        <div class="flex-1 flex items-end justify-center pb-0.5"></div>
                     </div>
                 `;
             }
