@@ -971,6 +971,14 @@ nav.nav-idle .max-w-4xl {
 
 
         // --- 擬物化頂部捲曲 (Page Curl) 過渡引擎 ---
+// ─── Shared easing ─────────────────────────────────────────────────────
+function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
+function easeOutBack(t)  {
+    const c = 1.5;
+    return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
+}
+
+// ─── Button click version ───────────────────────────────────────────────
 function animateCalendarTransition(isNext, updateDOMCallback) {
     const card = document.getElementById('calendar-card');
     if (!card) return;
@@ -979,58 +987,357 @@ function animateCalendarTransition(isNext, updateDOMCallback) {
 
     const rect  = card.getBoundingClientRect();
     const pRect = parent.getBoundingClientRect();
-    const top   = rect.top  - pRect.top  + parent.scrollTop;
+    const top   = rect.top - pRect.top + parent.scrollTop;
     const left  = rect.left - pRect.left;
     const W = rect.width, H = rect.height;
-    const dir = isNext ? -1 : 1; // -1 = 飛左, 1 = 飛右
+    const br = getComputedStyle(card).borderRadius;
 
-    // Clone 舊頁，蓋在頂層
-    const oldClone = card.cloneNode(true);
-    oldClone.removeAttribute('id');
-    Object.assign(oldClone.style, {
-        position: 'absolute',
-        top: top + 'px', left: left + 'px',
-        width: W + 'px', height: H + 'px',
-        margin: '0', zIndex: '20',
-        pointerEvents: 'none',
-        willChange: 'transform, opacity',
-        boxSizing: 'border-box',
-        borderRadius: getComputedStyle(card).borderRadius
+    if (isNext) {
+        // ── 推走：clone 當前頁飛左，底下新月份 ──
+        const clone = card.cloneNode(true);
+        clone.removeAttribute('id');
+        Object.assign(clone.style, {
+            position: 'absolute', top: top+'px', left: left+'px',
+            width: W+'px', height: H+'px', margin: '0',
+            pointerEvents: 'none', zIndex: '20', boxSizing: 'border-box',
+            borderRadius: br, willChange: 'transform',
+            boxShadow: '6px 0 24px rgba(0,0,0,0.13)',
+            transform: 'translateX(0)'
+        });
+        parent.appendChild(clone);
+        updateDOMCallback();
+        card.style.zIndex = '10';
+
+        const DUR = 420, startT = performance.now();
+        (function tick(now) {
+            const t    = Math.min((now - startT) / DUR, 1);
+            const ease = easeOutQuint(t);
+            clone.style.transform = `translateX(${-(W + 20) * ease}px)`;
+            clone.style.opacity   = String(1 - ease * 0.4);
+            if (t < 1) { requestAnimationFrame(tick); return; }
+            clone.remove();
+            card.style.zIndex = '';
+            card.style.transform = 'scale(0.985)';
+            card.style.transition = 'transform 220ms cubic-bezier(0.34,1.56,0.64,1)';
+            requestAnimationFrame(() => { card.style.transform = 'scale(1)'; });
+            setTimeout(() => { card.style.transition = card.style.transform = ''; }, 240);
+        })(performance.now());
+
+    } else {
+    const PEEK = 16;
+    const orig = new Date(state.currentMonthDate);
+    const prevDate = new Date(state.currentMonthDate);
+    prevDate.setMonth(prevDate.getMonth() - 1);
+
+    // 臨時渲染 prev 月份內容
+    state.currentMonthDate = prevDate;
+    renderCalendar();
+    // ❌ 刪走這裡的 lucide.createIcons()
+
+    const clone = card.cloneNode(true);
+    clone.removeAttribute('id');
+
+    // 還原 current 月份
+    state.currentMonthDate = orig;
+    renderCalendar();
+    // ❌ 刪走這裡的 lucide.createIcons()
+
+    Object.assign(clone.style, {
+        position: 'absolute', top: top+'px', left: left+'px',
+        width: W+'px', height: H+'px', margin: '0',
+        pointerEvents: 'none', zIndex: '20', boxSizing: 'border-box',
+        borderRadius: br, willChange: 'transform',
+        boxShadow: '6px 0 28px rgba(0,0,0,0.15)',
+        transform: `translateX(${-(W - PEEK)}px)`
     });
-    parent.appendChild(oldClone);
-
-    // 更新底層為新月份
-    updateDOMCallback();
+    parent.appendChild(clone);
     card.style.zIndex = '10';
 
-    // Spring 飛出
-    const target = dir * (W + 24);
-    const DUR    = 440;
-    const startT = performance.now();
-
+    const DUR = 420, startT = performance.now();
+    const startTx = -(W - PEEK);
     (function tick(now) {
         const t    = Math.min((now - startT) / DUR, 1);
-        // iOS-style: ease-out quintic
-        const ease = 1 - Math.pow(1 - t, 5);
-        oldClone.style.transform = `translateX(${target * ease}px)`;
-        oldClone.style.opacity   = String(1 - ease * 0.6);
+        const ease = easeOutQuint(t);
+        clone.style.transform = `translateX(${startTx * (1 - ease)}px)`;
         if (t < 1) { requestAnimationFrame(tick); return; }
-        oldClone.remove();
+        clone.remove();
+        updateDOMCallback(); // ← 呢度先 commit + renderCalendar
         card.style.zIndex = '';
-        // 新頁用 paperReveal 輕輕浮出
-        const revDir = isNext ? 1 : -1;
-        card.style.transform = `translateX(${revDir * 28}px)`;
-        card.style.opacity   = '0';
-        card.style.transition = 'none';
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            card.style.transition = 'transform 380ms cubic-bezier(0.16,1,0.3,1), opacity 280ms ease';
-            card.style.transform  = 'translateX(0)';
-            card.style.opacity    = '1';
-            setTimeout(() => {
-                card.style.transition = card.style.transform = card.style.opacity = '';
-            }, 400);
-        }));
+        lucide.createIcons(); // ← 只留呢一個
+        card.style.transform = 'translateX(-5px)';
+        card.style.transition = 'transform 200ms cubic-bezier(0.34,1.56,0.64,1)';
+        requestAnimationFrame(() => { card.style.transform = 'translateX(0)'; });
+        setTimeout(() => { card.style.transition = card.style.transform = ''; }, 220);
     })(performance.now());
+}
+}
+
+// ─── Gesture version ────────────────────────────────────────────────────
+function initCalendarSwipe() {
+    const card = document.getElementById('calendar-card');
+    if (!card) return;
+    const parent = card.parentElement;
+    if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+    card.style.touchAction = 'pan-y';
+
+    const PEEK      = 18;   // px: prev card peek amount
+    const THRESHOLD = 0.36; // 36% 觸發完成
+    const VEL_FLICK = 340;  // px/s: 快甩觸發
+
+    let startX = 0, startY = 0;
+    let isDragging = false, swipeDir = 0;
+    let movingClone = null, cardW = 0, cardH = 0;
+    let isAnimating = false, rafId = null;
+    let currentTx = 0, peekStart = 0;
+    let pendingDate = null;
+
+    // ── Velocity tracker ─────────────────────────────────────────────────
+    let velBuf = [], lastX = 0, lastT = 0;
+    function trackVel(x) {
+        const now = performance.now(), dt = now - lastT;
+        if (dt > 0 && dt < 80) velBuf.push((x - lastX) / dt * 1000);
+        if (velBuf.length > 5) velBuf.shift();
+        lastX = x; lastT = now;
+    }
+    function getVel() {
+        return velBuf.length ? velBuf.reduce((a,b)=>a+b,0)/velBuf.length : 0;
+    }
+
+    // ── Cleanup ──────────────────────────────────────────────────────────
+    function cleanup() {
+        cancelAnimationFrame(rafId);
+        movingClone?.remove(); movingClone = null;
+        card.style.cssText = card.style.cssText
+            .replace(/filter:[^;]+;?/g,'')
+            .replace(/z-index:[^;]+;?/g,'')
+            .replace(/transform:[^;]+;?/g,'')
+            .replace(/transition:[^;]+;?/g,'');
+        currentTx = 0;
+    }
+
+    // ── Build layers ──────────────────────────────────────────────────────
+    function buildNextLayers() {
+        // Clone current → top; render next month underneath
+        const rect  = card.getBoundingClientRect();
+        const pRect = parent.getBoundingClientRect();
+        cardW = rect.width; cardH = rect.height;
+        const top  = rect.top  - pRect.top  + parent.scrollTop;
+        const left = rect.left - pRect.left;
+        const br   = getComputedStyle(card).borderRadius;
+
+        movingClone = card.cloneNode(true);
+        movingClone.removeAttribute('id');
+        Object.assign(movingClone.style, {
+            position: 'absolute', top: top+'px', left: left+'px',
+            width: cardW+'px', height: cardH+'px', margin: '0',
+            pointerEvents: 'none', zIndex: '20', boxSizing: 'border-box',
+            borderRadius: br, willChange: 'transform',
+            boxShadow: '6px 0 24px rgba(0,0,0,0.12)',
+            transform: 'translateX(0)'
+        });
+        parent.appendChild(movingClone);
+
+        pendingDate = new Date(state.currentMonthDate);
+        pendingDate.setMonth(pendingDate.getMonth() + 1);
+        const orig = new Date(state.currentMonthDate);
+        state.currentMonthDate = pendingDate;
+        renderCalendar(); lucide.createIcons();
+        state.currentMonthDate = orig;
+
+        card.style.zIndex = '10';
+        currentTx = 0;
+    }
+
+    function buildPrevLayers() {
+        // Render prev month → clone it → restore current; clone peeks from left
+        const rect  = card.getBoundingClientRect();
+        const pRect = parent.getBoundingClientRect();
+        cardW = rect.width; cardH = rect.height;
+        const top  = rect.top  - pRect.top  + parent.scrollTop;
+        const left = rect.left - pRect.left;
+        const br   = getComputedStyle(card).borderRadius;
+
+        pendingDate = new Date(state.currentMonthDate);
+        pendingDate.setMonth(pendingDate.getMonth() - 1);
+
+        const orig = new Date(state.currentMonthDate);
+        state.currentMonthDate = pendingDate;
+        renderCalendar();
+        state.currentMonthDate = orig;
+
+        movingClone = card.cloneNode(true); // prev month content
+        movingClone.removeAttribute('id');
+        peekStart = -(cardW - PEEK);
+        Object.assign(movingClone.style, {
+            position: 'absolute', top: top+'px', left: left+'px',
+            width: cardW+'px', height: cardH+'px', margin: '0',
+            pointerEvents: 'none', zIndex: '20', boxSizing: 'border-box',
+            borderRadius: br, willChange: 'transform',
+            boxShadow: '6px 0 28px rgba(0,0,0,0.15)',
+            transform: `translateX(${peekStart}px)`
+        });
+        parent.appendChild(movingClone);
+
+        renderCalendar(); lucide.createIcons(); // restore current under clone
+        card.style.zIndex = '10';
+        currentTx = peekStart;
+    }
+
+    // ── Apply positions ───────────────────────────────────────────────────
+    function applyNext(tx) {
+        if (!movingClone) return;
+        movingClone.style.transform = `translateX(${tx}px)`;
+        const p = Math.min(1, Math.abs(tx) / cardW);
+        movingClone.style.opacity = String(1 - p * 0.35);
+    }
+
+    function applyPrev(tx) {
+        if (!movingClone) return;
+        movingClone.style.transform = `translateX(${tx}px)`;
+        const p = Math.min(1, (tx - peekStart) / (cardW - PEEK));
+        // shadow deepens as card slides in
+        const sh = 6 + p * 14;
+        const op = 0.08 + p * 0.12;
+        movingClone.style.boxShadow = `${sh}px 0 ${sh * 3}px rgba(0,0,0,${op})`;
+        card.style.filter = `brightness(${1 - p * 0.06})`;
+    }
+
+    // ── Snap back ─────────────────────────────────────────────────────────
+    function doSnapBack() {
+        const from   = currentTx;
+        const target = swipeDir === 1 ? 0 : peekStart;
+        const DUR    = 400;
+        const startT = performance.now();
+
+        // Restore correct underlying content
+        if (swipeDir === 1) {
+            renderCalendar(); lucide.createIcons(); // next → back to current
+        }
+
+        (function tick(now) {
+            const t    = Math.min((now - startT) / DUR, 1);
+            const ease = easeOutBack(t);
+            const tx   = from + (target - from) * ease;
+            swipeDir === 1 ? applyNext(tx) : applyPrev(tx);
+            if (t < 1) { rafId = requestAnimationFrame(tick); return; }
+            cleanup(); isAnimating = false;
+        })(performance.now());
+    }
+
+    // ── Complete ──────────────────────────────────────────────────────────
+    function doComplete(vel) {
+        const from = currentTx;
+        let target, applyFn;
+
+        if (swipeDir === 1) {
+            // fly off left
+            target  = -(cardW + 20);
+            applyFn = applyNext;
+            state.currentMonthDate = new Date(pendingDate);
+            renderCalendar(); lucide.createIcons();
+        } else {
+            // slide fully in
+            target  = 0;
+            applyFn = applyPrev;
+        }
+
+        const remaining = target - from;
+        const speed     = Math.max(Math.abs(vel), 350);
+        const DUR       = Math.min(400, Math.max(130, Math.abs(remaining) / speed * 1000));
+        const startT    = performance.now();
+
+        (function tick(now) {
+            const t    = Math.min((now - startT) / DUR, 1);
+            const ease = easeOutQuint(t);
+            applyFn(from + remaining * ease);
+            if (t < 1) { rafId = requestAnimationFrame(tick); return; }
+
+            if (swipeDir === -1) {
+                // prev card is now fully on top → commit and refresh underneath
+                state.currentMonthDate = new Date(pendingDate);
+                movingClone?.remove(); movingClone = null;
+                card.style.filter = card.style.zIndex = '';
+                renderCalendar(); lucide.createIcons();
+                // tiny settle nudge
+                card.style.transform  = 'translateX(-4px)';
+                card.style.transition = 'transform 200ms cubic-bezier(0.34,1.56,0.64,1)';
+                requestAnimationFrame(() => { card.style.transform = 'translateX(0)'; });
+                setTimeout(() => { card.style.transition = card.style.transform = ''; isAnimating = false; }, 220);
+            } else {
+                cleanup();
+                card.style.transform  = 'scale(0.988)';
+                card.style.transition = 'transform 200ms cubic-bezier(0.34,1.56,0.64,1)';
+                requestAnimationFrame(() => { card.style.transform = 'scale(1)'; });
+                setTimeout(() => { card.style.transition = card.style.transform = ''; isAnimating = false; }, 220);
+            }
+        })(performance.now());
+    }
+
+    // ── Touch handlers ────────────────────────────────────────────────────
+    card.addEventListener('touchstart', e => {
+        if (isAnimating) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isDragging = false; swipeDir = 0; currentTx = 0;
+        velBuf = []; lastX = startX; lastT = performance.now();
+    }, { passive: true });
+
+    card.addEventListener('touchmove', e => {
+        if (isAnimating) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+
+        if (!isDragging) {
+            if (Math.abs(dy) >= Math.abs(dx) || Math.abs(dx) < 8) return;
+            isDragging = true;
+            swipeDir = dx < 0 ? 1 : -1;
+            swipeDir === 1 ? buildNextLayers() : buildPrevLayers();
+            return;
+        }
+
+        if (e.cancelable) e.preventDefault();
+        if (!movingClone) return;
+        trackVel(e.touches[0].clientX);
+
+        if (swipeDir === 1) {
+            // Next: leftward only, rubber band if overshoots right
+            const raw = dx;
+            const abs = Math.abs(Math.min(0, raw));
+            currentTx = raw > 0 ? raw * 0.15 : -abs;
+            applyNext(currentTx);
+        } else {
+            // Prev: from peekStart rightward, rubber band past 0
+            const raw = peekStart + Math.max(0, dx);
+            currentTx = raw > 0 ? raw * 0.15 : raw;
+            applyPrev(currentTx);
+        }
+    }, { passive: false });
+
+    card.addEventListener('touchend', () => {
+        if (!isDragging || isAnimating) { isDragging = false; return; }
+        isDragging = false;
+        if (!movingClone) return;
+        isAnimating = true;
+
+        const vel = getVel(); // px/s, positive = rightward
+
+        let shouldComplete;
+        if (swipeDir === 1) {
+            const velInDir = -vel; // leftward positive
+            shouldComplete = Math.abs(currentTx) / cardW >= THRESHOLD || velInDir > VEL_FLICK;
+        } else {
+            const progress = (currentTx - peekStart) / (cardW - PEEK);
+            shouldComplete = progress >= THRESHOLD || vel > VEL_FLICK;
+        }
+
+        shouldComplete ? doComplete(vel) : doSnapBack();
+    }, { passive: true });
+
+    card.addEventListener('touchcancel', () => {
+        if (!isDragging) return;
+        isDragging = false; isAnimating = true;
+        doSnapBack();
+    }, { passive: true });
 }
 
 
@@ -2759,202 +3066,7 @@ document.getElementById('cal-prev').addEventListener('click', () => {
     });
 });
 
-// ── 新增：Calendar card 手勢支援 ──
-(// --- 實體便條紙手勢支援 (結合實時 3D 捲曲運算) ---
-function initCalendarSwipe() {
-    const card = document.getElementById('calendar-card');
-    if (!card) return;
-    const parent = card.parentElement;
-    if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
 
-    let startX = 0, startY = 0;
-    let isDragging = false, swipeDir = 0, currentTx = 0;
-    let oldClone = null, cardW = 0;
-    let isAnimating = false, rafId = null;
-    let pendingDate = null;
-
-    // Velocity tracker（滾動平均）
-    let velBuf = [], lastX = 0, lastT = 0;
-    function trackVel(x) {
-        const now = performance.now(), dt = now - lastT;
-        if (dt > 0 && dt < 80) velBuf.push((x - lastX) / dt * 1000);
-        if (velBuf.length > 5) velBuf.shift();
-        lastX = x; lastT = now;
-    }
-    function getVel() {
-        return velBuf.length ? velBuf.reduce((a,b) => a+b,0) / velBuf.length : 0;
-    }
-
-    function buildClone() {
-        const rect  = card.getBoundingClientRect();
-        const pRect = parent.getBoundingClientRect();
-        const top   = rect.top  - pRect.top  + parent.scrollTop;
-        const left  = rect.left - pRect.left;
-        cardW = rect.width;
-
-        oldClone = card.cloneNode(true);
-        oldClone.removeAttribute('id');
-        Object.assign(oldClone.style, {
-            position: 'absolute',
-            top: top + 'px', left: left + 'px',
-            width: cardW + 'px', height: rect.height + 'px',
-            margin: '0', zIndex: '20',
-            pointerEvents: 'none',
-            willChange: 'transform, opacity',
-            boxSizing: 'border-box',
-            borderRadius: getComputedStyle(card).borderRadius
-        });
-        parent.appendChild(oldClone);
-    }
-
-    function applyTx(tx) {
-        if (!oldClone) return;
-        oldClone.style.transform = `translateX(${tx}px)`;
-        // 飛出途中輕微透明
-        const progress = Math.min(1, Math.abs(tx) / cardW);
-        oldClone.style.opacity = String(1 - progress * 0.5);
-        card.style.filter = `brightness(${0.88 + progress * 0.12})`;
-    }
-
-    function cleanup() {
-        cancelAnimationFrame(rafId);
-        oldClone?.remove(); oldClone = null;
-        card.style.filter = card.style.zIndex = '';
-        cardW = 0; currentTx = 0;
-    }
-
-    // Spring 彈回
-    function doSnapBack() {
-        // 還原底層到原月份（pendingDate 從未 commit）
-        renderCalendar(); lucide.createIcons();
-
-        const from  = currentTx;
-        const startT = performance.now();
-        const DUR    = 420;
-
-        function tick(now) {
-            const t    = Math.min((now - startT) / DUR, 1);
-            // spring overshoot: ease-out back (elastic)
-            const ease = 1 - (Math.cos(t * Math.PI * 2.5) * Math.exp(-t * 5));
-            const clampedEase = Math.max(0, Math.min(1, ease));
-            applyTx(from * (1 - clampedEase));
-            if (t < 1) { rafId = requestAnimationFrame(tick); return; }
-            cleanup(); isAnimating = false;
-        }
-        rafId = requestAnimationFrame(tick);
-    }
-
-    // 飛出完成
-    function doComplete(initVelPxPerSec) {
-        // Lazy commit
-        state.currentMonthDate = new Date(pendingDate);
-        renderCalendar(); lucide.createIcons();
-
-        const flyTarget = (swipeDir === 1 ? -1 : 1) * (cardW + 24);
-        const from      = currentTx;
-        const remaining = flyTarget - from;
-
-        // 根據手指速度計算剩餘動畫時長（快甩 = 更短）
-        const speed  = Math.max(Math.abs(initVelPxPerSec), 300);
-        const DUR    = Math.min(420, Math.max(160, Math.abs(remaining) / speed * 1000));
-        const startT = performance.now();
-
-        function tick(now) {
-            const t    = Math.min((now - startT) / DUR, 1);
-            const ease = 1 - Math.pow(1 - t, 4); // ease-out quart
-            oldClone.style.transform = `translateX(${from + remaining * ease}px)`;
-            const p = Math.min(1, Math.abs(from + remaining * ease) / cardW);
-            oldClone.style.opacity = String(1 - p * 0.6);
-            if (t < 1) { rafId = requestAnimationFrame(tick); return; }
-
-            // 新頁滑入
-            const revDir = swipeDir === 1 ? 1 : -1;
-            cleanup();
-            card.style.transform  = `translateX(${revDir * 22}px)`;
-            card.style.opacity    = '0';
-            card.style.transition = 'none';
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                card.style.transition = 'transform 360ms cubic-bezier(0.16,1,0.3,1), opacity 250ms ease';
-                card.style.transform  = 'translateX(0)';
-                card.style.opacity    = '1';
-                setTimeout(() => {
-                    card.style.transition = card.style.transform = card.style.opacity = '';
-                    isAnimating = false;
-                }, 380);
-            }));
-        }
-        rafId = requestAnimationFrame(tick);
-    }
-
-    card.addEventListener('touchstart', e => {
-        if (isAnimating) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = false; swipeDir = 0; currentTx = 0;
-        velBuf = []; lastX = startX; lastT = performance.now();
-    }, { passive: true });
-
-    card.addEventListener('touchmove', e => {
-        if (isAnimating) return;
-        const dx = e.touches[0].clientX - startX;
-        const dy = e.touches[0].clientY - startY;
-
-        if (!isDragging) {
-            if (Math.abs(dy) >= Math.abs(dx) || Math.abs(dx) < 8) return;
-            isDragging = true;
-            swipeDir = dx < 0 ? 1 : -1;
-
-            // Clone 舊頁 → 底層預覽新月份（不 commit state）
-            buildClone();
-            pendingDate = new Date(state.currentMonthDate);
-            if (swipeDir === 1) pendingDate.setMonth(pendingDate.getMonth() + 1);
-            else                pendingDate.setMonth(pendingDate.getMonth() - 1);
-
-            const orig = new Date(state.currentMonthDate);
-            state.currentMonthDate = pendingDate;
-            renderCalendar(); lucide.createIcons();
-            state.currentMonthDate = orig; // 還原，state 未污染
-
-            card.style.zIndex = '10';
-            return;
-        }
-
-        if (e.cancelable) e.preventDefault();
-        if (!oldClone) return;
-        trackVel(e.touches[0].clientX);
-        // 阻力：超過 60% 寬度開始收窄，模擬橡皮筋
-        const raw      = swipeDir === 1 ? Math.min(0, dx) : Math.max(0, dx);
-        const absRaw   = Math.abs(raw);
-        const resist   = absRaw > cardW * 0.6
-            ? cardW * 0.6 + (absRaw - cardW * 0.6) * 0.25
-            : absRaw;
-        currentTx = Math.sign(raw) * resist;
-        applyTx(currentTx);
-    }, { passive: false });
-
-    card.addEventListener('touchend', () => {
-        if (!isDragging || isAnimating) { isDragging = false; return; }
-        isDragging = false;
-        if (!oldClone) return;
-        isAnimating = true;
-
-        const vel        = getVel();                       // px/s，正 = 向右
-        const velInDir   = swipeDir === 1 ? -vel : vel;   // 正 = 沿 swipe 方向
-        const progress   = Math.abs(currentTx) / cardW;
-        const isFlick    = velInDir > 350;                 // 快甩
-        const shouldDone = progress >= 0.36 || isFlick;
-
-        shouldDone ? doComplete(vel) : doSnapBack();
-    }, { passive: true });
-
-    card.addEventListener('touchcancel', () => {
-        if (!isDragging) return;
-        isDragging = false; isAnimating = true;
-        doSnapBack();
-    }, { passive: true });
-}
-
-)();
 
             document.getElementById('add-student-form').addEventListener('submit', (e) => {
                 e.preventDefault();
