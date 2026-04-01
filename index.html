@@ -278,9 +278,17 @@ nav.nav-idle .max-w-4xl {
 
 
 /* --- 底層新頁面浮現：陰影散去，微微放大 --- */
+/* --- Calendar Slide --- */
 @keyframes paperReveal {
-    0% { transform: scale(0.96) translateY(5px); opacity: 0; filter: brightness(0.85); }
-    100% { transform: scale(1) translateY(0); opacity: 1; filter: brightness(1); }
+    0%   { opacity: 0; transform: scale(0.97) translateX(6px); }
+    100% { opacity: 1; transform: scale(1)    translateX(0);   }
+}
+.cal-slide-base {
+    position: absolute;
+    pointer-events: none;
+    will-change: transform;
+    border-radius: inherit;
+    box-sizing: border-box;
 }
 
 
@@ -584,7 +592,7 @@ nav.nav-idle .max-w-4xl {
         <div id="view-calendar" class="view-section hidden">
     <div class="flex flex-col gap-6">
         
-        <div class="neu-card p-4 md:p-6" id="calendar-card">  <!-- ← 加上 id -->
+        <div class="neu-card p-4 md:p-6" id="calendar-card" style="touch-action: pan-y;">  <!-- ← 加上 id -->
   <div class="flex items-center justify-between mt-3 mb-7">
     <button id="cal-prev" class="neu-btn p-2">
       <i data-lucide="chevron-left" class="w-5 h-5"></i>
@@ -961,6 +969,7 @@ nav.nav-idle .max-w-4xl {
             editForm: {}
         };
 
+
         // --- 擬物化頂部捲曲 (Page Curl) 過渡引擎 ---
 function animateCalendarTransition(isNext, updateDOMCallback) {
     const card = document.getElementById('calendar-card');
@@ -968,113 +977,60 @@ function animateCalendarTransition(isNext, updateDOMCallback) {
     const parent = card.parentElement;
     if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
 
-    const rect = card.getBoundingClientRect();
+    const rect  = card.getBoundingClientRect();
     const pRect = parent.getBoundingClientRect();
-    const top  = rect.top  - pRect.top  + parent.scrollTop;
-    const left = rect.left - pRect.left;
+    const top   = rect.top  - pRect.top  + parent.scrollTop;
+    const left  = rect.left - pRect.left;
     const W = rect.width, H = rect.height;
-    const dir = isNext ? 1 : -1;
-    const isDark = document.documentElement.classList.contains('dark');
-    const br = getComputedStyle(card).borderRadius;
+    const dir = isNext ? -1 : 1; // -1 = 飛左, 1 = 飛右
 
-    // — Layer 1: clone 舊內容 —
+    // Clone 舊頁，蓋在頂層
     const oldClone = card.cloneNode(true);
     oldClone.removeAttribute('id');
     Object.assign(oldClone.style, {
-        position: 'absolute', top: top + 'px', left: left + 'px',
-        width: W + 'px', height: H + 'px', margin: '0',
-        pointerEvents: 'none', zIndex: '20',
-        boxSizing: 'border-box', overflow: 'hidden',
-        borderRadius: br
+        position: 'absolute',
+        top: top + 'px', left: left + 'px',
+        width: W + 'px', height: H + 'px',
+        margin: '0', zIndex: '20',
+        pointerEvents: 'none',
+        willChange: 'transform, opacity',
+        boxSizing: 'border-box',
+        borderRadius: getComputedStyle(card).borderRadius
     });
     parent.appendChild(oldClone);
 
-    // — Layer 2: Canvas overlay —
-    const cvs = document.createElement('canvas');
-    cvs.width = Math.round(W * devicePixelRatio);
-    cvs.height = Math.round(H * devicePixelRatio);
-    Object.assign(cvs.style, {
-        position: 'absolute', top: top + 'px', left: left + 'px',
-        width: W + 'px', height: H + 'px',
-        pointerEvents: 'none', zIndex: '25',
-        borderRadius: br,
-        clipPath: `inset(0 round ${br})`
-    });
-    const ctx = cvs.getContext('2d');
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-    parent.appendChild(cvs);
-
-    // 更新底層 DOM
+    // 更新底層為新月份
     updateDOMCallback();
-    card.style.cssText += ';z-index:10;filter:brightness(0.88);transition:none;';
+    card.style.zIndex = '10';
 
-    function drawFrame(progress) {
-        ctx.clearRect(0, 0, W, H);
-        const foldX = dir === 1 ? W * (1 - progress) : W * progress;
-        const SHADOW_W = Math.min(55, W * 0.11);
-        const EDGE_W   = 18;
+    // Spring 飛出
+    const target = dir * (W + 24);
+    const DUR    = 440;
+    const startT = performance.now();
 
-        // ① 背面紙
-        const bg = dir === 1
-            ? ctx.createLinearGradient(0, 0, foldX, 0)
-            : ctx.createLinearGradient(foldX, 0, W, 0);
-        if (dir === 1) {
-            bg.addColorStop(0,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
-            bg.addColorStop(0.75, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
-            bg.addColorStop(1,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, foldX, H);
-        } else {
-            bg.addColorStop(0,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
-            bg.addColorStop(0.25, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
-            bg.addColorStop(1,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
-            ctx.fillStyle = bg;
-            ctx.fillRect(foldX, 0, W - foldX, H);
-        }
-
-        // ② 翻頁投影（落在新月份上）
-        const sh = dir === 1
-            ? ctx.createLinearGradient(foldX, 0, foldX + SHADOW_W, 0)
-            : ctx.createLinearGradient(foldX, 0, foldX - SHADOW_W, 0);
-        sh.addColorStop(0,   'rgba(0,0,0,0.24)');
-        sh.addColorStop(0.35,'rgba(0,0,0,0.09)');
-        sh.addColorStop(1,   'rgba(0,0,0,0.00)');
-        ctx.fillStyle = sh;
-        if (dir === 1) ctx.fillRect(foldX, 0, SHADOW_W, H);
-        else           ctx.fillRect(Math.max(0, foldX - SHADOW_W), 0, SHADOW_W, H);
-
-        // ③ 折邊高光
-        const hl = dir === 1
-            ? ctx.createLinearGradient(Math.max(0, foldX - EDGE_W), 0, foldX, 0)
-            : ctx.createLinearGradient(foldX, 0, Math.min(W, foldX + EDGE_W), 0);
-        hl.addColorStop(0, 'rgba(255,255,255,0.00)');
-        hl.addColorStop(0.55, isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)');
-        hl.addColorStop(1,   isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.36)');
-        ctx.fillStyle = hl;
-        if (dir === 1) ctx.fillRect(Math.max(0, foldX - EDGE_W), 0, EDGE_W, H);
-        else           ctx.fillRect(foldX, 0, EDGE_W, H);
-
-        // ④ 舊頁 clip（只露出未翻部份）
-        oldClone.style.clipPath = dir === 1
-            ? `inset(0 0 0 ${foldX}px round ${br})`
-            : `inset(0 ${W - foldX}px 0 0 round ${br})`;
-
-        card.style.filter = `brightness(${0.88 + 0.12 * progress})`;
-    }
-
-    const DUR = 600;
-    const start = performance.now();
-    function tick(now) {
-        const t = Math.min((now - start) / DUR, 1);
-        const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t); // ease-out expo
-        drawFrame(ease);
+    (function tick(now) {
+        const t    = Math.min((now - startT) / DUR, 1);
+        // iOS-style: ease-out quintic
+        const ease = 1 - Math.pow(1 - t, 5);
+        oldClone.style.transform = `translateX(${target * ease}px)`;
+        oldClone.style.opacity   = String(1 - ease * 0.6);
         if (t < 1) { requestAnimationFrame(tick); return; }
-        oldClone.remove(); cvs.remove();
-        card.style.filter = card.style.zIndex = card.style.transition = '';
-        card.style.animation = 'paperReveal 0.28s cubic-bezier(0.28,0.84,0.38,1) forwards';
-        setTimeout(() => card.style.animation = '', 280);
-    }
-    requestAnimationFrame(tick);
+        oldClone.remove();
+        card.style.zIndex = '';
+        // 新頁用 paperReveal 輕輕浮出
+        const revDir = isNext ? 1 : -1;
+        card.style.transform = `translateX(${revDir * 28}px)`;
+        card.style.opacity   = '0';
+        card.style.transition = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            card.style.transition = 'transform 380ms cubic-bezier(0.16,1,0.3,1), opacity 280ms ease';
+            card.style.transform  = 'translateX(0)';
+            card.style.opacity    = '1';
+            setTimeout(() => {
+                card.style.transition = card.style.transform = card.style.opacity = '';
+            }, 400);
+        }));
+    })(performance.now());
 }
 
 
@@ -2812,147 +2768,120 @@ function initCalendarSwipe() {
     if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
 
     let startX = 0, startY = 0;
-    let isDragging = false, swipeDir = 0;
-    let oldClone = null, cvs = null, ctx = null;
+    let isDragging = false, swipeDir = 0, currentTx = 0;
+    let oldClone = null, cardW = 0;
     let isAnimating = false, rafId = null;
-    let currentProgress = 0;
-    let dims = null; // { W, H, br }
-    const THRESHOLD = 0.40;
+    let pendingDate = null;
 
-    function setupLayers() {
+    // Velocity tracker（滾動平均）
+    let velBuf = [], lastX = 0, lastT = 0;
+    function trackVel(x) {
+        const now = performance.now(), dt = now - lastT;
+        if (dt > 0 && dt < 80) velBuf.push((x - lastX) / dt * 1000);
+        if (velBuf.length > 5) velBuf.shift();
+        lastX = x; lastT = now;
+    }
+    function getVel() {
+        return velBuf.length ? velBuf.reduce((a,b) => a+b,0) / velBuf.length : 0;
+    }
+
+    function buildClone() {
         const rect  = card.getBoundingClientRect();
         const pRect = parent.getBoundingClientRect();
-        const top  = rect.top  - pRect.top  + parent.scrollTop;
-        const left = rect.left - pRect.left;
-        const W = rect.width, H = rect.height;
-        const br = getComputedStyle(card).borderRadius;
-        const isDark = document.documentElement.classList.contains('dark');
+        const top   = rect.top  - pRect.top  + parent.scrollTop;
+        const left  = rect.left - pRect.left;
+        cardW = rect.width;
 
         oldClone = card.cloneNode(true);
         oldClone.removeAttribute('id');
         Object.assign(oldClone.style, {
-            position: 'absolute', top: top + 'px', left: left + 'px',
-            width: W + 'px', height: H + 'px', margin: '0',
-            pointerEvents: 'none', zIndex: '20',
-            boxSizing: 'border-box', overflow: 'hidden', borderRadius: br
+            position: 'absolute',
+            top: top + 'px', left: left + 'px',
+            width: cardW + 'px', height: rect.height + 'px',
+            margin: '0', zIndex: '20',
+            pointerEvents: 'none',
+            willChange: 'transform, opacity',
+            boxSizing: 'border-box',
+            borderRadius: getComputedStyle(card).borderRadius
         });
         parent.appendChild(oldClone);
-
-        cvs = document.createElement('canvas');
-        cvs.width  = Math.round(W * devicePixelRatio);
-        cvs.height = Math.round(H * devicePixelRatio);
-        Object.assign(cvs.style, {
-            position: 'absolute', top: top + 'px', left: left + 'px',
-            width: W + 'px', height: H + 'px',
-            pointerEvents: 'none', zIndex: '25',
-            borderRadius: br, clipPath: `inset(0 round ${br})`
-        });
-        ctx = cvs.getContext('2d');
-        ctx.scale(devicePixelRatio, devicePixelRatio);
-        parent.appendChild(cvs);
-
-        card.style.cssText += ';z-index:10;filter:brightness(0.88);transition:none;';
-        dims = { W, H, br, isDark };
     }
 
-    function drawFrame(progress) {
-        if (!ctx || !dims) return;
-        const { W, H, br, isDark } = dims;
-        ctx.clearRect(0, 0, W, H);
-        const foldX = swipeDir === 1 ? W * (1 - progress) : W * progress;
-        const SHADOW_W = Math.min(55, W * 0.11);
-        const EDGE_W   = 18;
-
-        // ① 背面紙
-        const bg = swipeDir === 1
-            ? ctx.createLinearGradient(0, 0, foldX, 0)
-            : ctx.createLinearGradient(foldX, 0, W, 0);
-        if (swipeDir === 1) {
-            bg.addColorStop(0,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
-            bg.addColorStop(0.75, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
-            bg.addColorStop(1,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, foldX, H);
-        } else {
-            bg.addColorStop(0,   isDark ? 'rgba(56,54,50,0.90)' : 'rgba(255,255,255,0.90)');
-            bg.addColorStop(0.25, isDark ? 'rgba(44,42,39,0.97)' : 'rgba(251,250,247,0.97)');
-            bg.addColorStop(1,   isDark ? 'rgba(38,36,33,0.99)' : 'rgba(246,245,241,0.99)');
-            ctx.fillStyle = bg;
-            ctx.fillRect(foldX, 0, W - foldX, H);
-        }
-
-        // ② 投影
-        const sh = swipeDir === 1
-            ? ctx.createLinearGradient(foldX, 0, foldX + SHADOW_W, 0)
-            : ctx.createLinearGradient(foldX, 0, foldX - SHADOW_W, 0);
-        sh.addColorStop(0,    'rgba(0,0,0,0.24)');
-        sh.addColorStop(0.35, 'rgba(0,0,0,0.09)');
-        sh.addColorStop(1,    'rgba(0,0,0,0.00)');
-        ctx.fillStyle = sh;
-        if (swipeDir === 1) ctx.fillRect(foldX, 0, SHADOW_W, H);
-        else                ctx.fillRect(Math.max(0, foldX - SHADOW_W), 0, SHADOW_W, H);
-
-        // ③ 折邊高光
-        const hl = swipeDir === 1
-            ? ctx.createLinearGradient(Math.max(0, foldX - EDGE_W), 0, foldX, 0)
-            : ctx.createLinearGradient(foldX, 0, Math.min(W, foldX + EDGE_W), 0);
-        hl.addColorStop(0,    'rgba(255,255,255,0.00)');
-        hl.addColorStop(0.55, isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)');
-        hl.addColorStop(1,    isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.36)');
-        ctx.fillStyle = hl;
-        if (swipeDir === 1) ctx.fillRect(Math.max(0, foldX - EDGE_W), 0, EDGE_W, H);
-        else                ctx.fillRect(foldX, 0, EDGE_W, H);
-
-        // ④ 裁剪舊頁
-        if (oldClone) {
-            oldClone.style.clipPath = swipeDir === 1
-                ? `inset(0 0 0 ${foldX}px round ${br})`
-                : `inset(0 ${W - foldX}px 0 0 round ${br})`;
-        }
-        card.style.filter = `brightness(${0.88 + 0.12 * progress})`;
+    function applyTx(tx) {
+        if (!oldClone) return;
+        oldClone.style.transform = `translateX(${tx}px)`;
+        // 飛出途中輕微透明
+        const progress = Math.min(1, Math.abs(tx) / cardW);
+        oldClone.style.opacity = String(1 - progress * 0.5);
+        card.style.filter = `brightness(${0.88 + progress * 0.12})`;
     }
 
     function cleanup() {
         cancelAnimationFrame(rafId);
         oldClone?.remove(); oldClone = null;
-        cvs?.remove();      cvs = null; ctx = null;
-        card.style.filter = card.style.zIndex = card.style.transition = '';
-        dims = null;
+        card.style.filter = card.style.zIndex = '';
+        cardW = 0; currentTx = 0;
     }
 
-    function snapBack() {
-        const from = currentProgress;
-        const start = performance.now();
-        const DUR = 360;
-        // 月份還原
-        if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
-        else                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
+    // Spring 彈回
+    function doSnapBack() {
+        // 還原底層到原月份（pendingDate 從未 commit）
         renderCalendar(); lucide.createIcons();
 
+        const from  = currentTx;
+        const startT = performance.now();
+        const DUR    = 420;
+
         function tick(now) {
-            const t = Math.min((now - start) / DUR, 1);
-            const ease = 1 - Math.pow(1 - t, 3);   // ease-out cubic
-            drawFrame(from * (1 - ease));
+            const t    = Math.min((now - startT) / DUR, 1);
+            // spring overshoot: ease-out back (elastic)
+            const ease = 1 - (Math.cos(t * Math.PI * 2.5) * Math.exp(-t * 5));
+            const clampedEase = Math.max(0, Math.min(1, ease));
+            applyTx(from * (1 - clampedEase));
             if (t < 1) { rafId = requestAnimationFrame(tick); return; }
             cleanup(); isAnimating = false;
         }
         rafId = requestAnimationFrame(tick);
     }
 
-    function completePeel() {
-        const from  = currentProgress;
-        const start = performance.now();
-        const DUR   = 480;
+    // 飛出完成
+    function doComplete(initVelPxPerSec) {
+        // Lazy commit
+        state.currentMonthDate = new Date(pendingDate);
+        renderCalendar(); lucide.createIcons();
+
+        const flyTarget = (swipeDir === 1 ? -1 : 1) * (cardW + 24);
+        const from      = currentTx;
+        const remaining = flyTarget - from;
+
+        // 根據手指速度計算剩餘動畫時長（快甩 = 更短）
+        const speed  = Math.max(Math.abs(initVelPxPerSec), 300);
+        const DUR    = Math.min(420, Math.max(160, Math.abs(remaining) / speed * 1000));
+        const startT = performance.now();
 
         function tick(now) {
-            const t = Math.min((now - start) / DUR, 1);
-            const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t); // ease-out expo
-            drawFrame(from + (1 - from) * ease);
+            const t    = Math.min((now - startT) / DUR, 1);
+            const ease = 1 - Math.pow(1 - t, 4); // ease-out quart
+            oldClone.style.transform = `translateX(${from + remaining * ease}px)`;
+            const p = Math.min(1, Math.abs(from + remaining * ease) / cardW);
+            oldClone.style.opacity = String(1 - p * 0.6);
             if (t < 1) { rafId = requestAnimationFrame(tick); return; }
+
+            // 新頁滑入
+            const revDir = swipeDir === 1 ? 1 : -1;
             cleanup();
-            card.style.animation = 'paperReveal 0.28s cubic-bezier(0.28,0.84,0.38,1) forwards';
-            setTimeout(() => card.style.animation = '', 280);
-            isAnimating = false;
+            card.style.transform  = `translateX(${revDir * 22}px)`;
+            card.style.opacity    = '0';
+            card.style.transition = 'none';
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                card.style.transition = 'transform 360ms cubic-bezier(0.16,1,0.3,1), opacity 250ms ease';
+                card.style.transform  = 'translateX(0)';
+                card.style.opacity    = '1';
+                setTimeout(() => {
+                    card.style.transition = card.style.transform = card.style.opacity = '';
+                    isAnimating = false;
+                }, 380);
+            }));
         }
         rafId = requestAnimationFrame(tick);
     }
@@ -2961,7 +2890,8 @@ function initCalendarSwipe() {
         if (isAnimating) return;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
-        isDragging = false; swipeDir = 0; currentProgress = 0;
+        isDragging = false; swipeDir = 0; currentTx = 0;
+        velBuf = []; lastX = startX; lastT = performance.now();
     }, { passive: true });
 
     card.addEventListener('touchmove', e => {
@@ -2970,35 +2900,61 @@ function initCalendarSwipe() {
         const dy = e.touches[0].clientY - startY;
 
         if (!isDragging) {
-            if (Math.abs(dy) >= Math.abs(dx) || Math.abs(dx) < 10) return;
+            if (Math.abs(dy) >= Math.abs(dx) || Math.abs(dx) < 8) return;
             isDragging = true;
             swipeDir = dx < 0 ? 1 : -1;
-            setupLayers();   // ← clone 舊內容先
-            if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
-            else                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+
+            // Clone 舊頁 → 底層預覽新月份（不 commit state）
+            buildClone();
+            pendingDate = new Date(state.currentMonthDate);
+            if (swipeDir === 1) pendingDate.setMonth(pendingDate.getMonth() + 1);
+            else                pendingDate.setMonth(pendingDate.getMonth() - 1);
+
+            const orig = new Date(state.currentMonthDate);
+            state.currentMonthDate = pendingDate;
             renderCalendar(); lucide.createIcons();
+            state.currentMonthDate = orig; // 還原，state 未污染
+
+            card.style.zIndex = '10';
             return;
         }
-        e.preventDefault();
-        if (!dims) return;
-        currentProgress = Math.min(1, Math.abs(dx) / (dims.W * 0.85));
-        drawFrame(currentProgress);
+
+        if (e.cancelable) e.preventDefault();
+        if (!oldClone) return;
+        trackVel(e.touches[0].clientX);
+        // 阻力：超過 60% 寬度開始收窄，模擬橡皮筋
+        const raw      = swipeDir === 1 ? Math.min(0, dx) : Math.max(0, dx);
+        const absRaw   = Math.abs(raw);
+        const resist   = absRaw > cardW * 0.6
+            ? cardW * 0.6 + (absRaw - cardW * 0.6) * 0.25
+            : absRaw;
+        currentTx = Math.sign(raw) * resist;
+        applyTx(currentTx);
     }, { passive: false });
 
-    card.addEventListener('touchend', e => {
+    card.addEventListener('touchend', () => {
         if (!isDragging || isAnimating) { isDragging = false; return; }
         isDragging = false;
-        if (!dims) return;
+        if (!oldClone) return;
         isAnimating = true;
-        currentProgress >= THRESHOLD ? completePeel() : snapBack();
+
+        const vel        = getVel();                       // px/s，正 = 向右
+        const velInDir   = swipeDir === 1 ? -vel : vel;   // 正 = 沿 swipe 方向
+        const progress   = Math.abs(currentTx) / cardW;
+        const isFlick    = velInDir > 350;                 // 快甩
+        const shouldDone = progress >= 0.36 || isFlick;
+
+        shouldDone ? doComplete(vel) : doSnapBack();
     }, { passive: true });
 
     card.addEventListener('touchcancel', () => {
-        if (!isDragging || !dims) return;
+        if (!isDragging) return;
         isDragging = false; isAnimating = true;
-        snapBack();
+        doSnapBack();
     }, { passive: true });
-})();
+}
+
+)();
 
             document.getElementById('add-student-form').addEventListener('submit', (e) => {
                 e.preventDefault();
