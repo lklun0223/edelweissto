@@ -1,30 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-HK" class="light">
+
+<html class="light" lang="zh-HK">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Workie - Soft UI Tracker</title>
-    
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Firebase V8 Compat -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-    <!-- Tailwind Configuration -->
-    <script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Workie - Soft UI Tracker</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Firebase V8 Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<!-- Tailwind Configuration -->
+<script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -76,13 +71,7 @@
             }
         }
     </script>
-
-
-
-
-
-    <!-- Custom CSS -->
-
+<!-- Custom CSS -->
 <style type="text/tailwindcss">
         @layer utilities {
             .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -277,48 +266,6 @@ nav.nav-idle .max-w-4xl {
 }
 
 
-/* --- 頂部固定的便條紙 3D 捲曲效果 --- */
-.calendar-perspective {
-    /* 加深透視距離，讓捲曲更加立體但不誇張 */
-    perspective: 1500px; 
-    position: relative;
-}
-
-#calendar-card {
-    background-color: #ffffff; 
-    transform-style: preserve-3d;
-    /* 核心：將物理支點固定在頂部中央，模擬頂部塗膠的便條紙 */
-    transform-origin: top center; 
-}
-.dark #calendar-card {
-    background-color: #1a1b1e;
-}
-
-/* --- 向左滑 (下一月)：從右下角掀起，往左上撕下 --- */
-@keyframes curlPeelLeft {
-    0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); opacity: 1; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08); filter: brightness(1); }
-    /* 掀起一半：X軸上翻，Y軸向左扭曲，Z軸輕微左傾 */
-    40% { transform: rotateX(50deg) rotateY(-25deg) rotateZ(-10deg) translateY(-10px); opacity: 1; box-shadow: 20px 30px 40px rgba(0,0,0,0.15); filter: brightness(1.05); }
-    /* 撕下飛走：大角度捲曲並淡出 */
-    100% { transform: rotateX(110deg) rotateY(-45deg) rotateZ(-20deg) translateY(-40px); opacity: 0; box-shadow: 30px 50px 50px rgba(0,0,0,0.1); filter: brightness(1.1); }
-}
-
-/* --- 向右滑 (上一月)：從左下角掀起，往右上撕下 --- */
-@keyframes curlPeelRight {
-    0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); opacity: 1; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08); filter: brightness(1); }
-    /* 掀起一半：X軸上翻，Y軸向右扭曲 (正數)，Z軸輕微右傾 */
-    40% { transform: rotateX(50deg) rotateY(25deg) rotateZ(10deg) translateY(-10px); opacity: 1; box-shadow: -20px 30px 40px rgba(0,0,0,0.15); filter: brightness(1.05); }
-    /* 撕下飛走 */
-    100% { transform: rotateX(110deg) rotateY(45deg) rotateZ(20deg) translateY(-40px); opacity: 0; box-shadow: -30px 50px 50px rgba(0,0,0,0.1); filter: brightness(1.1); }
-}
-
-/* --- 底層新頁面浮現：陰影散去，微微放大 --- */
-@keyframes paperReveal {
-    0% { transform: scale(0.96) translateY(5px); opacity: 0; filter: brightness(0.85); }
-    100% { transform: scale(1) translateY(0); opacity: 1; filter: brightness(1); }
-}
-
-
 
 
 
@@ -381,14 +328,14 @@ nav.nav-idle .max-w-4xl {
     #view-calendar > div {
         display: block;
         grid-template-columns: none;
-        max-width: calc(100% - 22rem - 1.5rem);
+        max-width: calc(100% - 20rem - 1.5rem);
     }
 
     /* 記錄：跟隨左+中，無右欄 */
     #view-records > div {
         display: block;
         grid-template-columns: none;
-        max-width: calc(100% - 22rem - 1.5rem);
+        max-width: calc(100% - 20rem - 1.5rem);
     }
 }
 
@@ -406,560 +353,494 @@ nav.nav-idle .max-w-4xl {
     </style>
 </head>
 <body class="min-h-screen bg-bg-light text-text-main dark:bg-bg-dark dark:text-text-darkMain selection:bg-brand/30">
-
-    <!-- Dynamic Island (Top Right, Compact) -->
-    <div id="dynamic-island" class="fixed top-4 right-4 z-[60] flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border border-black/10 dark:border-white/10 shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] scale-90 origin-top-right">
-        <div id="sync-badge" class="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full shadow-neu-inset-light dark:shadow-neu-inset-dark transition-all duration-500 opacity-0 hidden">
-            <span id="sync-dot" class="w-1.5 h-1.5 rounded-full bg-aux-peach"></span>
-        </div>
-        <button id="mode-trip-toggle" class="p-1 rounded-full text-text-muted hover:text-brand transition-colors" title="Trip Mode">
-            <i data-lucide="plane" class="w-3.5 h-3.5" id="trip-icon"></i>
-        </button>
-        <div class="w-px h-3 bg-black/20 dark:bg-white/20"></div>
-        <button id="theme-toggle" class="p-1 rounded-full text-text-muted hover:text-brand transition-colors" title="Dark Mode">
-            <i data-lucide="moon" class="w-3.5 h-3.5" id="theme-icon"></i>
-        </button>
-    </div>
-    
-    <!-- ===================== Desktop Sidebar ===================== -->
-<aside id="desktop-sidebar" class="hidden lg:flex flex-col fixed left-0 top-0 h-full w-56 bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-xl border-r border-white/70 dark:border-black/40 z-50 py-8 px-4">
-    
-    <!-- App Title -->
-    <div class="mb-8 px-2">
-        <div class="flex items-center gap-2">
-            <div class="flex items-center justify-center w-8 h-8 rounded-xl bg-brand shadow-brand-glow text-white shrink-0">
-                <i data-lucide="wallet" class="w-4 h-4"></i>
-            </div>
-            <div>
-                <p class="text-sm font-extrabold text-text-main dark:text-text-darkMain tracking-tight">Workie</p>
-                <p class="text-[10px] font-bold text-text-muted">Finance Tracker</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Nav Items -->
-    <nav class="flex flex-col gap-1 flex-1">
-        <button data-tab="dashboard" class="sidebar-tab active flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left">
-            <i data-lucide="home" class="w-4 h-4 shrink-0"></i>
-            <span class="text-sm font-bold">主頁</span>
-        </button>
-        <button data-tab="calendar" class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left">
-            <i data-lucide="calendar-days" class="w-4 h-4 shrink-0"></i>
-            <span class="text-sm font-bold">月曆</span>
-        </button>
-        <button data-tab="records" class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left">
-            <i data-lucide="list" class="w-4 h-4 shrink-0"></i>
-            <span class="text-sm font-bold">記錄</span>
-        </button>
-        <button data-tab="expenses" class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left">
-            <i data-lucide="receipt" class="w-4 h-4 shrink-0"></i>
-            <span class="text-sm font-bold">支出</span>
-        </button>
-        <button data-tab="settings" class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left">
-            <i data-lucide="settings" class="w-4 h-4 shrink-0"></i>
-            <span class="text-sm font-bold">設定</span>
-        </button>
-    </nav>
-
-    <!-- Bottom Controls -->
-    <div class="flex flex-col gap-3 px-2">
-        <div id="sidebar-sync-badge" class="hidden flex items-center gap-2">
-            <span id="sidebar-sync-dot" class="w-1.5 h-1.5 rounded-full bg-aux-peach"></span>
-            <span id="sidebar-sync-label" class="text-[10px] font-bold text-text-muted">同步中...</span>
-        </div>
-        <div class="flex items-center gap-3">
-            <button id="sidebar-trip-toggle" class="p-2 neu-btn text-text-muted hover:text-brand" title="Trip Mode">
-                <i data-lucide="plane" class="w-4 h-4" id="sidebar-trip-icon"></i>
-            </button>
-            <button id="sidebar-theme-toggle" class="p-2 neu-btn text-text-muted hover:text-brand" title="Dark Mode">
-                <i data-lucide="moon" class="w-4 h-4" id="sidebar-theme-icon"></i>
-            </button>
-        </div>
-    </div>
+<!-- Dynamic Island (Top Right, Compact) -->
+<div class="fixed top-4 right-4 z-[60] flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border border-black/10 dark:border-white/10 shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] scale-90 origin-top-right" id="dynamic-island">
+<div class="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full shadow-neu-inset-light dark:shadow-neu-inset-dark transition-all duration-500 opacity-0 hidden" id="sync-badge">
+<span class="w-1.5 h-1.5 rounded-full bg-aux-peach" id="sync-dot"></span>
+</div>
+<button class="p-1 rounded-full text-text-muted hover:text-brand transition-colors" id="mode-trip-toggle" title="Trip Mode">
+<i class="w-3.5 h-3.5" data-lucide="plane" id="trip-icon"></i>
+</button>
+<div class="w-px h-3 bg-black/20 dark:bg-white/20"></div>
+<button class="p-1 rounded-full text-text-muted hover:text-brand transition-colors" id="theme-toggle" title="Dark Mode">
+<i class="w-3.5 h-3.5" data-lucide="moon" id="theme-icon"></i>
+</button>
+</div>
+<!-- ===================== Desktop Sidebar ===================== -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 h-full w-56 bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-xl border-r border-white/70 dark:border-black/40 z-50 py-8 px-4" id="desktop-sidebar">
+<!-- App Title -->
+<div class="mb-8 px-2">
+<div class="flex items-center gap-2">
+<div class="flex items-center justify-center w-8 h-8 rounded-xl bg-brand shadow-brand-glow text-white shrink-0">
+<i class="w-4 h-4" data-lucide="wallet"></i>
+</div>
+<div>
+<p class="text-sm font-extrabold text-text-main dark:text-text-darkMain tracking-tight">Workie</p>
+<p class="text-[10px] font-bold text-text-muted">Finance Tracker</p>
+</div>
+</div>
+</div>
+<!-- Nav Items -->
+<nav class="flex flex-col gap-1 flex-1">
+<button class="sidebar-tab active flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="dashboard">
+<i class="w-4 h-4 shrink-0" data-lucide="home"></i>
+<span class="text-sm font-bold">主頁</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="calendar">
+<i class="w-4 h-4 shrink-0" data-lucide="calendar-days"></i>
+<span class="text-sm font-bold">月曆</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="records">
+<i class="w-4 h-4 shrink-0" data-lucide="list"></i>
+<span class="text-sm font-bold">記錄</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="expenses">
+<i class="w-4 h-4 shrink-0" data-lucide="receipt"></i>
+<span class="text-sm font-bold">支出</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="settings">
+<i class="w-4 h-4 shrink-0" data-lucide="settings"></i>
+<span class="text-sm font-bold">設定</span>
+</button>
+</nav>
+<!-- Bottom Controls -->
+<div class="flex flex-col gap-3 px-2">
+<div class="hidden flex items-center gap-2" id="sidebar-sync-badge">
+<span class="w-1.5 h-1.5 rounded-full bg-aux-peach" id="sidebar-sync-dot"></span>
+<span class="text-[10px] font-bold text-text-muted" id="sidebar-sync-label">同步中...</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 neu-btn text-text-muted hover:text-brand" id="sidebar-trip-toggle" title="Trip Mode">
+<i class="w-4 h-4" data-lucide="plane" id="sidebar-trip-icon"></i>
+</button>
+<button class="p-2 neu-btn text-text-muted hover:text-brand" id="sidebar-theme-toggle" title="Dark Mode">
+<i class="w-4 h-4" data-lucide="moon" id="sidebar-theme-icon"></i>
+</button>
+</div>
+</div>
 </aside>
-
-        
-        
-    <!-- Mobile: original layout / Desktop: 3-col grid -->
-<div id="mobile-container" class="max-w-4xl mx-auto px-4 pt-0 lg:hidden">
+<!-- Mobile: original layout / Desktop: 3-col grid -->
+<div class="max-w-4xl mx-auto px-4 pt-0 lg:hidden" id="mobile-container">
 </div>
-
-<div id="desktop-container" class="desktop-main hidden lg:grid">
-    <div class="desktop-main-col" id="desktop-main-col"></div>
-    <div class="desktop-right-col" id="desktop-right-col"></div>
+<div class="desktop-main hidden lg:grid" id="desktop-container">
+<div class="desktop-main-col" id="desktop-main-col"></div>
+<div class="desktop-right-col" id="desktop-right-col"></div>
 </div>
-
 <!-- View sections (shared, moved by JS on resize) -->
-<div id="views-root" class="max-w-4xl mx-auto px-4 pt-14">
-
-    <!-- ================= 主頁 (Dashboard) ================= -->
-<div id="view-dashboard" class="view-section card-push-enter">
-
-<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_24rem] lg:items-start lg:gap-6">
-
-    <!-- 左欄：進度 + 收入趨勢 -->
-    <div class="flex flex-col gap-6">
-
-        <div class="neu-card p-6">
-            <div class="flex justify-between items-end mb-8">
-                <div>
-                    <h2 class="text-s font-bold text-text-muted mb-1">總目標進度</h2>
-                    <div class="flex items-baseline gap-2">
-                        <p id="dash-current-total" class="text-4xl font-extrabold tracking-tight text-text-main dark:text-text-darkMain">$0</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div id="currency-toggle-container" class="hidden flex justify-end mb-2">
-                        <div class="flex neu-inset p-1">
-                            <button id="curr-hkd" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all">HKD</button>
-                            <button id="curr-eur" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">EUR</button>
-                        </div>
-                    </div>
-                    <p id="dash-earned-total" class="text-sm font-bold text-aux-mint mb-0.5">(+$0)</p>
-                    <p id="dash-remaining-text" class="text-xs font-bold text-brand">$0 to go</p>
-                </div>
-            </div>
-            <div class="space-y-2">
-                <div class="flex justify-between text-[12px] font-bold text-text-muted">
-                    <span id="dash-progress-text">0%</span>
-                    <span id="dash-goal-text">目標: $100,000</span>
-                </div>
-                <div class="neu-inset h-4 overflow-hidden p-0.1 bg-black/5 dark:bg-white/5">
-                    <div id="dash-progress-bar"
-                         class="bg-brand h-full rounded-full transition-all duration-1000 ease-out relative shadow-brand-glow overflow-hidden"
-                         style="width: 0%">
-                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-[200%] -translate-x-full animate-shimmer backdrop-blur-[1px]"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="neu-card p-5">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-sm flex items-center gap-2">
-                    <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></div>
-                    收入趨勢
-                </h3>
-                <div class="flex neu-inset p-1">
-                    <button id="chart-type-weekly" class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all">單週</button>
-                    <button id="chart-type-cumulative" class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">累積</button>
-                </div>
-            </div>
-            <div class="flex neu-inset p-1 mb-4" id="chart-period-container">
-    <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" data-days="28">4週</button>
-    <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" data-days="56">8週</button>
-    <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" data-days="180">月</button>
-    <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" data-days="365+">年</button>
+<div class="max-w-4xl mx-auto px-4 pt-14" id="views-root">
+<!-- ================= 主頁 (Dashboard) ================= -->
+<div class="view-section card-push-enter" id="view-dashboard">
+<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+<!-- 左欄：進度 + 收入趨勢 -->
+<div class="flex flex-col gap-6"><div class="neu-card p-6">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-s font-bold text-text-muted mb-1">總目標進度</h2>
+<div class="flex items-baseline gap-2">
+<p class="text-4xl font-extrabold tracking-tight text-text-main dark:text-text-darkMain" id="dash-current-total">$0</p>
 </div>
-            <div class="h-48 w-full relative">
-                <canvas id="incomeChart"></canvas>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- 右欄：新增記錄 + 最近記錄 -->
-    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
-
-        <div class="neu-card p-5">
-            <h2 class="text-sm font-bold mb-4 flex items-center gap-2 text-text-main dark:text-text-darkMain">
-                <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand"><i data-lucide="plus" class="w-4 h-4"></i></div>
+</div>
+<div class="text-right">
+<div class="hidden flex justify-end mb-2" id="currency-toggle-container">
+<div class="flex neu-inset p-1">
+<button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="curr-hkd">HKD</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" id="curr-eur">EUR</button>
+</div>
+</div>
+<p class="text-sm font-bold text-aux-mint mb-0.5" id="dash-earned-total">(+$0)</p>
+<p class="text-xs font-bold text-brand" id="dash-remaining-text">$0 to go</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[12px] font-bold text-text-muted">
+<span id="dash-progress-text">0%</span>
+<span id="dash-goal-text">目標: $100,000</span>
+</div>
+<div class="neu-inset h-4 overflow-hidden p-0.1 bg-black/5 dark:bg-white/5">
+<div class="bg-brand h-full rounded-full transition-all duration-1000 ease-out relative shadow-brand-glow overflow-hidden" id="dash-progress-bar" style="width: 0%">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-[200%] -translate-x-full animate-shimmer backdrop-blur-[1px]"></div>
+</div>
+</div>
+</div>
+</div><div class="neu-card p-5">
+<h2 class="text-sm font-bold mb-4 flex items-center gap-2 text-text-main dark:text-text-darkMain">
+<div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand"><i class="w-4 h-4" data-lucide="plus"></i></div>
                 新增今日記錄
             </h2>
-            <form id="record-form" class="space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">日期</label>
-                        <input type="date" id="record-date" class="neu-input" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">時長 (hr)</label>
-                        <div class="flex items-center gap-2">
-                            <button type="button" id="btn-duration-minus" class="neu-btn p-2"><i data-lucide="minus" class="w-4 h-4"></i></button>
-                            <div class="flex-1 text-center neu-inset py-2 text-sm font-bold text-text-main dark:text-text-darkMain">
-                                <span id="record-duration">1.5</span>
-                            </div>
-                            <button type="button" id="btn-duration-plus" class="neu-btn p-2"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">學生 / 來源</label>
-                    <select id="record-source" class="neu-input appearance-none" required>
-                        <option value="" disabled selected>請選擇學生...</option>
-                    </select>
-                </div>
-
-                <div id="record-preview" class="hidden p-3 neu-inset flex justify-between items-center">
-                    <span class="text-xs font-bold text-text-muted">預計收入</span>
-                    <span id="record-preview-amount" class="text-base font-extrabold text-aux-mint">$0</span>
-                </div>
-
-                <button type="submit" class="w-full neu-btn-primary py-3 text-sm">儲存記錄</button>
-            </form>
-        </div>
-
-        <div class="neu-card p-5">
-    <h3 class="font-bold text-sm mb-3 flex items-center gap-2">
-        <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-muted"><i data-lucide="clock" class="w-4 h-4"></i></div>
+<form class="space-y-4" id="record-form">
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">日期</label>
+<input class="neu-input" id="record-date" required="" type="date"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">時長 (hr)</label>
+<div class="flex items-center gap-2">
+<button class="neu-btn p-2" id="btn-duration-minus" type="button"><i class="w-4 h-4" data-lucide="minus"></i></button>
+<div class="flex-1 text-center neu-inset py-2 text-sm font-bold text-text-main dark:text-text-darkMain">
+<span id="record-duration">1.5</span>
+</div>
+<button class="neu-btn p-2" id="btn-duration-plus" type="button"><i class="w-4 h-4" data-lucide="plus"></i></button>
+</div>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">學生 / 來源</label>
+<select class="neu-input appearance-none" id="record-source" required="">
+<option disabled="" selected="" value="">請選擇學生...</option>
+</select>
+</div>
+<div class="hidden p-3 neu-inset flex justify-between items-center" id="record-preview">
+<span class="text-xs font-bold text-text-muted">預計收入</span>
+<span class="text-base font-extrabold text-aux-mint" id="record-preview-amount">$0</span>
+</div>
+<button class="w-full neu-btn-primary py-3 text-sm" type="submit">儲存記錄</button>
+</form>
+</div></div>
+<!-- 右欄：新增記錄 + 最近記錄 -->
+<div class="flex flex-col gap-6 lg:sticky lg:top-8"><div class="neu-card p-5">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-bold text-sm flex items-center gap-2">
+<div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i class="w-4 h-4" data-lucide="bar-chart-2"></i></div>
+                    收入趨勢
+                </h3>
+<div class="flex neu-inset p-1">
+<button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="chart-type-weekly">單週</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" id="chart-type-cumulative">累積</button>
+</div>
+</div>
+<div class="flex neu-inset p-1 mb-4" id="chart-period-container">
+<button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" data-days="28">4週</button>
+<button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" data-days="56">8週</button>
+<button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" data-days="180">月</button>
+<button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" data-days="365+">年</button>
+</div>
+<div class="h-48 w-full relative">
+<canvas id="incomeChart"></canvas>
+</div>
+</div><div class="neu-card p-5">
+<h3 class="font-bold text-sm mb-3 flex items-center gap-2">
+<div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-muted"><i class="w-4 h-4" data-lucide="clock"></i></div>
         最近記錄
-        <button onclick="switchTab('records')" class="ml-auto text-[10px] font-bold text-brand hover:opacity-60 transition-opacity">
+        <button class="ml-auto text-[10px] font-bold text-brand hover:opacity-60 transition-opacity" onclick="switchTab('records')">
             查看全部
         </button>
-    </h3>
-    <div class="space-y-2" id="recent-records-body"></div>
-</div>
-
-    </div>
-
+</h3>
+<div class="space-y-2" id="recent-records-body"></div>
+</div></div>
 </div> </div>
-
-        <!-- ================= 月曆 (Calendar) ================= -->
-        <div id="view-calendar" class="view-section hidden">
-    <div class="flex flex-col gap-6">
-        
-        <div class="neu-card p-4 md:p-6" id="calendar-card">  <!-- ← 加上 id -->
-  <div class="flex items-center justify-between mt-3 mb-7">
-    <button id="cal-prev" class="neu-btn p-2">
-      <i data-lucide="chevron-left" class="w-5 h-5"></i>
-    </button>
-    <div class="text-center">
-      <h2 id="cal-month-title" class="text-lg font-extrabold tracking-tight text-text-main dark:text-text-darkMain"></h2>
-      <p class="text-xs font-bold text-aux-mint mt-1" id="cal-month-total">0</p>
-    </div>
-    <button id="cal-next" class="neu-btn p-2">
-      <i data-lucide="chevron-right" class="w-5 h-5"></i>
-    </button>
+<!-- ================= 月曆 (Calendar) ================= -->
+<div class="view-section hidden" id="view-calendar">
+<div class="flex flex-col gap-6">
+<div class="neu-card p-4 pb-3 md:p-6" id="calendar-card"> <!-- ← 加上 id -->
+<div class="flex items-center justify-between mt-3 mb-7">
+<button class="neu-btn p-2" id="cal-prev">
+<i class="w-5 h-5" data-lucide="chevron-left"></i>
+</button>
+<div class="text-center">
+<h2 class="text-lg font-extrabold tracking-tight text-text-main dark:text-text-darkMain" id="cal-month-title"></h2>
+<p class="text-xs font-bold text-aux-mint mt-1" id="cal-month-total">0</p>
+</div>
+<button class="neu-btn p-2" id="cal-next">
+<i class="w-5 h-5" data-lucide="chevron-right"></i>
+</button>
+</div>
+<div class="w-full">
+<div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-text-muted mb-2">
+<div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+</div>
+<div class="grid grid-cols-7 gap-1 md:gap-2" id="calendar-grid"></div>
+<div class="mt-3 px-1" id="cal-day-panel"></div>
+</div>
+</div>
+<!-- 底部資訊欄 -->
+<div class="flex justify-around items-center px-2 pt-4 pb-1">
+<div class="text-center">
+<p class="text-[10px] font-bold text-text-muted mb-0.5">還有</p>
+<p class="text-xl font-extrabold text-brand" id="cal-days-remaining">--</p>
+<p class="text-[10px] font-bold text-text-muted">天出發</p>
+</div>
+<div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+<div class="text-center">
+<p class="text-[10px] font-bold text-text-muted mb-0.5">每天需</p>
+<p class="text-xl font-extrabold text-brand" id="cal-goal-amount">$--</p>
+<p class="text-[10px] font-bold text-text-muted">達標</p>
+</div>
+<div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+<div class="text-center">
+<p class="text-[10px] font-bold text-text-muted mb-0.5">已儲</p>
+<p class="text-xl font-extrabold text-aux-mint" id="cal-saved-amount">$--</p>
+<p class="text-[10px] font-bold text-text-muted">累積收入</p>
+</div>
+</div>
+</div> </div>
+<!-- ================= 所有記錄頁 (Records) ================= -->
+<div class="view-section hidden" id="view-records">
+<!-- 標題列獨立，不再是 neu-card 的一部分 -->
+<div class="neu-card !flex items-center gap-3 p-4 mb-4 text-text-main dark:text-text-darkMain">
+  <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-mint">
+    <i class="w-5 h-5" data-lucide="list"></i>
   </div>
-            
-            <div class="w-full">
-                <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-text-muted mb-2">
-                    <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
-                </div>
-                        <div id="calendar-grid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
-<div id="cal-day-panel" class="mt-3 px-1"></div>
-            </div>
-        </div>
-
-        <!-- 底部資訊欄 -->
-        <div class="flex justify-around items-center px-2 pt-4 pb-1">
-            <div class="text-center">
-                <p class="text-[10px] font-bold text-text-muted mb-0.5">還有</p>
-                <p id="cal-days-remaining" class="text-xl font-extrabold text-brand">--</p>
-                <p class="text-[10px] font-bold text-text-muted">天出發</p>
-            </div>
-            <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
-            <div class="text-center">
-    <p class="text-[10px] font-bold text-text-muted mb-0.5">每天需</p>
-    <p id="cal-goal-amount" class="text-xl font-extrabold text-brand">$--</p>
-    <p class="text-[10px] font-bold text-text-muted">達標</p>
+  <h2 class="text-lg font-bold">歷史記錄</h2>
 </div>
-            <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
-            <div class="text-center">
-                <p class="text-[10px] font-bold text-text-muted mb-0.5">已儲</p>
-                <p id="cal-saved-amount" class="text-xl font-extrabold text-aux-mint">$--</p>
-                <p class="text-[10px] font-bold text-text-muted">累積收入</p>
-            </div>
-        </div>
-
-        </div> </div>
-
-        <!-- ================= 所有記錄頁 (Records) ================= -->
-<div id="view-records" class="view-section hidden">
-
-    <!-- 標題列獨立，不再是 neu-card 的一部分 -->
-    <div class="neu-card flex items-center gap-3 p-4 mb-4 text-aux-mint">
-    <i data-lucide="list" class="w-5 h-5"></i>
-    <h2 class="text-lg font-bold">歷史記錄</h2>
+<!-- container 直接是卡片列，gap-4 分隔每張 weekly card -->
+<div class="flex flex-col gap-4" id="all-records-container"></div>
+</div>
+<!-- ================= 支出頁面 (Expenses) ================= -->
+<div class="view-section hidden" id="view-expenses">
+<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+<!-- 左欄：支出追蹤 + 特別支出 -->
+<div class="flex flex-col gap-6"><div class="hidden neu-card p-5" id="trip-budget-module">
+<h2 class="text-lg font-bold mb-4 flex items-center justify-between text-brand">
+<div class="flex items-center gap-2 text-text-main dark:text-text-darkMain">
+<div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-brand"><i class="w-5 h-5" data-lucide="plane"></i></div>旅遊預算
+</div>
+</h2>
+<div class="mb-4 neu-inset p-3 flex justify-between items-center">
+<span class="text-xs font-bold text-text-muted">出發日期</span>
+<input class="neu-input w-auto py-1 text-xs" id="trip-departure-date" type="date"/>
+</div>
+<div class="mb-5" id="trip-master-progress"></div>
+<div class="space-y-3" id="trip-categories-container"></div>
+<button class="mt-4 w-full neu-btn py-2 text-sm text-brand" onclick="addTripCategory()">+ 新增目的地</button>
 </div>
 
-    <!-- container 直接是卡片列，gap-4 分隔每張 weekly card -->
-    <div id="all-records-container" class="flex flex-col gap-4"></div>
-
-</div>
-
-        <!-- ================= 支出頁面 (Expenses) ================= -->
-<div id="view-expenses" class="view-section hidden">
-<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_24rem] lg:items-start lg:gap-6">
-
-    <!-- 左欄：支出追蹤 + 特別支出 -->
-    <div class="flex flex-col gap-6">
-
-        <div id="smart-expense-module" class="neu-card p-5">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-text-main dark:text-text-darkMain">
-                <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-blue-400"><i data-lucide="smartphone" class="w-5 h-5"></i></div>
+<div class="neu-card p-5" id="smart-expense-module">
+<h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-text-main dark:text-text-darkMain">
+<div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-blue-400"><i class="w-5 h-5" data-lucide="smartphone"></i></div>
                 支出追蹤
             </h2>
-            <p class="text-[10px] text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">請輸入本月 1 號至今的「累積總額」。系統會自動計算日均支出。跨月時數據將自動重置。</p>
-            <form id="smart-expense-form" class="space-y-3 mb-5 neu-inset p-4">
-                <input type="date" id="se-date" class="neu-input" required>
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2">
-                            <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                            <span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">八達通</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
-                                <input type="number" id="se-oct-spent" class="neu-input" min="0" required>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總增值</label>
-                                <input type="number" id="se-oct-reload" class="neu-input" min="0" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2">
-                            <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                            <span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">E-wallet</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
-                                <input type="number" id="se-ew-spent" class="neu-input" min="0" required>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總轉帳</label>
-                                <input type="number" id="se-ew-transfer" class="neu-input" min="0" required>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <button type="submit" class="w-full neu-btn py-2 text-sm text-blue-600 dark:text-blue-400">新增快照</button>
-            </form>
-            <div class="flex neu-inset p-1 mb-3">
-                <button id="se-tab-daily" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-blue-600 dark:text-blue-400 bg-bg-light dark:bg-bg-dark transition-all">日</button>
-                <button id="se-tab-weekly" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">週</button>
-                <button id="se-tab-monthly" class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all">月</button>
-            </div>
-            <div class="h-48 w-full relative mb-4">
-                <canvas id="smartExpenseChart"></canvas>
-            </div>
-            <h3 class="text-sm font-bold mb-3 text-text-muted ml-1">歷史紀錄</h3>
-            <div id="smart-expense-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar"></div>
-        </div>
+<p class="text-[10px] text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">請輸入本月 1 號至今的「累積總額」。系統會自動計算日均支出。跨月時數據將自動重置。</p>
+<form class="space-y-3 mb-5 neu-inset p-4" id="smart-expense-form">
+<input class="neu-input" id="se-date" required="" type="date"/>
+<div class="space-y-3">
+<div>
+<div class="flex items-center gap-1.5 mb-2">
+<div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+<span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">八達通</span>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
+<input class="neu-input" id="se-oct-spent" min="0" required="" type="number"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總增值</label>
+<input class="neu-input" id="se-oct-reload" min="0" required="" type="number"/>
+</div>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-1.5 mb-2">
+<div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+<span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">E-wallet</span>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
+<input class="neu-input" id="se-ew-spent" min="0" required="" type="number"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總轉帳</label>
+<input class="neu-input" id="se-ew-transfer" min="0" required="" type="number"/>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full neu-btn py-2 text-sm text-blue-600 dark:text-blue-400" type="submit">新增快照</button>
+</form>
+<div class="flex neu-inset p-1 mb-3">
+<button class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-blue-600 dark:text-blue-400 bg-bg-light dark:bg-bg-dark transition-all" id="se-tab-daily">日</button>
+<button class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" id="se-tab-weekly">週</button>
+<button class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" id="se-tab-monthly">月</button>
+</div>
+<div class="h-48 w-full relative mb-4">
+<canvas id="smartExpenseChart"></canvas>
+</div>
+<h3 class="text-sm font-bold mb-3 text-text-muted ml-1">歷史紀錄</h3>
+<div class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar" id="smart-expense-list"></div>
+</div>
 
-        <div class="neu-card p-5">
-            <h2 class="text-lg font-bold mb-5 flex items-center gap-2 text-text-main dark:text-text-darkMain">
-                <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-peach"><i data-lucide="circle-dollar-sign" class="w-5 h-5"></i></div>
+</div>
+<!-- 右欄：旅遊預算 -->
+<div class="flex flex-col gap-6 lg:sticky lg:top-8"><div class="neu-card p-5">
+<h2 class="text-lg font-bold mb-5 flex items-center gap-2 text-text-main dark:text-text-darkMain">
+<div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-peach"><i class="w-5 h-5" data-lucide="circle-dollar-sign"></i></div>
                 特別支出
             </h2>
-            <form id="expense-form" class="mb-8 neu-inset p-4 space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="col-span-2">
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">目的 </label>
-                        <input type="text" id="expense-purpose" class="neu-input" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">日期</label>
-                        <input type="date" id="expense-date" class="neu-input" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">金額 ($)</label>
-                        <input type="number" min="0" id="expense-amount" class="neu-input" required>
-                    </div>
-                </div>
-                <button type="submit" class="w-full neu-btn py-2.5 text-sm text-brand">新增支出</button>
-            </form>
-            <h3 class="text-sm font-bold mb-4 text-text-muted ml-1">支出紀錄</h3>
-            <div id="expenses-list" class="space-y-3"></div>
-        </div>
-
-    </div>
-
-    <!-- 右欄：旅遊預算 -->
-    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
-        <div id="trip-budget-module" class="hidden neu-card p-5">
-            <h2 class="text-lg font-bold mb-4 flex items-center justify-between text-brand">
-                <div class="flex items-center gap-2 text-text-main dark:text-text-darkMain">
-                    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-brand"><i data-lucide="plane" class="w-5 h-5"></i></div>
-                    旅遊預算
-                </div>
-            </h2>
-            <div class="mb-4 neu-inset p-3 flex justify-between items-center">
-                <span class="text-xs font-bold text-text-muted">出發日期</span>
-                <input type="date" id="trip-departure-date" class="neu-input w-auto py-1 text-xs">
-            </div>
-            <div id="trip-master-progress" class="mb-5"></div>
-            <div id="trip-categories-container" class="space-y-3"></div>
-            <button onclick="addTripCategory()" class="mt-4 w-full neu-btn py-2 text-sm text-brand">+ 新增目的地</button>
-        </div>
-    </div>
+<form class="mb-8 neu-inset p-4 space-y-4" id="expense-form">
+<div class="grid grid-cols-2 gap-3">
+<div class="col-span-2">
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">目的 </label>
+<input class="neu-input" id="expense-purpose" required="" type="text"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">日期</label>
+<input class="neu-input" id="expense-date" required="" type="date"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">金額 ($)</label>
+<input class="neu-input" id="expense-amount" min="0" required="" type="number"/>
+</div>
+</div>
+<button class="w-full neu-btn py-2.5 text-sm text-brand" type="submit">新增支出</button>
+</form>
+<h3 class="text-sm font-bold mb-4 text-text-muted ml-1">支出紀錄</h3>
+<div class="space-y-3" id="expenses-list"></div>
+</div>
 
 </div>
 </div>
-
-        <!-- ================= 設定頁 (Settings & Students) ================= -->
-<div id="view-settings" class="view-section hidden">
-<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_24rem] lg:items-start lg:gap-6">
-
-    <!-- 左欄：管理學生 -->
-    <div class="flex flex-col gap-6">
-
-        <div class="neu-card p-5">
-            <h2 class="text-lg font-bold flex items-center gap-2 text-text-main dark:text-text-darkMain mb-5">
-                <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
+</div>
+<!-- ================= 設定頁 (Settings & Students) ================= -->
+<div class="view-section hidden" id="view-settings">
+<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+<!-- 左欄：管理學生 -->
+<div class="flex flex-col gap-6">
+<div class="neu-card p-5">
+<h2 class="text-lg font-bold flex items-center gap-2 text-text-main dark:text-text-darkMain mb-5">
+<div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i class="w-5 h-5" data-lucide="user-plus"></i></div>
                 管理學生
             </h2>
-            <form id="add-student-form" class="mb-8 neu-inset p-4 space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="col-span-2">
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">學生姓名</label>
-                        <input type="text" id="new-s-name" class="neu-input" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">年級</label>
-                        <select id="new-s-grade" class="neu-input appearance-none">
-                            <option>小一</option><option>小二</option><option>小三</option><option>小四</option><option>小五</option><option>小六</option>
-                            <option selected>中一</option><option>中二</option><option>中三</option><option>中四</option><option>中五</option><option>中六</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">時薪 ($/hr)</label>
-                        <input type="number" min="0" id="new-s-rate" class="neu-input" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">科目</label>
-                        <select id="new-s-subject" class="neu-input appearance-none">
-                            <option selected>英文</option><option>全科</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">地址簡稱</label>
-                        <input type="text" id="new-s-address-short" class="neu-input">
-                    </div>
-                </div>
-                <button type="submit" class="w-full neu-btn py-2.5 text-sm text-brand">新增學生</button>
-            </form>
-            <h3 id="students-count-title" class="text-sm font-bold text-text-muted mb-3 ml-1">現有學生 (0)</h3>
-            <div id="students-list" class="space-y-3 mb-8"></div>
-        </div>
-
-    </div>
-
-    <!-- 右欄：系統設定 + 備份 + Firebase -->
-    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
-
-        <div class="neu-card p-5">
-            <div>
-                <h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">系統數值設定</h3>
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">原目標 ($)</label>
-                        <input type="number" id="setting-goal" class="neu-input">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">起點金額 ($)</label>
-                        <input type="number" id="setting-initial" class="neu-input">
-                    </div>
-                </div>
-                <button id="btn-save-sys-settings" class="w-full neu-btn py-2 text-sm">儲存設定</button>
-            </div>
-
-            <div id="trip-settings-container" class="hidden pt-6 mt-6 border-t border-black/5 dark:border-white/5">
-                <h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">Trip Mode 設定</h3>
-                <div class="neu-inset p-4 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <label class="block text-xs font-bold text-text-muted">即時匯率 (EUR to HKD)</label>
-                        <button onclick="fetchLiveRate(true)" class="p-1.5 text-brand hover:bg-brand/10 rounded-lg transition-colors">
-                            <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-rate-icon"></i>
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl font-extrabold text-text-main dark:text-text-darkMain" id="display-exchange-rate">8.35</span>
-                        <span class="text-[10px] text-text-muted" id="rate-last-updated">更新於: --</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
-                <h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">手動備份</h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="btn-export" class="neu-btn py-2 text-xs flex items-center justify-center gap-1"><i data-lucide="download" class="w-3 h-3"></i> 匯出</button>
-                    <button id="btn-import-trigger" class="neu-btn py-2 text-xs flex items-center justify-center gap-1"><i data-lucide="upload" class="w-3 h-3"></i> 匯入</button>
-                    <input type="file" id="file-import" accept=".json" class="hidden">
-                </div>
-            </div>
-
-            <div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
-                <h3 class="text-sm font-bold mb-2 text-text-main dark:text-text-darkMain">Firebase 同步</h3>
-                <textarea id="firebase-config-input" rows="3" class="neu-input text-[10px] font-mono mb-3" placeholder="貼上 Firebase Config..."></textarea>
-                <button id="btn-save-firebase" class="w-full neu-btn py-2 text-sm">連線</button>
-            </div>
-        </div>
-
-    </div>
-
+<form class="mb-8 neu-inset p-4 space-y-4" id="add-student-form">
+<div class="grid grid-cols-2 gap-3">
+<div class="col-span-2">
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">學生姓名</label>
+<input class="neu-input" id="new-s-name" required="" type="text"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">年級</label>
+<select class="neu-input appearance-none" id="new-s-grade">
+<option>小一</option><option>小二</option><option>小三</option><option>小四</option><option>小五</option><option>小六</option>
+<option selected="">中一</option><option>中二</option><option>中三</option><option>中四</option><option>中五</option><option>中六</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">時薪 ($/hr)</label>
+<input class="neu-input" id="new-s-rate" min="0" required="" type="number"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">科目</label>
+<select class="neu-input appearance-none" id="new-s-subject">
+<option selected="">英文</option><option>全科</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">地址簡稱</label>
+<input class="neu-input" id="new-s-address-short" type="text"/>
 </div>
 </div>
-
-    <!-- Sticky Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 w-full bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-xl border-t border-white/50 dark:border-white/5 z-50 pb-[env(safe-area-inset-bottom)]">
-    <div class="max-w-4xl mx-auto px-4 py-3">
-        <div class="flex justify-around items-center" id="tabs-container">
-            <button data-tab="dashboard" class="nav-tab active">
-                <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
-                <span class="text-[9px] font-bold">主頁</span>
-            </button>
-            <button data-tab="calendar" class="nav-tab">
-                <i data-lucide="calendar-days" class="w-5 h-5 mb-0.5"></i>
-                <span class="text-[9px] font-bold">月曆</span>
-            </button>
-            <button data-tab="records" class="nav-tab">
-                <i data-lucide="list" class="w-5 h-5 mb-0.5"></i>
-                <span class="text-[9px] font-bold">記錄</span>
-            </button>
-            <button data-tab="expenses" class="nav-tab">
-                <i data-lucide="receipt" class="w-5 h-5 mb-0.5"></i>
-                <span class="text-[9px] font-bold">支出</span>
-            </button>
-            <button data-tab="settings" class="nav-tab">
-                <i data-lucide="settings" class="w-5 h-5 mb-0.5"></i>
-                <span class="text-[9px] font-bold">設定</span>
-            </button>
-        </div>
-    </div>
+<button class="w-full neu-btn py-2.5 text-sm text-brand" type="submit">新增學生</button>
+</form>
+<h3 class="text-sm font-bold text-text-muted mb-3 ml-1" id="students-count-title">現有學生 (0)</h3>
+<div class="space-y-3 mb-8" id="students-list"></div>
+</div>
+</div>
+<!-- 右欄：系統設定 + 備份 + Firebase -->
+<div class="flex flex-col gap-6 lg:sticky lg:top-8">
+<div class="neu-card p-5">
+<div>
+<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">系統數值設定</h3>
+<div class="grid grid-cols-2 gap-3 mb-4">
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">原目標 ($)</label>
+<input class="neu-input" id="setting-goal" type="number"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">起點金額 ($)</label>
+<input class="neu-input" id="setting-initial" type="number"/>
+</div>
+</div>
+<button class="w-full neu-btn py-2 text-sm" id="btn-save-sys-settings">儲存設定</button>
+</div>
+<div class="hidden pt-6 mt-6 border-t border-black/5 dark:border-white/5" id="trip-settings-container">
+<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">Trip Mode 設定</h3>
+<div class="neu-inset p-4 space-y-3">
+<div class="flex justify-between items-center">
+<label class="block text-xs font-bold text-text-muted">即時匯率 (EUR to HKD)</label>
+<button class="p-1.5 text-brand hover:bg-brand/10 rounded-lg transition-colors" onclick="fetchLiveRate(true)">
+<i class="w-4 h-4" data-lucide="refresh-cw" id="refresh-rate-icon"></i>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-2xl font-extrabold text-text-main dark:text-text-darkMain" id="display-exchange-rate">8.35</span>
+<span class="text-[10px] text-text-muted" id="rate-last-updated">更新於: --</span>
+</div>
+</div>
+</div>
+<div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
+<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">手動備份</h3>
+<div class="grid grid-cols-2 gap-3">
+<button class="neu-btn py-2 text-xs flex items-center justify-center gap-1" id="btn-export"><i class="w-3 h-3" data-lucide="download"></i> 匯出</button>
+<button class="neu-btn py-2 text-xs flex items-center justify-center gap-1" id="btn-import-trigger"><i class="w-3 h-3" data-lucide="upload"></i> 匯入</button>
+<input accept=".json" class="hidden" id="file-import" type="file"/>
+</div>
+</div>
+<div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
+<h3 class="text-sm font-bold mb-2 text-text-main dark:text-text-darkMain">Firebase 同步</h3>
+<textarea class="neu-input text-[10px] font-mono mb-3" id="firebase-config-input" placeholder="貼上 Firebase Config..." rows="3"></textarea>
+<button class="w-full neu-btn py-2 text-sm" id="btn-save-firebase">連線</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-xl border-t border-white/50 dark:border-white/5 z-50 pb-[env(safe-area-inset-bottom)]">
+<div class="max-w-4xl mx-auto px-4 py-3">
+<div class="flex justify-around items-center" id="tabs-container">
+<button class="nav-tab active" data-tab="dashboard">
+<i class="w-5 h-5 mb-0.5" data-lucide="home"></i>
+<span class="text-[9px] font-bold">主頁</span>
+</button>
+<button class="nav-tab" data-tab="calendar">
+<i class="w-5 h-5 mb-0.5" data-lucide="calendar-days"></i>
+<span class="text-[9px] font-bold">月曆</span>
+</button>
+<button class="nav-tab" data-tab="records">
+<i class="w-5 h-5 mb-0.5" data-lucide="list"></i>
+<span class="text-[9px] font-bold">記錄</span>
+</button>
+<button class="nav-tab" data-tab="expenses">
+<i class="w-5 h-5 mb-0.5" data-lucide="receipt"></i>
+<span class="text-[9px] font-bold">支出</span>
+</button>
+<button class="nav-tab" data-tab="settings">
+<i class="w-5 h-5 mb-0.5" data-lucide="settings"></i>
+<span class="text-[9px] font-bold">設定</span>
+</button>
+</div>
+</div>
 </nav>
-
 <!-- ===================== Confirm Modal ===================== -->
-<div id="confirm-modal" class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4">
-    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="confirm-modal-backdrop"></div>
-    <div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
-        <p id="confirm-modal-msg" class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed"></p>
-        <div class="flex gap-3">
-            <button id="confirm-modal-cancel" class="flex-1 neu-btn py-2.5 text-sm text-text-muted">取消</button>
-            <button id="confirm-modal-ok" class="flex-1 neu-btn-primary py-2.5 text-sm">確認刪除</button>
-        </div>
-    </div>
+<div class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4" id="confirm-modal">
+<div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="confirm-modal-backdrop"></div>
+<div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
+<p class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed" id="confirm-modal-msg"></p>
+<div class="flex gap-3">
+<button class="flex-1 neu-btn py-2.5 text-sm text-text-muted" id="confirm-modal-cancel">取消</button>
+<button class="flex-1 neu-btn-primary py-2.5 text-sm" id="confirm-modal-ok">確認刪除</button>
 </div>
-
+</div>
+</div>
 <!-- ===================== Input Modal ===================== -->
-<div id="input-modal" class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4">
-    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="input-modal-backdrop"></div>
-    <div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
-        <p id="input-modal-msg" class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed"></p>
-        <input type="text" id="input-modal-field" class="neu-input text-sm">
-        <div class="flex gap-3">
-            <button id="input-modal-cancel" class="flex-1 neu-btn py-2.5 text-sm text-text-muted">取消</button>
-            <button id="input-modal-ok" class="flex-1 neu-btn-primary py-2.5 text-sm">確認</button>
-        </div>
-    </div>
+<div class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4" id="input-modal">
+<div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="input-modal-backdrop"></div>
+<div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
+<p class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed" id="input-modal-msg"></p>
+<input class="neu-input text-sm" id="input-modal-field" type="text"/>
+<div class="flex gap-3">
+<button class="flex-1 neu-btn py-2.5 text-sm text-text-muted" id="input-modal-cancel">取消</button>
+<button class="flex-1 neu-btn-primary py-2.5 text-sm" id="input-modal-ok">確認</button>
 </div>
-
-
-    <!-- Toast Notification Container -->
+</div>
+</div>
+<!-- Toast Notification Container -->
 <!-- 手機：水平居中、頂部；桌面：靠右（避開左側 sidebar w-56 = 14rem） -->
-<div id="toast-container"
-     class="fixed top-5 left-1/2 -translate-x-1/2
-            lg:left-auto lg:translate-x-0 lg:right-6
-            z-70 flex flex-col items-center lg:items-end gap-2 pointer-events-none w-[min(90vw,22rem)]">
+<div class="fixed top-5 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-70 flex flex-col items-center lg:items-end gap-2 pointer-events-none w-[min(90vw,22rem)]" id="toast-container">
 </div>
-
-    <!-- Application Logic -->
-    <script>
+<!-- Application Logic -->
+<script>
         const getTodayString = () => {
             const d = new Date();
             const offset = d.getTimezoneOffset() * 60000;
@@ -995,64 +876,6 @@ nav.nav-idle .max-w-4xl {
             editingSourceId: null,
             editForm: {}
         };
-
-        // --- 擬物化頂部捲曲 (Page Curl) 過渡引擎 ---
-function animateCalendarTransition(isNext, updateDOMCallback) {
-    const card = document.getElementById('calendar-card');
-    if (!card) return updateDOMCallback(); 
-
-    const parent = card.parentElement;
-    parent.classList.add('calendar-perspective');
-
-    // 複製當前頁面作為「即將被撕下」的表層
-    const clone = card.cloneNode(true);
-    clone.removeAttribute('id');
-    
-    const rect = card.getBoundingClientRect();
-    clone.style.position = 'absolute';
-    clone.style.top = card.offsetTop + 'px';
-    clone.style.left = card.offsetLeft + 'px';
-    clone.style.width = rect.width + 'px';
-    clone.style.height = rect.height + 'px';
-    clone.style.margin = '0';
-    clone.style.pointerEvents = 'none'; 
-    clone.style.transformOrigin = 'top center'; // 確保複製體的支點也是頂部
-    
-    const computedStyle = getComputedStyle(card);
-    clone.style.backgroundColor = computedStyle.backgroundColor;
-    clone.style.borderRadius = computedStyle.borderRadius;
-
-    // 動畫參數：稍微帶有一點紙張抵抗力與重量感
-    const easing = 'cubic-bezier(0.3, 0.8, 0.4, 1)';
-    const duration = '0.7s';
-
-    // 表層是舊頁面，底層是新頁面
-    clone.style.zIndex = '20'; 
-    card.style.zIndex = '10';  
-    parent.appendChild(clone);
-
-    // 瞬間更新底層的真實日曆資料
-    updateDOMCallback(); 
-
-    // 根據方向播放對應的 3D 捲曲動畫
-    if (isNext) {
-        // 向左滑：右下角捲起
-        clone.style.animation = `curlPeelLeft ${duration} ${easing} forwards`;
-    } else {
-        // 向右滑：左下角捲起
-        clone.style.animation = `curlPeelRight ${duration} ${easing} forwards`;
-    }
-    
-    // 底層頁面統一使用見光浮現效果
-    card.style.animation = `paperReveal ${duration} ${easing} forwards`;
-
-    setTimeout(() => {
-        if (clone.parentNode) clone.parentNode.removeChild(clone);
-        card.style.animation = '';
-        card.style.zIndex = '';
-        card.style.transform = ''; 
-    }, 700); 
-}
 
 
 
@@ -2099,7 +1922,7 @@ if (savedEl) {
             const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
             let html = '';
             Object.entries(groups).forEach(([month, weeks]) => {
-                html += `<div class="space-y-3">
+                html += `<div class="space-y-3 pb-3">
                     <h3 class="text-base font-extrabold text-text-main dark:text-text-darkMain pl-1">${month}</h3>
                     <div class="space-y-4">`;
                 
@@ -2113,7 +1936,7 @@ if (savedEl) {
                                 <span class="text-text-muted">${week}</span>
                                 <span class="text-aux-mint bg-aux-mint/10 px-2 py-0.5 rounded-md">週收入: ${symbol}${Math.round(weekTotal)}</span>
                             </div>
-                            <div class="flex flex-col p-2 space-y-1">
+                            <div class="flex flex-col p-2 pb-3 space-y-1">
                     `;
                     weekRecords.forEach((record) => {
                         let recAmt = record.income;
@@ -2446,9 +2269,52 @@ if (savedEl) {
             document.getElementById(`se-tab-${state.seChartTab}`).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
 
             if (state.seChartTab === 'daily') {
-                finalLabels = rawChartData.map(d => d.label);
-                finalData = rawChartData.map(d => d.dailyAvg);
-            } else if (state.seChartTab === 'weekly') {
+    // 建立過去 30 日的日期陣列
+    const todayD = new Date(getTodayString());
+    const window30 = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(todayD);
+        d.setDate(todayD.getDate() - i);
+        window30.push(d.toISOString().split('T')[0]);
+    }
+
+    // 為每個日期計算每日平均支出
+    const dailyAvgMap = {};
+    const allSorted = [...state.smartExpenses].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const allMonths = [...new Set(allSorted.map(e => e.date.slice(0, 7)))];
+
+    allMonths.forEach(m => {
+        const mRec = allSorted.filter(e => e.date.startsWith(m));
+        mRec.forEach((curr, i) => {
+            const currCum = curr.octSpent + curr.ewSpent - curr.ewTransfer + Math.max(0, curr.ewTransfer - curr.octReload);
+            let diffExp = currCum;
+const endD = new Date(curr.date);
+let startD;
+
+if (i > 0) {
+    const prev = mRec[i - 1];
+    const prevCum = prev.octSpent + prev.ewSpent - prev.ewTransfer + Math.max(0, prev.ewTransfer - prev.octReload);
+    diffExp = currCum - prevCum;
+    startD = new Date(prev.date);
+    startD.setDate(startD.getDate() + 1);
+} else {
+    // 無前一條記錄：從當月1日到當日攤分
+    startD = new Date(curr.date.slice(0, 7) + '-01');
+}
+
+            const days = Math.max(1, Math.round((endD - startD) / 86400000) + 1);
+            const avg = Math.max(0, diffExp) / days;
+
+            // 將每日平均分攤到該時段每一日
+            for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+                dailyAvgMap[d.toISOString().split('T')[0]] = avg;
+            }
+        });
+    });
+
+    finalLabels = window30.map(d => d.slice(5));           // MM-DD 標籤
+    finalData   = window30.map(d => +(dailyAvgMap[d] || 0).toFixed(2));
+} else if (state.seChartTab === 'weekly') {
                 let weekGroups = {};
                 rawChartData.forEach(d => {
                     const week = getWeekRange(d.dateStr);
@@ -2761,23 +2627,17 @@ if (savedEl) {
 
 
 // --- 下一個月按鈕 (Next) ---
+// --- Next ---
 document.getElementById('cal-next').addEventListener('click', () => {
-    // 傳入 true 代表是「下個月」(撕下紙張效果)
-    animateCalendarTransition(true, () => {
-        state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
-        renderCalendar();
-        lucide.createIcons();
-    });
+    state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
+    renderCalendar();
+    lucide.createIcons();
 });
-
-// --- 上一個月按鈕 (Prev) ---
+// --- Prev ---
 document.getElementById('cal-prev').addEventListener('click', () => {
-    // 傳入 false 代表是「上個月」(新紙張蓋下效果)
-    animateCalendarTransition(false, () => {
-        state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
-        renderCalendar();
-        lucide.createIcons();
-    });
+    state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+    renderCalendar();
+    lucide.createIcons();
 });
 
 // ── Calendar card 手勢支援（修正版） ──
@@ -2881,7 +2741,7 @@ document.getElementById('cal-prev').addEventListener('click', () => {
         var inDirDx = swipeDir === 1 ? Math.min(0, dx) : Math.max(0, dx);
         currentTx = inDirDx + (dx - inDirDx) * 0.10;     // 反方向 10% rubber-band
         setTx(currentTx);
-    }, { passive: false });
+    }, { passive: true  });
 
     card.addEventListener('touchend', function () {
         if (!isDragging || isAnimating) { isDragging = false; return; }
@@ -3086,5 +2946,5 @@ updateSidebarState();
         }
 
     </script>
-</body>
+</div></body>
 </html>
