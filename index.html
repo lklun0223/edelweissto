@@ -1976,15 +1976,15 @@ if (savedEl) {
         function renderExpenses() {
             const list = document.getElementById('expenses-list');
             if (state.expenses.length === 0) {
-    list.innerHTML = `
-        <div class="flex flex-col items-center gap-3 py-10 text-center">
-            <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
-                <i data-lucide="receipt" class="w-8 h-8"></i>
-            </div>
-            <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有支出記錄</p>
-            <p class="text-xs font-bold text-text-muted">喺上方表格新增第一筆支出</p>
-        </div>`;
-    lucide.createIcons();
+                list.innerHTML = `
+                    <div class="flex flex-col items-center gap-3 py-10 text-center">
+                        <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                            <i data-lucide="receipt" class="w-8 h-8"></i>
+                        </div>
+                        <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有支出記錄</p>
+                        <p class="text-xs font-bold text-text-muted">喺上方表格新增第一筆支出</p>
+                    </div>`;
+                lucide.createIcons();
             } else {
                 const sortedExpenses = [...state.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
                 const maxExpense = Math.max(...state.expenses.map(e => e.amount), 1);
@@ -2001,8 +2001,8 @@ if (savedEl) {
                             </div>
                             <div class="relative z-10 flex items-center gap-3">
                                 <span class="text-sm font-extrabold text-aux-peach">-$${formatMoney(exp.amount)}</span>
-                                <button onclick="deleteExpense(${exp.id})" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <button data-expense-delete-id="${exp.id}" class="p-1.5 text-text-muted dark:text-text-darkMuted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
                                 </button>
                             </div>
                         </div>
@@ -2346,8 +2346,8 @@ rawChartData.push({
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-xs font-extrabold text-aux-peach">日均: $${dailyAvg.toFixed(1)}</span>
-                        <button onclick="deleteSmartExpense('${curr.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <button data-smart-expense-delete-id="${curr.id}" class="p-1.5 text-text-muted dark:text-text-darkMuted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
                         </button>
                     </div>
                 </div>
@@ -2482,34 +2482,36 @@ rawChartData.push({
 }
 
         window.deleteSmartExpense = function(id) {
-    const target = state.smartExpenses.find(e => e.id === id);
-    if (!target) return;
+            const target = (state.smartExpenses || []).find(e => String(e.id) === String(id));
+            if (!target) return;
 
-    showConfirmModal('確定要刪除此追蹤紀錄？', () => {
-        // 先刪 smartExpenses 內的紀錄
-        state.smartExpenses = state.smartExpenses.filter(e => e.id !== id);
+            showConfirmModal('確定要刪除此追蹤紀錄？', () => {
+                state.smartExpenses = (state.smartExpenses || []).filter(e => String(e.id) !== String(id));
 
-        // 如果係該月最後一日 snapshot → 同步刪除該月「x月消費（來自追蹤）」
-        const monthKey = target.date.slice(0, 7); // "YYYY-MM"
-        const d = new Date(target.date);
-        const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-        const isLastDayOfMonth = d.getDate() === lastDayOfMonth.getDate();
+                const monthKey = target.date.slice(0, 7);
+                const d = new Date(target.date);
+                const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+                const isLastDayOfMonth = d.getDate() === lastDayOfMonth.getDate();
 
-        if (isLastDayOfMonth) {
-            const labelMonth = String(d.getMonth() + 1);
-            const purpose = `${labelMonth}月消費（來自追蹤）`;
+                if (isLastDayOfMonth) {
+                    const labelMonth = String(d.getMonth() + 1);
+                    const purpose = `${labelMonth}月消費（來自追蹤）`;
 
-            state.expenses = (state.expenses || []).filter(e =>
-                !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
-            );
-        }
+                    state.expenses = (state.expenses || []).filter(e =>
+                        !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+                    );
+                }
 
-        saveState();
-        showToast('紀錄已刪除');
-        renderSmartExpenses();
-        renderExpenses();
-    });
-};
+                saveState();
+                showToast('紀錄已刪除');
+                renderSmartExpenses();
+                renderExpenses();
+                renderDashboard();
+                renderTripBudget();
+                renderCalendar();
+                updateCalendarFooter();
+            });
+        };
 
         function renderSettings() {
             document.getElementById('students-count-title').innerText = `現有學生 (${state.sources.length})`;
@@ -2625,16 +2627,17 @@ rawChartData.push({
 };
 
         window.deleteExpense = function(id) {
-    showConfirmModal('確定要刪除此特別支出？', () => {
-        state.expenses = state.expenses.filter(e => e.id !== id);
-        saveState();
-        showToast('特別支出已刪除');
-        renderExpenses();
-        renderDashboard();
-        renderTripBudget();
-    });
-};
-
+            showConfirmModal('確定要刪除此特別支出？', () => {
+                state.expenses = state.expenses.filter(e => String(e.id) !== String(id));
+                saveState();
+                showToast('特別支出已刪除');
+                renderExpenses();
+                renderDashboard();
+                renderTripBudget();
+                renderCalendar();
+                updateCalendarFooter();
+            });
+        };
         window.deleteSource = function(id) {
     const source = state.sources.find(s => s.id === id);
     if (!source) return;
@@ -2689,11 +2692,11 @@ rawChartData.push({
             });
 
             document.querySelectorAll('.nav-tab, .sidebar-tab').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const tab = e.currentTarget.dataset.tab;
-        if (tab) switchTab(tab);
-    });
-});
+                btn.addEventListener('click', (e) => {
+                    const tab = e.currentTarget.dataset.tab;
+                    if (tab) switchTab(tab);
+                });
+            });
 
             document.getElementById('record-date').addEventListener('change', (e) => { state.formData.date = e.target.value; });
             document.getElementById('record-source').addEventListener('change', (e) => { state.formData.sourceId = e.target.value; renderDashboard(); });
@@ -2999,11 +3002,9 @@ document.getElementById('cal-prev').addEventListener('click', () => {
 
     e.target.reset();
     document.getElementById('se-date').value = getTodayString();
-    saveState();
     showToast('快照已新增！');
-    renderSmartExpenses();
-    renderExpenses();
-});// 令右欄特別支出即時更新
+    saveState();
+    });// 令右欄特別支出即時更新
 
             document.getElementById('se-tab-daily').addEventListener('click', () => { state.seChartTab = 'daily'; renderSmartExpenses(); });
             document.getElementById('se-tab-weekly').addEventListener('click', () => { state.seChartTab = 'weekly'; renderSmartExpenses(); });
@@ -3075,10 +3076,9 @@ document.getElementById('cal-prev').addEventListener('click', () => {
     document.addEventListener(evt, resetNavIdle, { passive: true });
 });
 resetNavIdle();
-        setTimeout(initScrollReveal, 80);    
+setTimeout(initScrollReveal, 80);
 
 // Sidebar button events
-
 document.getElementById('sidebar-theme-toggle').addEventListener('click', () => {
     document.getElementById('theme-toggle').click();
     updateSidebarState();
@@ -3087,6 +3087,27 @@ document.getElementById('sidebar-theme-toggle').addEventListener('click', () => 
 document.getElementById('sidebar-trip-toggle').addEventListener('click', () => {
     document.getElementById('mode-trip-toggle').click();
     updateSidebarState();
+});
+
+// Delete button delegation
+document.addEventListener('click', (e) => {
+    const expenseBtn = e.target.closest('[data-expense-delete-id]');
+    if (expenseBtn) {
+        const id = expenseBtn.dataset.expenseDeleteId;
+        if (id) {
+            window.deleteExpense(id);
+            return;
+        }
+    }
+
+    const smartExpenseBtn = e.target.closest('[data-smart-expense-delete-id]');
+    if (smartExpenseBtn) {
+        const id = smartExpenseBtn.dataset.smartExpenseDeleteId;
+        if (id) {
+            window.deleteSmartExpense(id);
+            return;
+        }
+    }
 });
 
 window.addEventListener('resize', () => {
