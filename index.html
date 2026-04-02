@@ -2482,10 +2482,32 @@ rawChartData.push({
 }
 
         window.deleteSmartExpense = function(id) {
-    showConfirmModal('確定要刪除這筆快照嗎？', () => {
+    const target = state.smartExpenses.find(e => e.id === id);
+    if (!target) return;
+
+    showConfirmModal('確定要刪除此追蹤紀錄？', () => {
+        // 先刪 smartExpenses 內的紀錄
         state.smartExpenses = state.smartExpenses.filter(e => e.id !== id);
+
+        // 如果係該月最後一日 snapshot → 同步刪除該月「x月消費（來自追蹤）」
+        const monthKey = target.date.slice(0, 7); // "YYYY-MM"
+        const d = new Date(target.date);
+        const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        const isLastDayOfMonth = d.getDate() === lastDayOfMonth.getDate();
+
+        if (isLastDayOfMonth) {
+            const labelMonth = String(d.getMonth() + 1);
+            const purpose = `${labelMonth}月消費（來自追蹤）`;
+
+            state.expenses = (state.expenses || []).filter(e =>
+                !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+            );
+        }
+
         saveState();
-        showToast('快照已刪除');
+        showToast('紀錄已刪除');
+        renderSmartExpenses();
+        renderExpenses();
     });
 };
 
@@ -2603,10 +2625,13 @@ rawChartData.push({
 };
 
         window.deleteExpense = function(id) {
-    showConfirmModal('確定要刪除這筆支出紀錄嗎？', () => {
+    showConfirmModal('確定要刪除此特別支出？', () => {
         state.expenses = state.expenses.filter(e => e.id !== id);
         saveState();
-        showToast('支出已刪除');
+        showToast('特別支出已刪除');
+        renderExpenses();
+        renderDashboard();
+        renderTripBudget();
     });
 };
 
