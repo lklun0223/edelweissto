@@ -847,6 +847,13 @@ nav.nav-idle .max-w-4xl {
             return new Date(d.getTime() - offset).toISOString().split('T')[0];
         };
 
+        function formatLocalDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
         const state = {
             GOAL: 100000,
             INITIAL_AMOUNT: 57000,
@@ -2188,201 +2195,291 @@ if (savedEl) {
     });
 };
 
-        function renderSmartExpenses() {
-            if(!document.getElementById('se-date').value) {
-                document.getElementById('se-date').value = getTodayString();
-            }
+function getTrackedMonthExpenseTotal(monthKey) {
+    const records = state.smartExpenses || [];
+    if (!records.length) return 0;
 
-            const listContainer = document.getElementById('smart-expense-list');
-            let sorted = [...state.smartExpenses].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            let listHtml = '';
-            let rawChartData = []; // { dateStr, diffExp, days, dailyAvg }
+    const monthRecords = records
+        .filter(r => r.date && r.date.startsWith(monthKey))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            // Group by month to calculate cumulative differences correctly
-            const months = [...new Set(sorted.map(e => e.date.slice(0, 7)))];
-            
-            months.forEach(m => {
-                const mRecords = sorted.filter(e => e.date.startsWith(m));
-                for (let i = 0; i < mRecords.length; i++) {
-                    let curr = mRecords[i];
-                    let currCumExp = curr.octSpent + (curr.ewSpent - curr.ewTransfer) + Math.max(0, curr.ewTransfer - curr.octReload);
-                    
-                    let diffExp = currCumExp;
-                    let days = parseInt(curr.date.slice(8, 10)); // Day of the month
-                    let label = curr.date.slice(5);
-                    
-                    if (i > 0) {
-                        let prev = mRecords[i-1];
-                        let prevCumExp = prev.octSpent + (prev.ewSpent - prev.ewTransfer) + Math.max(0, prev.ewTransfer - prev.octReload);
-                        diffExp = currCumExp - prevCumExp;
-                        days = parseInt(curr.date.slice(8, 10)) - parseInt(prev.date.slice(8, 10));
-                        label = `${prev.date.slice(5)} to ${curr.date.slice(5)}`;
-                    }
-                    
-                    if (days <= 0) days = 1;
-                    let dailyAvg = diffExp / days;
-                    
-                    rawChartData.push({ 
-                        dateStr: curr.date, 
-                        label: label, 
-                        diffExp: diffExp, 
-                        days: days, 
-                        dailyAvg: dailyAvg,
-                        month: m
-                    });
+    if (!monthRecords.length) return 0;
 
-                    // Build list UI
-                    listHtml = `
-                        <div class="neu-inset p-3 flex justify-between items-center">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] font-bold text-text-muted">${curr.date}</span>
-                                <span class="text-[10px] font-bold text-text-main dark:text-text-darkMain">
-                                    八達通: $${curr.octSpent} | E-wallet: $${curr.ewSpent}
-                                </span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-extrabold text-aux-peach">日均: $${dailyAvg.toFixed(1)}</span>
-                                <button onclick="deleteSmartExpense('${curr.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                </button>
-                            </div>
-                        </div>
-                    ` + listHtml; 
-                }
-            });
+    let total = 0;
 
-            if (sorted.length === 0) {
-                listContainer.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">尚未有任何紀錄。</div>`;
-            } else {
-                listContainer.innerHTML = listHtml;
-            }
+    for (let i = 0; i < monthRecords.length; i++) {
+        const curr = monthRecords[i];
 
-            // Prepare Chart Data based on Tab
-            let finalLabels = [];
-            let finalData = [];
+        const ewSpent   = Number(curr.ewSpent   ?? 0);
+        const octSpent  = Number(curr.octSpent  ?? 0);
+        const octReload = Number(curr.octReload ?? 0);
 
-            const tabs = ['se-tab-daily', 'se-tab-weekly', 'se-tab-monthly'];
-            tabs.forEach(t => {
-                document.getElementById(t).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-            });
-            document.getElementById(`se-tab-${state.seChartTab}`).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+        const currTotal = ewSpent + octSpent - octReload;
 
-            if (state.seChartTab === 'daily') {
-    // 建立過去 30 日的日期陣列
-    const todayD = new Date(getTodayString());
-    const window30 = [];
-    for (let i = 29; i >= 0; i--) {
-        const d = new Date(todayD);
-        d.setDate(todayD.getDate() - i);
-        window30.push(d.toISOString().split('T')[0]);
+        let diffExp = currTotal;
+        if (i > 0) {
+            const prev = monthRecords[i - 1];
+            const prevTotal =
+                Number(prev.ewSpent   ?? 0) +
+                Number(prev.octSpent  ?? 0) -
+                Number(prev.octReload ?? 0);
+
+            diffExp = currTotal - prevTotal;
+        }
+
+        if (isFinite(diffExp) && diffExp > 0) {
+            total += diffExp;
+        }
     }
 
-    // 為每個日期計算每日平均支出
-    const dailyAvgMap = {};
-    const allSorted = [...state.smartExpenses].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const allMonths = [...new Set(allSorted.map(e => e.date.slice(0, 7)))];
-
-    allMonths.forEach(m => {
-        const mRec = allSorted.filter(e => e.date.startsWith(m));
-        mRec.forEach((curr, i) => {
-            const currCum = curr.octSpent + curr.ewSpent - curr.ewTransfer + Math.max(0, curr.ewTransfer - curr.octReload);
-            let diffExp = currCum;
-const endD = new Date(curr.date);
-let startD;
-
-if (i > 0) {
-    const prev = mRec[i - 1];
-    const prevCum = prev.octSpent + prev.ewSpent - prev.ewTransfer + Math.max(0, prev.ewTransfer - prev.octReload);
-    diffExp = currCum - prevCum;
-    startD = new Date(prev.date);
-    startD.setDate(startD.getDate() + 1);
-} else {
-    // 無前一條記錄：從當月1日到當日攤分
-    startD = new Date(curr.date.slice(0, 7) + '-01');
+    return Math.round(total);
 }
 
-            const days = Math.max(1, Math.round((endD - startD) / 86400000) + 1);
-            const avg = Math.max(0, diffExp) / days;
+function backfillTrackedMonthExpenses() {
+    if (!state.smartExpenses.length) return;
 
-            // 將每日平均分攤到該時段每一日
-            for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-                dailyAvgMap[d.toISOString().split('T')[0]] = avg;
-            }
+    const sorted = [...state.smartExpenses].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const monthKeys = [...new Set(sorted.map(r => r.date.slice(0, 7)))];
+
+    monthKeys.forEach(monthKey => {
+        const recordsOfMonth = sorted.filter(r => r.date.startsWith(monthKey));
+        if (!recordsOfMonth.length) return;
+
+        // 搵該月最後一日（根據該月最後一條記錄嘅月份）
+        const anyDate = new Date(monthKey + '-01');
+        const lastDayDate = new Date(anyDate.getFullYear(), anyDate.getMonth() + 1, 0);
+        const lastDayStr = formatLocalDate(lastDayDate);
+
+        // 如果該月 smartExpenses 入面冇「最後一日」記錄，就略過（你尚未填完）
+        const hasLastDayRecord = recordsOfMonth.some(r => r.date === lastDayStr);
+        if (!hasLastDayRecord) return;
+
+        const total = getTrackedMonthExpenseTotal(monthKey);
+        if (total <= 0) return;
+
+        const labelMonth = (lastDayDate.getMonth() + 1).toString(); // 1..12
+        const purpose = `${labelMonth}月消費（來自追蹤）`;
+
+        // 避免重覆：刪除同一月份、同名舊 entry（無論之前有冇手動或自動寫入）
+        state.expenses = state.expenses.filter(e =>
+            !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+        );
+
+        state.expenses.push({
+            id: `${monthKey}-tracked`,
+            date: lastDayStr,
+            purpose,
+            amount: Math.round(total)
         });
     });
+}
 
-    finalLabels = window30.map(d => d.slice(5));           // MM-DD 標籤
-    finalData   = window30.map(d => +(dailyAvgMap[d] || 0).toFixed(2));
+function renderSmartExpenses() {
+    if (!document.getElementById('se-date').value) {
+        document.getElementById('se-date').value = getTodayString();
+    }
+
+    const listContainer = document.getElementById('smart-expense-list');
+    const sorted = [...(state.smartExpenses || [])].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let listHtml = '';
+    let rawChartData = [];
+
+    const months = [...new Set(sorted.map(e => e.date.slice(0, 7)))];
+
+    months.forEach(m => {
+        const mRecords = sorted.filter(e => e.date.startsWith(m));
+
+        for (let i = 0; i < mRecords.length; i++) {
+            const curr = mRecords[i];
+
+            const currCumExp =
+    (Number(curr.ewSpent) || 0) +
+    (Number(curr.octSpent) || 0) -
+    (Number(curr.octReload) || 0);
+
+let diffExp = currCumExp;
+let days = parseInt(curr.date.slice(8, 10), 10);
+let label = curr.date.slice(5);
+
+if (i > 0) {
+    const prev = mRecords[i - 1];
+    const prevCumExp =
+        (Number(prev.ewSpent) || 0) +
+        (Number(prev.octSpent) || 0) -
+        (Number(prev.octReload) || 0);
+
+    diffExp = currCumExp - prevCumExp;
+    days = parseInt(curr.date.slice(8, 10), 10) - parseInt(prev.date.slice(8, 10), 10);
+    label = `${prev.date.slice(5)} to ${curr.date.slice(5)}`;
+}
+
+if (!isFinite(diffExp) || diffExp < 0) diffExp = 0;
+if (days <= 0) days = 1;
+
+const dailyAvg = diffExp / days;
+
+// 每條 snapshot 對應一段期間，供「日」圖表展開成逐日數據
+const periodStart = i === 0
+    ? 1
+    : parseInt(mRecords[i - 1].date.slice(8, 10), 10) + 1;
+const periodEnd = parseInt(curr.date.slice(8, 10), 10);
+
+rawChartData.push({
+    dateStr: curr.date,
+    label,
+    diffExp,
+    days,
+    dailyAvg,
+    month: m,
+    periodStart,
+    periodEnd
+});
+
+            listHtml = `
+                <div class="neu-inset p-3 flex justify-between items-center">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-text-muted">${curr.date}</span>
+                        <span class="text-[10px] font-bold text-text-main dark:text-text-darkMain">
+                            八達通: $${Number(curr.octSpent || 0)} | E-wallet: $${Number(curr.ewSpent || 0)}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-extrabold text-aux-peach">日均: $${dailyAvg.toFixed(1)}</span>
+                        <button onclick="deleteSmartExpense('${curr.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            ` + listHtml;
+        }
+    });
+
+    if (sorted.length === 0) {
+        listContainer.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">尚未有任何紀錄。</div>`;
+    } else {
+        listContainer.innerHTML = listHtml;
+    }
+
+    const tabs = ['se-tab-daily', 'se-tab-weekly', 'se-tab-monthly'];
+    tabs.forEach(t => {
+        document.getElementById(t).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+    });
+    document.getElementById(`se-tab-${state.seChartTab}`).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+
+    let finalLabels = [];
+    let finalData = [];
+
+    if (state.seChartTab === 'daily') {
+    const today = new Date();
+    const past30 = [];
+
+    for (let offset = 29; offset >= 0; offset--) {
+        const dt = new Date(today);
+        dt.setDate(today.getDate() - offset);
+
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+
+        past30.push(`${y}-${m}-${d}`);
+    }
+
+    finalLabels = past30.map(dateStr => dateStr.slice(5));
+
+    finalData = past30.map(dateStr => {
+        const monthKey = dateStr.slice(0, 7);
+        const dayNum = parseInt(dateStr.slice(8, 10), 10);
+
+        const segs = rawChartData
+            .filter(d => d.month === monthKey)
+            .sort((a, b) => a.periodStart - b.periodStart);
+
+        if (!segs.length) return 0;
+
+        const matched = segs.find(seg => dayNum >= seg.periodStart && dayNum <= seg.periodEnd);
+        if (matched) return matched.dailyAvg;
+
+        if (dayNum < segs[0].periodStart) return segs[0].dailyAvg;
+
+        return segs[segs.length - 1].dailyAvg;
+    });
 } else if (state.seChartTab === 'weekly') {
-                let weekGroups = {};
-                rawChartData.forEach(d => {
-                    const week = getWeekRange(d.dateStr);
-                    if (!weekGroups[week]) weekGroups[week] = { totalExp: 0, totalDays: 0 };
-                    weekGroups[week].totalExp += d.diffExp;
-                    weekGroups[week].totalDays += d.days;
-                });
-                finalLabels = Object.keys(weekGroups);
-                finalData = Object.values(weekGroups).map(g => g.totalExp / (g.totalDays || 1));
-            } else if (state.seChartTab === 'monthly') {
-                let monthGroups = {};
-                rawChartData.forEach(d => {
-                    if (!monthGroups[d.month]) monthGroups[d.month] = { totalExp: 0, totalDays: 0 };
-                    monthGroups[d.month].totalExp += d.diffExp;
-                    monthGroups[d.month].totalDays += d.days;
-                });
-                finalLabels = Object.keys(monthGroups);
-                finalData = Object.values(monthGroups).map(g => g.totalExp / (g.totalDays || 1));
-            }
+        let weekGroups = {};
+        rawChartData.forEach(d => {
+            const week = getWeekRange(d.dateStr);
+            if (!weekGroups[week]) weekGroups[week] = { totalExp: 0, totalDays: 0 };
+            weekGroups[week].totalExp += d.diffExp;
+            weekGroups[week].totalDays += d.days;
+        });
+        finalLabels = Object.keys(weekGroups);
+        finalData = Object.values(weekGroups).map(g => g.totalExp / (g.totalDays || 1));
+    } else if (state.seChartTab === 'monthly') {
+        let monthGroups = {};
+        rawChartData.forEach(d => {
+            if (!monthGroups[d.month]) monthGroups[d.month] = { totalExp: 0, totalDays: 0 };
+            monthGroups[d.month].totalExp += d.diffExp;
+            monthGroups[d.month].totalDays += d.days;
+        });
+        finalLabels = Object.keys(monthGroups);
+        finalData = Object.values(monthGroups).map(g => g.totalExp / (g.totalDays || 1));
+    }
 
-            const ctx = document.getElementById('smartExpenseChart').getContext('2d');
-            const textColor = state.isDarkMode ? '#9CA3AF' : '#9CA3AF';
-            const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    const ctx = document.getElementById('smartExpenseChart').getContext('2d');
+    const textColor = '#9CA3AF';
+    const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
 
-            if (smartChartInstance) smartChartInstance.destroy();
-            
-            smartChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: finalLabels.length ? finalLabels : ['無資料'],
-                    datasets: [{
-                        label: '日均支出 ($)',
-                        data: finalData.length ? finalData : [0],
-                        backgroundColor: '#A5B4FC',
-                        borderRadius: 4,
-                        barThickness: 'flex',
-                        maxBarThickness: 30
-                    }]
+    if (smartChartInstance) smartChartInstance.destroy();
+
+    smartChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: finalLabels.length ? finalLabels : ['無資料'],
+            datasets: [{
+                label: '日均支出 ($)',
+                data: finalData.length ? finalData : [0],
+                backgroundColor: '#A5B4FC',
+                borderRadius: 4,
+                barThickness: 'flex',
+                maxBarThickness: 30
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                    titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
+                    bodyColor: '#A5B4FC',
+                    borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    callbacks: { label: (ctx) => `$${ctx.raw.toFixed(1)}/日` }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 600, easing: 'easeOutQuart' },
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
-                            titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
-                            bodyColor: '#A5B4FC',
-                            borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                            borderWidth: 1,
-                            padding: 10,
-                            cornerRadius: 12,
-                            displayColors: false,
-                            callbacks: { label: (ctx) => `$${ctx.raw.toFixed(1)}/日` }
-                        }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } } },
-                        y: { 
-                            grid: { color: gridColor, drawBorder: false }, 
-                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' }, callback: (val) => `$${val}` },
-                            beginAtZero: true
-                        }
+                y: {
+                    beginAtZero: true,
+                    grid: { color: gridColor, drawBorder: false },
+                    ticks: {
+                        color: textColor,
+                        font: { family: 'Inter', size: 10, weight: '600' },
+                        callback: (val) => `$${val}`
                     }
                 }
-            });
+            }
         }
+    });
+}
 
         window.deleteSmartExpense = function(id) {
     showConfirmModal('確定要刪除這筆快照嗎？', () => {
@@ -2811,43 +2908,77 @@ document.getElementById('cal-prev').addEventListener('click', () => {
             document.getElementById('trip-departure-date').addEventListener('change', (e) => { state.departureDate = e.target.value; saveState(); });
 
             document.getElementById('smart-expense-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const inputDate = document.getElementById('se-date').value;
-                
-                // Check if missing last day of previous month
-                const dateObj = new Date(inputDate);
-                if (dateObj.getDate() !== 1) {
-                    const prevMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 0);
-                    const prevMonthStr = prevMonthDate.toISOString().split('T')[0].slice(0, 7);
-                    const hasPrevMonthRecords = state.smartExpenses.some(r => r.date.startsWith(prevMonthStr));
-                    
-                    if (hasPrevMonthRecords) {
-                        const lastDayStr = prevMonthDate.toISOString().split('T')[0];
-                        const hasLastDayRecord = state.smartExpenses.some(r => r.date === lastDayStr);
-                        if (!hasLastDayRecord) {
-                            showToast(`請記得補充上個月最後一天 (${lastDayStr.slice(5)}) 的數據，以確保統計準確！`, 'error');
-                        }
-                    }
-                }
+    e.preventDefault();
 
-                const newRecord = {
-                    id: Date.now().toString(),
-                    date: inputDate,
-                    octSpent: parseFloat(document.getElementById('se-oct-spent').value),
-                    octReload: parseFloat(document.getElementById('se-oct-reload').value),
-                    ewSpent: parseFloat(document.getElementById('se-ew-spent').value),
-                    ewTransfer: parseFloat(document.getElementById('se-ew-transfer').value)
-                };
-                
-                // Remove existing snapshot for the same date if any
-                state.smartExpenses = state.smartExpenses.filter(r => r.date !== inputDate);
-                state.smartExpenses.push(newRecord);
-                
-                e.target.reset();
-                document.getElementById('se-date').value = getTodayString();
-                saveState();
-                showToast('快照已新增！');
+    const inputDate = document.getElementById('se-date').value;
+    if (!inputDate) {
+        showToast('請先選擇日期', 'error');
+        return;
+    }
+
+    // 檢查上個月最後一日是否已填
+    const dateObj = new Date(inputDate);
+    if (dateObj.getDate() !== 1) {
+        const prevMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 0);
+        const prevMonthStr = formatLocalDate(prevMonthDate).slice(0, 7);
+        const hasPrevMonthRecords = state.smartExpenses.some(r => r.date.startsWith(prevMonthStr));
+
+        if (hasPrevMonthRecords) {
+            const lastDayStr = formatLocalDate(prevMonthDate);
+            const hasLastDayRecord = state.smartExpenses.some(r => r.date === lastDayStr);
+            if (!hasLastDayRecord) {
+                showToast(`${lastDayStr.slice(5)} 未有追蹤紀錄`, 'error');
+                return;
+            }
+        }
+    }
+
+    const newRecord = {
+        id: Date.now().toString(),
+        date: inputDate,
+        octSpent: parseFloat(document.getElementById('se-oct-spent').value) || 0,
+        octReload: parseFloat(document.getElementById('se-oct-reload').value) || 0,
+        ewSpent: parseFloat(document.getElementById('se-ew-spent').value) || 0,
+        ewTransfer: parseFloat(document.getElementById('se-ew-transfer').value) || 0
+    };
+
+    // 同日 snapshot 只留最新
+    state.smartExpenses = state.smartExpenses.filter(r => r.date !== inputDate);
+    state.smartExpenses.push(newRecord);
+
+    // 如果係當月最後一日，自動寫入 / 更新「x月消費（來自追蹤）」
+    const checkDate = new Date(inputDate);
+    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0);
+    const isLastDayOfMonth = checkDate.getDate() === lastDayOfMonth.getDate();
+
+    if (isLastDayOfMonth) {
+        const monthKey = inputDate.slice(0, 7);
+        const total = getTrackedMonthExpenseTotal(monthKey);
+
+        if (total > 0) {
+            const labelMonth = String(checkDate.getMonth() + 1);
+            const purpose = `${labelMonth}月消費（來自追蹤）`;
+
+            state.expenses = (state.expenses || []).filter(e =>
+                !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+            );
+
+            state.expenses.push({
+                id: `${monthKey}-tracked`,
+                date: inputDate,
+                purpose,
+                amount: Math.round(total)
             });
+        }
+    }
+
+    e.target.reset();
+    document.getElementById('se-date').value = getTodayString();
+    saveState();
+    showToast('快照已新增！');
+    renderSmartExpenses();
+    renderExpenses();
+});// 令右欄特別支出即時更新
 
             document.getElementById('se-tab-daily').addEventListener('click', () => { state.seChartTab = 'daily'; renderSmartExpenses(); });
             document.getElementById('se-tab-weekly').addEventListener('click', () => { state.seChartTab = 'weekly'; renderSmartExpenses(); });
@@ -2904,7 +3035,9 @@ document.getElementById('cal-prev').addEventListener('click', () => {
 
         // Initialize App
         loadLocalData(); 
-        initEvents();    
+        initEvents();
+        backfillTrackedMonthExpenses();
+        saveState();    
         
         // Fetch Live Exchange Rate on mount and set interval
         if (!state.exchangeRate) state.exchangeRate = 8.35;
