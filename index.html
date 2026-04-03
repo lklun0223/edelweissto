@@ -1119,8 +1119,18 @@ nav.nav-idle .max-w-4xl {
             setSyncStatus('offline');
         });
 }
+        function getCurrentTotal() {
+            const totalEarned = (state.records || []).reduce(
+                (sum, r) => sum + (Number(r.income) || 0),
+                0
+            );
+            const initial = Number(state.INITIAL_AMOUNT) || 0;  // ← 注意係 INITIAL_AMOUNT
+            return initial + totalEarned;
+        }
 
         const formatMoney = (num) => num.toLocaleString();
+
+
         const getWeekRange = (dateString) => {
             const d = new Date(dateString);
             const day = d.getDay() || 7; 
@@ -1455,14 +1465,13 @@ function updateSidebarState() {
 }
 
         function renderDashboard() {
-            const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
-            const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
-            
-            const effectiveGoal = state.GOAL + totalExpenses;
-            const currentTotal = state.INITIAL_AMOUNT + totalEarned;
-            const progressPercentage = Math.min((currentTotal / effectiveGoal) * 100, 100);
+            const totalEarned = (state.records || []).reduce((sum, r) => sum + (Number(r.income) || 0), 0);
+            const totalExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+            const effectiveGoal = (Number(state.GOAL) || 0) + totalExpenses;
+            const currentTotal = getCurrentTotal(); // = 起點金額 + 總收入
+            const progressPercentage = effectiveGoal > 0 ? Math.min((currentTotal / effectiveGoal) * 100, 100) : 0;
 
-            let displayTotal = currentTotal;
+            let displayTotal = currentTotal;          // 直接顯示 currentTotal
             let displayEarned = totalEarned;
             let displayGoal = effectiveGoal;
             let displayRemaining = Math.max(0, effectiveGoal - currentTotal);
@@ -1476,24 +1485,31 @@ function updateSidebarState() {
                 symbol = '€';
             }
 
-            document.getElementById('dash-current-total').innerText = `${symbol}${formatMoney(Math.round(displayTotal))}`;
-            document.getElementById('dash-earned-total').innerText = `(+${symbol}${formatMoney(Math.round(displayEarned))})`;
-            document.getElementById('dash-goal-text').innerText = `目標: ${symbol}${formatMoney(Math.round(displayGoal))}`;
-            document.getElementById('dash-progress-text').innerText = `${progressPercentage.toFixed(1)}%`;
-document.getElementById('dash-progress-text').style.color = progressPercentage < 5
-    ? 'var(--color-brand, #FF6B6B)'
-    : '';
-            document.getElementById('dash-remaining-text').innerText = `${symbol}${formatMoney(Math.round(displayRemaining))} to go`;
+            document.getElementById('dash-current-total').innerText =
+                `${symbol}${formatMoney(Math.round(displayTotal))}`;
+            document.getElementById('dash-earned-total').innerText =
+                `(+${symbol}${formatMoney(Math.round(displayEarned))})`;
+            document.getElementById('dash-goal-text').innerText =
+                `目標: ${symbol}${formatMoney(Math.round(displayGoal))}`;
+            document.getElementById('dash-progress-text').innerText =
+                `${progressPercentage.toFixed(1)}%`;
+            document.getElementById('dash-progress-text').style.color = progressPercentage < 5
+                ? 'var(--color-brand, #FF6B6B)'
+                : '';
+            document.getElementById('dash-remaining-text').innerText =
+                `${symbol}${formatMoney(Math.round(displayRemaining))} to go`;
+
             const progressBar = document.getElementById('dash-progress-bar');
-const progressPercentageClamped = Math.max(progressPercentage, progressPercentage > 0 ? 4 : 0);
-progressBar.style.width = `${progressPercentageClamped}%`;
-progressBar.style.opacity = progressPercentage > 0 ? '1' : '0';
-// Goal celebration
-const celebKey = 'goalCelebrated_' + state.GOAL;
-if (progressPercentage >= 100 && !localStorage.getItem(celebKey)) {
-    localStorage.setItem(celebKey, '1');
-    setTimeout(launchCelebration, 1000);
-}
+            const progressPercentageClamped = Math.max(progressPercentage, progressPercentage > 0 ? 4 : 0);
+            progressBar.style.width = `${progressPercentageClamped}%`;
+            progressBar.style.opacity = progressPercentage > 0 ? '1' : '0';
+            
+            // Goal celebration
+            const celebKey = 'goalCelebrated_' + state.GOAL;
+            if (progressPercentage >= 100 && !localStorage.getItem(celebKey)) {
+                localStorage.setItem(celebKey, '1');
+                setTimeout(launchCelebration, 1000);
+            }
 
             document.getElementById('record-date').value = state.formData.date;
             document.getElementById('record-duration').innerText = state.formData.duration;
@@ -1536,37 +1552,37 @@ if (progressPercentage >= 100 && !localStorage.getItem(celebKey)) {
             const tbody = document.getElementById('recent-records-body');
             tbody.innerHTML = '';
             if (state.records.length === 0) {
-    tbody.innerHTML = `
-        <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
-            <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
-                <i data-lucide="inbox" class="w-5 h-5"></i>
-            </div>
-            <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
-            <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
-        </div>`;
-    lucide.createIcons();
-} else {
-                state.records.slice(0, 5).forEach(record => {
-    let recAmt = record.income;
-    if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
-    tbody.innerHTML += `
-    <div class="swipe-wrapper" data-id="${record.id}">
-        <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
-        <div class="swipe-item neu-inset p-3 flex items-center justify-between">
-            <div class="flex flex-col">
-                <span class="text-[10px] font-bold text-text-muted">${record.date.slice(5)}</span>
-                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
-                <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
-            </div>
-        </div>
-    </div>`;
-});
-attachSwipeToDelete(tbody, id => deleteRecord(id));
+                tbody.innerHTML = `
+                    <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
+                        <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                            <i data-lucide="inbox" class="w-5 h-5"></i>
+                        </div>
+                        <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
+                        <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
+                    </div>`;
+                lucide.createIcons();
+            } else {
+                            state.records.slice(0, 5).forEach(record => {
+                let recAmt = record.income;
+                if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
+                tbody.innerHTML += `
+                <div class="swipe-wrapper" data-id="${record.id}">
+                    <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
+                    <div class="swipe-item neu-inset p-3 flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-text-muted">${record.date.slice(5)}</span>
+                            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
+                            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            attachSwipeToDelete(tbody, id => deleteRecord(id));
             }
             renderChart();
         }
@@ -2025,15 +2041,12 @@ if (savedEl) {
             const masterProgressContainer = document.getElementById('trip-master-progress');
             
             // Waterfall Calculation Base (更新邏輯：起初金額->旅遊，後來收入->特別支出->旅遊)
-            const totalEarned = state.records.reduce((sum, r) => sum + r.income, 0);
-            const specialExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
-            
-            // 後來收入先填滿「特別支出」，如果有剩餘，才撥入旅遊預算
+            const totalEarned = (state.records || []).reduce((sum, r) => sum + (Number(r.income) || 0), 0);
+            const specialExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
             const remainingEarned = Math.max(0, totalEarned - specialExpenses);
-            
-            // 旅遊預算的真正可用資金 = 起初金額 + 剩下的後來收入
-            let availableSavings = state.INITIAL_AMOUNT + remainingEarned;
-            
+            let availableSavings = getCurrentTotal() - specialExpenses;
+            if (availableSavings < 0) availableSavings = 0;
+
             let totalBudget = 0;
             state.tripCategories.forEach(cat => {
                 cat.total = cat.items.reduce((sum, item) => sum + item.amount, 0);
