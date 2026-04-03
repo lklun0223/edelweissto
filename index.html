@@ -702,48 +702,66 @@ nav.nav-idle .max-w-4xl {
 <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender"><i class="w-5 h-5" data-lucide="user-plus"></i></div>
                 管理學生
             </h2>
-<form class="mb-8 neu-inset p-4 space-y-4" id="add-student-form">
-<div class="grid grid-cols-2 gap-3">
-<div class="col-span-2">
-<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">學生姓名</label>
-<input class="neu-input" id="new-s-name" required="" type="text"/>
-</div>
-<div>
-<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">年級</label>
-<select class="neu-input appearance-none" id="new-s-grade">
-<option>小一</option><option>小二</option><option>小三</option><option>小四</option><option>小五</option><option>小六</option>
-<option selected="">中一</option><option>中二</option><option>中三</option><option>中四</option><option>中五</option><option>中六</option>
-</select>
-</div>
-<div>
-<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">時薪 ($/hr)</label>
-<input class="neu-input" id="new-s-rate" min="0" required="" type="number"/>
-</div>
-<div>
-<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">科目</label>
-<select class="neu-input appearance-none" id="new-s-subject">
-<option selected="">英文</option><option>全科</option>
-</select>
-</div>
-<div>
-<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">地址簡稱</label>
-<input class="neu-input" id="new-s-address-short" type="text"/>
-</div>
-</div>
-<button class="w-full neu-btn py-2.5 text-sm text-brand" type="submit">新增學生</button>
+<form class="mb-8 space-y-4" id="add-student-form">
+  <div class="grid grid-cols-2 gap-3">
+    <div class="col-span-2">
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">學生姓名</label>
+      <input class="neu-input" id="new-s-name" type="text" required />
+    </div>
+
+    <div>
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">年級</label>
+      <select class="neu-input appearance-none" id="new-s-grade">
+        <option>小一</option><option>小二</option><option>小三</option><option>小四</option><option>小五</option><option>小六</option>
+        <option selected>中一</option><option>中二</option><option>中三</option><option>中四</option><option>中五</option><option>中六</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">時薪 ($/hr)</label>
+      <input class="neu-input" id="new-s-rate" type="number" min="0" required />
+    </div>
+
+    <div>
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">科目</label>
+      <select class="neu-input appearance-none" id="new-s-subject">
+        <option selected>英文</option><option>全科</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">地址簡稱</label>
+      <input class="neu-input" id="new-s-address-short" type="text" />
+    </div>
+
+    <!-- 這兩個改成半行 -->
+    <div>
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">詳細地址（選填）</label>
+      <input class="neu-input" id="new-s-detail-address" type="text" />
+    </div>
+
+    <div>
+      <label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">聯絡電話（選填）</label>
+      <input class="neu-input" id="new-s-phone" type="text" />
+    </div>
+  </div>
+
+  <button class="w-full neu-btn py-2.5 text-sm text-brand" type="submit">
+    新增學生
+  </button>
 </form>
 <h3 class="text-sm font-bold text-text-muted mb-3 ml-1" id="students-count-title">現有學生 (0)</h3>
-<div class="space-y-3 mb-8" id="students-list"></div>
+<div class="space-y-3 mb-1" id="students-list"></div>
 </div>
 </div>
 <!-- 右欄：系統設定 + 備份 + Firebase -->
 <div class="flex flex-col gap-6 lg:sticky lg:top-8">
 <div class="neu-card p-5">
 <div>
-<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">系統數值設定</h3>
+<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">自訂目標設定</h3>
 <div class="grid grid-cols-2 gap-3 mb-4">
 <div>
-<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">原目標 ($)</label>
+<label class="block text-[10px] font-bold text-text-muted mb-1 ml-1">自訂目標 ($)</label>
 <input class="neu-input" id="setting-goal" type="number"/>
 </div>
 <div>
@@ -754,7 +772,7 @@ nav.nav-idle .max-w-4xl {
 <button class="w-full neu-btn py-2 text-sm" id="btn-save-sys-settings">儲存設定</button>
 </div>
 <div class="hidden pt-6 mt-6 border-t border-black/5 dark:border-white/5" id="trip-settings-container">
-<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">Trip Mode 設定</h3>
+<h3 class="text-sm font-bold mb-4 text-text-main dark:text-text-darkMain">匯率同步</h3>
 <div class="neu-inset p-4 space-y-3">
 <div class="flex justify-between items-center">
 <label class="block text-xs font-bold text-text-muted">即時匯率 (EUR to HKD)</label>
@@ -881,7 +899,15 @@ nav.nav-idle .max-w-4xl {
             chartType: 'weekly',
             currentMonthDate: new Date(),
             editingSourceId: null,
-            editForm: {}
+            editForm: {},
+            editingTripItemId: null,
+            editingTripItemName: '',
+            editingSourceId: null,
+            editForm: {},
+            editingTripItemId: null,
+            editingTripItemName: '',
+            editingTripCategoryId: null,
+            editingTripCategoryName: ''            
         };
 
 
@@ -2045,6 +2071,7 @@ if (savedEl) {
         }
 
         function renderTripBudget() {
+            console.log('renderTripBudget called');
             if (!state.isTripMode) return;
             
             document.getElementById('trip-departure-date').value = state.departureDate;
@@ -2082,16 +2109,50 @@ if (savedEl) {
                 let allocated = Math.min(cat.total, Math.max(0, remainingSavings));
                 remainingSavings -= allocated;
                 let progress = cat.total > 0 ? (allocated / cat.total) * 100 : 0;
-                
-                let itemsHtml = cat.items.map(item => `
-                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-black/5 dark:border-white/5">
-                        <span class="text-text-main dark:text-text-darkMain">${item.name}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-text-main dark:text-text-darkMain">$${item.amount}</span>
-                            <button onclick="deleteTripItem('${cat.id}', '${item.id}')" class="text-brand hover:opacity-70"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-                        </div>
-                    </div>
-                `).join('');
+                const isEditingCat = state.editingTripCategoryId === cat.id;
+
+                let itemsHtml = (cat.items || []).map(item => {
+                    const isEditing = state.editingTripItemId === item.id;
+
+                    if (!isEditing) {
+                        // 顯示模式
+                        return `
+                            <div class="flex justify-between items-center text-xs py-1.5 border-b border-black/5 dark:border-white/5">
+                                <span class="text-text-main dark:text-text-darkMain">${item.name}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-text-main dark:text-text-darkMain">$${item.amount}</span>
+                                    <button onclick="startEditTripItem('${item.id}', '${cat.id}', '${item.name.replace(/'/g, "\\'")}')"
+                                            class="text-text-muted hover:text-brand">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <button onclick="deleteTripItem('${cat.id}', '${item.id}')" class="text-brand hover:opacity-70">
+                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // 編輯模式
+                        return `
+                            <div class="flex justify-between items-center text-xs py-1.5 border-b border-black/5 dark:border-white/5">
+                                <input
+                                    type="text"
+                                    class="neu-input py-1 text-xs flex-1 mr-2"
+                                    id="edit-trip-item-name-${item.id}"
+                                    value="${state.editingTripItemName}"
+                                />
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="saveEditTripItem('${cat.id}', '${item.id}')" class="text-aux-mint hover:opacity-80">
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <button onclick="cancelEditTripItem()" class="text-text-muted hover:text-brand">
+                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
                 
                 html += `
                     <div class="relative overflow-hidden rounded-2xl border border-transparent dark:border-white/5 shadow-neu-inset-light dark:shadow-neu-inset-dark mb-3">
@@ -2100,13 +2161,39 @@ if (savedEl) {
                         
                         <div class="relative z-10 p-3">
                             <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleAccordion('${cat.id}')">
-    <span class="font-bold text-sm flex items-center gap-2 text-text-main dark:text-text-darkMain">
-        <i data-lucide="chevron-down" id="chevron-${cat.id}" class="w-3.5 h-3.5 text-text-muted transition-transform duration-300"></i>
-        ${cat.name}
-        ${cat.type === 'dest' ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
-    </span>
-    <span class="text-xs font-bold text-text-muted">${allocated.toFixed(0)} / ${cat.total}</span>
-</div>
+                        <span class="font-bold text-sm flex items-center gap-2 text-text-main dark:text-text-darkMain">
+                            <i data-lucide="chevron-down" id="chevron-${cat.id}" class="w-3.5 h-3.5 text-text-muted transition-transform duration-300"></i>
+                            ${
+                            !isEditingCat
+                                ? `
+                                <span>${cat.name}</span>
+                                <button onclick="event.stopPropagation(); startEditTripCategory('${cat.id}', '${cat.name.replace(/'/g, "\\'")}')" class="text-text-muted hover:text-brand">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                                ${cat.type === 'dest'
+                                    ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>`
+                                    : ''
+                                }
+                                `
+                                : `
+                                <input
+                                    type="text"
+                                    class="neu-input py-1 text-xs"
+                                    id="edit-trip-cat-name-${cat.id}"
+                                    value="${state.editingTripCategoryName}"
+                                    onclick="event.stopPropagation();"
+                                />
+                                <button onclick="event.stopPropagation(); saveEditTripCategory('${cat.id}')" class="text-aux-mint hover:opacity-80">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); cancelEditTripCategory()" class="text-text-muted hover:text-brand">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
+                                `
+                            }
+                        </span>
+                        <span class="text-xs font-bold text-text-muted">${allocated.toFixed(0)} / ${cat.total}</span>
+                        </div>
                             <div id="acc-${cat.id}" class="hidden mt-3 space-y-1 bg-white/50 dark:bg-black/20 p-2 rounded-xl backdrop-blur-sm overflow-hidden" style="transition: max-height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;">
                                 ${itemsHtml}
                                 <div class="flex gap-2 mt-3">
@@ -2135,7 +2222,7 @@ if (savedEl) {
             masterProgressContainer.innerHTML = `
                 <div class="flex justify-between text-xs font-bold text-text-muted mb-1.5">
                     <span>總進度: ${masterProgress.toFixed(1)}%</span>
-                    <span class="text-aux-mint">目標: $${dailyTarget}/日</span>
+                    <span class="text-aux-mint">每天需 $${dailyTarget}達標</span>
                 </div>
                 <div class="h-2.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden shadow-neu-inset-light dark:shadow-neu-inset-dark">
     <div class="h-full bg-aux-mint rounded-full transition-all duration-1000 ease-out relative shadow-aux-mint-glow overflow-hidden" style="width: ${masterProgress}%">
@@ -2144,7 +2231,7 @@ if (savedEl) {
 </div>
                 <div class="flex justify-between text-[10px] font-bold text-text-muted mt-1.5">
                     <span>可用資金: $${availableSavings}</span>
-                    <span>總預算: $${totalBudget}</span>
+                    <span>總旅遊預算: $${totalBudget}</span>
                 </div>
             `;
         }
@@ -2195,6 +2282,74 @@ if (savedEl) {
                 cat.items = cat.items.filter(i => i.id !== itemId);
                 saveState();
             }
+        };
+
+        window.startEditTripItem = function (itemId, catId, currentName) {
+        state.editingTripItemId = itemId;
+        state.editingTripItemName = currentName || '';
+        renderTripBudget();
+        const input = document.getElementById(`edit-trip-item-name-${itemId}`);
+        if (input) {
+            input.focus();
+            input.select();
+        }
+        };
+
+        window.startEditTripCategory = function (catId, currentName) {
+        state.editingTripCategoryId = catId;
+        state.editingTripCategoryName = currentName || '';
+        renderTripBudget();
+        const input = document.getElementById(`edit-trip-cat-name-${catId}`);
+        if (input) {
+            input.focus();
+            input.select();
+        }
+        };
+
+        window.cancelEditTripCategory = function () {
+        state.editingTripCategoryId = null;
+        state.editingTripCategoryName = '';
+        renderTripBudget();
+        };
+
+        window.saveEditTripCategory = function (catId) {
+        const input = document.getElementById(`edit-trip-cat-name-${catId}`);
+        if (!input) return;
+        const newName = input.value.trim();
+        if (!newName) return;
+
+        const cat = (state.tripCategories || []).find(c => c.id === catId);
+        if (!cat) return;
+
+        cat.name = newName;
+        state.editingTripCategoryId = null;
+        state.editingTripCategoryName = '';
+        saveState(); // 會觸發 renderTripBudget
+        };
+
+        window.cancelEditTripItem = function () {
+        state.editingTripItemId = null;
+        state.editingTripItemName = '';
+        renderTripBudget();
+        };
+
+        window.saveEditTripItem = function (catId, itemId) {
+        const input = document.getElementById(`edit-trip-item-name-${itemId}`);
+        if (!input) return;
+
+        const newName = input.value.trim();
+        if (!newName) return;
+
+        const cat = (state.tripCategories || []).find(c => c.id === catId);
+        if (!cat) return;
+
+        const item = (cat.items || []).find(i => i.id === itemId);
+        if (!item) return;
+
+        item.name = newName;
+        state.editingTripItemId = null;
+        state.editingTripItemName = '';
+        saveState();
         };
 
         window.addTripCategory = function() {
@@ -2559,7 +2714,8 @@ rawChartData.push({
                                         ${['英文','全科'].map(s => `<option ${state.editForm.subject===s?'selected':''}>${s}</option>`).join('')}
                                     </select>
                                     <input type="number" id="edit-rate" value="${state.editForm.rate}" class="neu-input py-1.5 text-xs">
-                                    <input type="text" id="edit-address-short" value="${state.editForm.addressShort || ''}" placeholder="地址簡稱" class="col-span-2 neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-detail-address" value="${state.editForm.detailAddress || ''}" placeholder="詳細地址（選填）" class="col-span-2 neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-phone" value="${state.editForm.phone || ''}" placeholder="聯絡電話（選填）" class="col-span-2 neu-input py-1.5 text-xs">
                                 </div>
                                 <div class="flex justify-end gap-2 mt-2">
                                     <button onclick="cancelEdit()" class="px-3 py-1.5 text-xs font-bold text-text-muted neu-btn">取消</button>
@@ -2578,7 +2734,19 @@ rawChartData.push({
                                         <h4 class="font-bold text-sm text-text-main dark:text-text-darkMain">${source.name}</h4>
                                         <span class="text-sm font-extrabold text-brand">$${source.rate}<span class="text-[9px] text-text-muted font-normal">/hr</span></span>
                                     </div>
-                                    <p class="text-[10px] font-bold text-text-muted">${source.grade} • ${source.subject} • ${source.addressShort || '無地址'}</p>
+                                    <p class="text-[10px] font-bold text-text-muted">
+                                    ${source.grade} • ${source.subject} • ${(source.addressShort || '無地址')}
+                                    </p>
+                                    ${source.detailAddress ? `
+                                    <p class="text-[10px] text-text-muted mt-0.5">
+                                        地址：${source.detailAddress}
+                                    </p>
+                                    ` : ''}
+                                    ${source.phone ? `
+                                    <p class="text-[10px] text-text-muted mt-0.5">
+                                        電話：${source.phone}
+                                    </p>
+                                    ` : ''}
                                 </div>
                                 <div class="flex flex-col gap-1 ml-1">
                                     <button onclick="startEdit('${source.id}')" class="p-1.5 text-text-muted hover:text-aux-lavender rounded-lg"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
@@ -2599,6 +2767,46 @@ rawChartData.push({
                 const d = new Date(state.lastRateUpdate);
                 document.getElementById('rate-last-updated').innerText = `更新於: ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
             }
+        }
+
+        function startEdit(id) {
+        const source = state.sources.find(s => s.id === id);
+        if (!source) return;
+
+        state.editingSourceId = id;
+        state.editForm = {
+            name: source.name,
+            grade: source.grade,
+            subject: source.subject,
+            rate: source.rate,
+            addressShort: source.addressShort || '',
+            detailAddress: source.detailAddress || '',
+            phone: source.phone || ''
+        };
+
+        renderSettings();
+        }
+
+        function saveEdit() {
+        const source = state.sources.find(s => s.id === state.editingSourceId);
+        if (!source) return;
+
+        source.name = document.getElementById('edit-name').value.trim();
+        source.grade = document.getElementById('edit-grade').value;
+        source.subject = document.getElementById('edit-subject').value;
+        source.rate = parseFloat(document.getElementById('edit-rate').value) || 0;
+        source.addressShort = document.getElementById('edit-address-short').value.trim();
+        source.detailAddress = document.getElementById('edit-detail-address').value.trim() || '';
+        source.phone = document.getElementById('edit-phone').value.trim() || '';
+
+        state.editingSourceId = null;
+        saveState();
+        renderSettings();
+        }
+
+        function cancelEdit() {
+        state.editingSourceId = null;
+        renderSettings();
         }
 
         function renderAll(updateTabs = true) {
@@ -2913,17 +3121,21 @@ document.getElementById('cal-prev').addEventListener('click', () => {
 
 
             document.getElementById('add-student-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const newSource = {
-                    id: `s_${Date.now()}`, name: document.getElementById('new-s-name').value,
-                    grade: document.getElementById('new-s-grade').value, subject: document.getElementById('new-s-subject').value,
-                    rate: parseFloat(document.getElementById('new-s-rate').value),
-                    addressShort: document.getElementById('new-s-address-short').value
-                };
-                state.sources.push(newSource);
-                e.target.reset();
-                saveState();
-                showToast('學生資料已新增！');
+            e.preventDefault();
+            const newSource = {
+                id: `s_${Date.now()}`,
+                name: document.getElementById('new-s-name').value,
+                grade: document.getElementById('new-s-grade').value,
+                subject: document.getElementById('new-s-subject').value,
+                rate: parseFloat(document.getElementById('new-s-rate').value),
+                addressShort: document.getElementById('new-s-address-short').value,
+                detailAddress: document.getElementById('new-s-detail-address').value.trim() || '',
+                phone: document.getElementById('new-s-phone').value.trim() || ''
+            };
+            state.sources.push(newSource);
+            e.target.reset();
+            saveState();
+            showToast('學生資料已新增！');
             });
 
             document.getElementById('btn-save-sys-settings').addEventListener('click', () => {
