@@ -1887,21 +1887,33 @@ if (goalEl) {
         today.setHours(0, 0, 0, 0);
         const dep = new Date(depDate);
         const daysLeft = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+
         if (daysLeft <= 0) {
             goalEl.textContent = '--';
         } else {
-            const totalEarned = state.records.reduce((sum, r) => sum + (r.income || 0), 0);
-            const specialExpenses = state.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-            const remainingEarned = Math.max(0, totalEarned - specialExpenses);
-            const availableSavings = state.INITIAL_AMOUNT + remainingEarned;
-            let totalBudget = 0;
-            state.tripCategories.forEach(cat => {
-                cat.items.forEach(item => { totalBudget += (item.amount || 0); });
+            // 跟隨支出頁「每天需」的公式
+            let totalBudgetTrip = 0;
+            (state.tripCategories || []).forEach(cat => {
+                (cat.items || []).forEach(item => {
+                    totalBudgetTrip += Number(item.amount) || 0;
+                });
             });
-            if (totalBudget === 0) totalBudget = state.GOAL;
-            const totalRemaining = Math.max(0, totalBudget - availableSavings);
-            const perDay = (totalRemaining / daysLeft).toFixed(1);
-            goalEl.textContent = perDay;
+            if (totalBudgetTrip === 0) totalBudgetTrip = Number(state.GOAL) || 0;
+
+            const totalEarnedTrip = (state.records || []).reduce(
+                (sum, r) => sum + (Number(r.income) || 0),
+                0
+            );
+            const specialExpensesTrip = (state.expenses || []).reduce(
+                (sum, e) => sum + (Number(e.amount) || 0),
+                0
+            );
+
+            const availableSavingsTrip = getCurrentTotal() - specialExpensesTrip;
+            const totalRemainingTrip = Math.max(0, totalBudgetTrip - availableSavingsTrip);
+            const perDayTrip = totalRemainingTrip / daysLeft;
+
+            goalEl.textContent = perDayTrip.toFixed(1);
         }
     } else {
         goalEl.textContent = '--';
