@@ -1746,37 +1746,43 @@ function updateSidebarState() {
             
             const tbody = document.getElementById('recent-records-body');
             tbody.innerHTML = '';
+
             if (state.records.length === 0) {
                 tbody.innerHTML = `
                     <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
-                        <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
-                            <i data-lucide="inbox" class="w-5 h-5"></i>
+                        <div class="w-9 h-9 rounded-2xl flex items-center justify-center shadow-neu-light dark:shadow-neu-dark text-text-muted bg-bg-light dark:bg-bg-dark mb-1">
+                            <i data-lucide="inbox" class="w-4 h-4"></i>
                         </div>
-                        <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
-                        <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
-                    </div>`;
+                        <p class="text-xs font-bold text-text-main dark:text-text-darkMain">
+                            暫時未有任何記錄
+                        </p>
+                        <p class="text-[10px] text-text-muted dark:text-text-darkMuted leading-snug">
+                            由今日開始用上面個表單記低每一單補習，呢度會自動顯示你最近嘅收入。
+                        </p>
+                    </div>
+                `;
                 lucide.createIcons();
             } else {
-                            state.records.slice(0, 5).forEach(record => {
-                let recAmt = record.income;
-                if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
-                tbody.innerHTML += `
-                <div class="swipe-wrapper" data-id="${record.id}">
-                    <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
-                    <div class="swipe-item neu-inset p-3 flex items-center justify-between">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] font-bold text-text-muted">${record.date.slice(5)}</span>
-                            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
+                state.records.slice(0, 5).forEach(record => {
+                    let recAmt = record.income;
+                    if (state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
+                    tbody.innerHTML += `
+                    <div class="swipe-wrapper" data-id="${record.id}">
+                        <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
+                        <div class="swipe-item neu-inset p-3 flex items-center justify-between">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-bold text-text-muted">${record.date.slice(5)}</span>
+                                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
+                                <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
-                            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-            });
+                    </div>`;
+                });
             attachSwipeToDelete(tbody, id => deleteRecord(id));
             }
             renderChart();
@@ -2023,41 +2029,59 @@ updateCalendarFooter();
         }
 
 
-function openCalendarDay(dateStr) {
-    const panel = document.getElementById('cal-day-panel');
-    if (panel.dataset.open === dateStr) {
-        panel.dataset.open = '';
-        panel.classList.remove('open');
-        panel.innerHTML = '';
-        return;
-    }
-    panel.dataset.open = dateStr;
-    const dayRecords = state.records.filter(r => r.date === dateStr);
-    const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
-    if (dayRecords.length === 0) {
-        panel.innerHTML = `<div class="neu-inset p-3 text-center text-xs font-bold text-text-muted">${dateStr.slice(5)} — 沒有記錄</div>`;
-    } else {
-        const total = dayRecords.reduce((s, r) => s + r.income, 0);
-        let html = `<div class="neu-inset p-3 space-y-2">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-extrabold text-text-main dark:text-text-darkMain">${dateStr.slice(5)}</span>
-                <span class="text-xs font-extrabold text-aux-mint">${symbol}${formatMoney(Math.round(total))}</span>
-            </div>`;
-        dayRecords.forEach(r => {
-            let amt = r.income;
-            if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
-            html += `<div class="flex justify-between items-center py-1.5 border-t border-black/5 dark:border-white/5">
-                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${r.sourceName}</span>
-                <span class="text-xs font-bold text-aux-mint">${symbol}${Math.round(amt)}</span>
-            </div>`;
-        });
-        html += `</div>`;
-        panel.innerHTML = html;
-    }
-    panel.classList.remove('open');
-    void panel.offsetWidth;
-    panel.classList.add('open');
-}
+        function openCalendarDay(dateStr) {
+            const panel = document.getElementById('cal-day-panel');
+            if (panel.dataset.open === dateStr) {
+                panel.dataset.open = '';
+                panel.classList.remove('open');
+                panel.innerHTML = '';
+                return;
+            }
+
+            panel.dataset.open = dateStr;
+            const dayRecords = state.records.filter(r => r.date === dateStr);
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+
+            if (dayRecords.length === 0) {
+                panel.innerHTML = `
+                    <div class="neu-inset p-4 flex flex-col items-center justify-center text-center gap-2">
+                        <div class="w-8 h-8 rounded-2xl flex items-center justify-center shadow-neu-light dark:shadow-neu-dark text-text-muted bg-bg-light dark:bg-bg-dark mb-1">
+                            <i data-lucide="calendar-x" class="w-4 h-4"></i>
+                        </div>
+                        <p class="text-xs font-bold text-text-main dark:text-text-darkMain">
+                            ${dateStr.slice(5)} 呢日未有任何記錄
+                        </p>
+                        <p class="text-[10px] text-text-muted dark:text-text-darkMuted leading-snug">
+                            可以喺 Dashboard 用新增記錄表單，揀返呢一日，之後日曆會顯示你當日嘅入帳。
+                        </p>
+                    </div>
+                `;
+                if (window.lucide && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+            } else {
+                const total = dayRecords.reduce((s, r) => s + r.income, 0);
+                let html = `<div class="neu-inset p-3 space-y-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-extrabold text-text-main dark:text-text-darkMain">${dateStr.slice(5)}</span>
+                        <span class="text-xs font-extrabold text-aux-mint">${symbol}${formatMoney(Math.round(total))}</span>
+                    </div>`;
+                dayRecords.forEach(r => {
+                    let amt = r.income;
+                    if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                    html += `<div class="flex justify-between items-center py-1.5 border-t border-black/5 dark:border-white/5">
+                        <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${r.sourceName}</span>
+                        <span class="text-xs font-bold text-aux-mint">${symbol}${Math.round(amt)}</span>
+                    </div>`;
+                });
+                html += `</div>`;
+                panel.innerHTML = html;
+            }
+
+            panel.classList.remove('open');
+            void panel.offsetWidth;
+            panel.classList.add('open');
+        }
 
         function updateCalendarFooter() {
     // 還有多少天
@@ -2705,10 +2729,25 @@ rawChartData.push({
     });
 
     if (sorted.length === 0) {
-        listContainer.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">尚未有任何紀錄。</div>`;
-    } else {
-        listContainer.innerHTML = listHtml;
+    listContainer.innerHTML = `
+        <div class="neu-inset p-5 flex flex-col items-center justify-center text-center gap-2">
+            <div class="w-9 h-9 rounded-2xl flex items-center justify-center shadow-neu-light dark:shadow-neu-dark text-blue-400 bg-bg-light dark:bg-bg-dark mb-1">
+                <i data-lucide="smartphone" class="w-4 h-4"></i>
+            </div>
+            <p class="text-xs font-bold text-text-main dark:text-text-darkMain">
+                仲未有任何 Smart Expense 記錄
+            </p>
+            <p class="text-[10px] text-text-muted dark:text-text-darkMuted leading-snug">
+                先喺上面輸入八達通同電子錢包數據，呢度會幫你計出每段時間嘅實際平均開支。
+            </p>
+        </div>
+    `;
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
     }
+} else {
+    listContainer.innerHTML = listHtml;
+}
 
     const tabs = ['se-tab-daily', 'se-tab-weekly', 'se-tab-monthly'];
     tabs.forEach(t => {
