@@ -281,11 +281,54 @@ nav.nav-idle .max-w-4xl {
 }
         }
 
-        body { 
-    overflow-x: hidden;
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
-    transition: background-color 0.5s ease, color 0.5s ease; 
+        body {
+        overflow-x: hidden;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        transition: background-color 0.5s ease, color 0.5s ease;
+
+        /* 淺色主題：米白底 + 稍暖橙黃／淡藍流動漸變 */
+        background:
+            radial-gradient(circle at 0% 0%, rgba(255, 238, 228, 0.60), transparent 55%), /* 暖橙光暈 */
+            radial-gradient(circle at 100% 100%, rgba(255, 246, 218, 0.60), transparent 55%), /* 黃白光暈 */
+            radial-gradient(circle at 0% 100%, rgba(215, 235, 255, 0.40), transparent 55%),  /* 淡藍作平衡 */
+            linear-gradient(135deg, #FDFBF7, #FFF7EF, #FFF4E1);
+        background-size: 220% 220%;
+        animation: softGradientMove 9s ease-in-out infinite;
+        }
+
+        /* Dark mode：更深黑藍底 + 稍強粉橙／藍紫光暈 */
+        .dark body {
+  overflow-x: hidden;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  transition: background-color 0.5s ease, color 0.5s ease;
+
+  /* 深色主題：純深灰底 + 極淡灰階光暈（無藍、無紫，只係亮度差） */
+  background:
+    radial-gradient(circle at 0% 0%,   rgba(140, 140, 140, 0.020), transparent 55%),  /* 淺灰 */
+    radial-gradient(circle at 100% 0%, rgba(120, 120, 120, 0.018), transparent 55%), /* 中灰 */
+    radial-gradient(circle at 0% 100%, rgba(110, 110, 110, 0.018), transparent 55%), /* 深灰 */
+    radial-gradient(circle at 100% 100%, rgba(130, 130, 130, 0.018), transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(150, 150, 150, 0.015), transparent 60%),
+    linear-gradient(145deg, #111827, #0b1120, #111827);
+  background-size: 320% 320%;
+  animation: softGradientMove 14s ease-in-out infinite;
 }
+
+        /* 漸變移動動畫 */
+        @keyframes softGradientMove {
+        0%   { background-position: 0% 50%; }
+        50%  { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+        }
+
+        /* 尊重減少動態設定 */
+        @media (prefers-reduced-motion: reduce) {
+        body,
+        .dark body {
+            animation: none;
+            background-size: auto;
+        }
+        }
 
 
 
