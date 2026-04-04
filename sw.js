@@ -1,44 +1,3556 @@
-const CACHE_NAME = 'workie-v1';
-const ASSETS = [
-  './index.html',
-  './icon-192.png',
-  './icon-512.png'
-];
+<!DOCTYPE html>
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
+<html class="light" lang="zh-HK">
+<head>
+<meta charset="utf-8"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF6B6B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Workie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Workie - Soft UI Tracker</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Firebase V8 Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<!-- Tailwind Configuration -->
+<script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            light: '#FF8E8E',
+                            DEFAULT: '#FF6B6B',
+                            dark: '#E55A5A',
+                        },
+                        bg: {
+                            light: '#FDFBF7',
+                            dark: '#1A1B1E',
+                        },
+                        text: {
+                        // 明亮主文本
+                        title: '#1F2933',     // 最重要標題（卡片 title、大數字附近文字）
+                        body: '#374151',      // 一般內文、列表內容
+                        main: '#4A4A4A',      // 舊用法，暫時保留作相容
+
+                        // 次要 / 說明
+                        label: '#4B5563',     // 表單 label、副標題
+                        subtle: '#6B7280',    // 次要資訊（年級、科目、細描述）
+                        muted: '#9CA3AF',     // 最淡，用於非重點提示 / footer
+
+                        // Dark mode 對應
+                        darkTitle: '#F9FAFB',
+                        darkBody: '#E5E7EB',
+                        darkLabel: '#D1D5DB',
+                        darkSubtle: '#9CA3AF',
+                        darkMain: '#E5E7EB',   // 舊 key 保留
+                        darkMuted: '#9CA3AF'   // 舊 key 保留
+                        },
+                        aux: {
+                            mint: '#7BC67E',
+                            lavender: '#A5B4FC',
+                            peach: '#FFB347',
+                        }
+                    },
+
+
+                    boxShadow: {
+                        'neu-light': '-5px -5px 15px rgba(255, 255, 255, 0.8), 5px 5px 15px rgba(0, 0, 0, 0.05)',
+                        'neu-dark': '-5px -5px 20px rgba(255, 255, 255, 0.04), 5px 5px 20px rgba(0, 0, 0, 0.5)',
+                        'neu-inset-light': 'inset 4px 4px 8px rgba(0, 0, 0, 0.07), inset -4px -4px 8px rgba(255, 255, 255, 0.9)',
+                        'neu-inset-dark': 'inset 4px 4px 8px rgba(0, 0, 0, 0.4), inset -4px -4px 8px rgba(255, 255, 255, 0.02)',
+                        'brand-glow': '0 4px 15px rgba(255, 107, 107, 0.4)',
+                    },
+                    animation: {
+                        shimmer: 'shimmer 2s infinite',
+                        pulse_fast: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        spin_slow: 'spin 2s linear infinite',
+                    },
+                    keyframes: {
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+<!-- Custom CSS -->
+<style type="text/tailwindcss">
+        @layer utilities {
+            .no-scrollbar::-webkit-scrollbar { display: none; }
+            .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.stagger-item {
+    opacity: 0;
+    animation: staggerFadeUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes magnetPull {
+    0%   { opacity: 0; transform: translateY(52px) scale(0.98); }
+    60%  { opacity: 1; transform: translateY(-6px) scale(1.005); }
+    80%  { transform: translateY(3px) scale(0.999); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+.scroll-reveal {
+    opacity: 0;
+    /* 改用 CSS 變量控制起始位置，預設從下方 70px */
+    transform: translateY(var(--scroll-from, 70px));
+    transition: none;
+}
+/* 新增：從上方落下的變體，只改變量，不直接覆蓋 transform */
+.scroll-reveal.from-above {
+    --scroll-from: -70px;
+}
+/* 不變：revealed 永遠是終點 translateY(0)，無 specificity 衝突 */
+.scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.42s cubic-bezier(0.65, 0, 0.35, 1),
+                transform 0.42s cubic-bezier(0.65, 0, 0.35, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+}
+.swipe-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+}
+.swipe-delete-bg {
+    position: absolute;
+    right: 2px; top: 2px; bottom: 2px;
+    width: 2.8rem;
+    background: #FF6B6B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+}
+.swipe-item {
+    position: relative;
+    width: 100%;
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+    touch-action: pan-y;
+    background-color: #FDFBF7;
+}
+.dark .swipe-item {
+    background-color: #1A1B1E;
+}
+@keyframes floatUp {
+    0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateY(-110vh) scale(1.3) rotate(20deg); opacity: 0; }
+}
+.confetti-emoji {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    font-size: 2rem;
+    animation: floatUp linear forwards;
+    will-change: transform;
+}
+#cal-day-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+    opacity: 0;
+}
+#cal-day-panel.open {
+    max-height: 400px;
+    opacity: 1;
+}
+.swipe-item.is-swiping {
+    transition: none;
+}
+     
+       
+.card-push-enter {
+    animation: cardPushRight 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.card-push-enter-left {
+    animation: cardPushLeft 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.modal-slide-up {
+    animation: modalSlideUp 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.modal-slide-down {
+    animation: modalSlideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.modal-backdrop-in {
+    animation: backdropFadeIn 0.38s ease forwards;
+}
+.modal-backdrop-out {
+    animation: backdropFadeOut 0.3s ease forwards;
+}
+@keyframes modalSlideUp {
+    0% { opacity: 0; transform: translateY(100%); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes modalSlideDown {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(100%); }
+}
+@keyframes backdropFadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+@keyframes backdropFadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+@keyframes cardPushRight {
+    0% { opacity: 0; transform: translateX(40px) scale(0.97); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes cardPushLeft {
+    0% { opacity: 0; transform: translateX(-40px) scale(0.97); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+        }
+
+        @layer components {
+            .neu-card {
+    @apply bg-bg-light dark:bg-bg-dark shadow-neu-light dark:shadow-neu-dark rounded-3xl transition-all duration-500 overflow-visible border-2 border-white/70 dark:border-black/40;
+}
+            .neu-btn-primary {
+    @apply bg-brand text-white font-bold rounded-2xl shadow-brand-glow hover:opacity-90 transition-all duration-200 flex items-center justify-center;
+}
+.neu-btn-primary:active {
+    animation: btnSpring 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.neu-btn {
+    @apply bg-bg-light dark:bg-bg-dark text-text-main dark:text-text-darkMain font-bold rounded-xl shadow-neu-light dark:shadow-neu-dark active:shadow-neu-inset-light dark:active:shadow-neu-inset-dark transition-all duration-200;
+}
+.neu-btn:active {
+    animation: btnSpring 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes btnSpring {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(0.95); }
+    70%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+            .neu-inset {
+                @apply bg-bg-light dark:bg-bg-dark shadow-neu-inset-light dark:shadow-neu-inset-dark rounded-2xl border border-transparent dark:border-white/5;
+            }
+            .neu-input {
+                @apply w-full bg-bg-light dark:bg-bg-dark shadow-neu-inset-light dark:shadow-neu-inset-dark rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand/30 text-text-main dark:text-text-darkMain transition-all duration-300 text-sm;
+            }
+            .nav-tab {
+                @apply flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 text-text-muted;
+            }
+            .nav-tab.active {
+                @apply text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark;
+            }
+	    .nav-tab span {
+    transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease;
+    max-height: 1rem;
+    overflow: hidden;
+    display: block;
+}
+nav.nav-idle .nav-tab span {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+}
+nav.nav-idle {
+    transition: padding 0.3s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+nav.nav-idle .max-w-4xl {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+        }
+
+        body {
+        overflow-x: hidden;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        transition: background-color 0.5s ease, color 0.5s ease;
+
+        /* 淺色主題：米白底 + 稍暖橙黃／淡藍流動漸變 */
+        background:
+            radial-gradient(circle at 0% 0%,   rgba(255, 238, 228, 0.60), transparent 55%), /* 暖橙光暈 */
+            radial-gradient(circle at 100% 100%, rgba(255, 246, 218, 0.60), transparent 55%), /* 黃白光暈 */
+            radial-gradient(circle at 0% 100%, rgba(215, 235, 255, 0.40), transparent 55%),  /* 淡藍作平衡 */
+            linear-gradient(135deg, #FDFBF7, #FFF7EF, #FFF4E1);
+        background-size: 220% 220%;
+        animation: softGradientMove 9s ease-in-out infinite;
+        }
+
+        /* Dark mode：黑到銀灰的柔和金屬漸變（純灰階，無色相） */
+        .dark body {
+        overflow-x: hidden;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        transition: background-color 0.5s ease, color 0.5s ease;
+
+        /* 深色主題：黑到銀灰的較強金屬漸變（純灰階） */
+        background:
+            radial-gradient(circle at 0% 0%,   rgba(210, 210, 210, 0.12), transparent 55%), /* 更亮銀灰 */
+            radial-gradient(circle at 100% 100%, rgba(70, 70, 70, 0.12),  transparent 55%), /* 更深石墨灰 */
+            radial-gradient(circle at 0% 100%, rgba(160, 160, 160, 0.09), transparent 55%), /* 中灰 */
+            linear-gradient(145deg, #020202, #101010, #1f1f1f);
+        background-size: 260% 260%;
+        animation: softMetalMove 8s ease-in-out infinite;
+        }
+
+        /* Dark mode 金屬感灰階流動動畫（加快） */
+        @keyframes softMetalMove {
+        0%   { background-position: 0% 35%; }
+        50%  { background-position: 100% 65%; }
+        100% { background-position: 0% 35%; }
+        }
+
+        /* Dark mode 金屬感灰階流動動畫 */
+        @keyframes softMetalMove {
+        0%   { background-position: 0% 40%; }
+        50%  { background-position: 100% 60%; }
+        100% { background-position: 0% 40%; }
+        }
+
+        /* 尊重減少動態設定：兩個 mode 一齊停動畫 */
+        @media (prefers-reduced-motion: reduce) {
+        body,
+        .dark body {
+            animation: none;
+            background-size: auto;
+        }
+        }
+
+
+
+
+
+/* ===== Desktop Layout ===== */
+@media (max-width: 1023px) {
+    #view-calendar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 72px; /* 底部 nav bar 高度 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        overflow: hidden;
+    }
+    #view-calendar.hidden {
+        display: none !important;
+    }
+    #view-calendar > div {
+        width: 100%;
+        max-width: 480px;
+    }
+}
+@media (min-width: 1024px) {
+    body {
+        padding-bottom: 0;
+    }
+    nav.fixed.bottom-0 {
+        display: none !important;
+    }
+    #dynamic-island {
+        display: none !important;
+    }
+
+    /* 整體容器：置中 + 縮窄 */
+.max-w-4xl.mx-auto.px-4.pt-14 {
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 17rem;
+    padding-right: 2rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 80rem;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Sidebar 跟隨置中 */
+#desktop-sidebar {
+    left: max(0px, calc(50vw - 40rem));
+}
+
+    .view-section > div > .neu-card {
+        min-width: 0;
+    }
+
+    /* 月曆：跟隨左+中，無右欄 */
+    #view-calendar > div {
+        display: block;
+        grid-template-columns: none;
+        max-width: calc(100% - 20rem - 1.5rem);
+    }
+
+    /* 記錄：跟隨左+中，無右欄 */
+    #view-records > div {
+        display: block;
+        grid-template-columns: none;
+        max-width: calc(100% - 20rem - 1.5rem);
+    }
+}
+
+/* Sidebar tab active state */
+.sidebar-tab.active {
+    @apply text-brand shadow-neu-inset-light dark:shadow-neu-inset-dark bg-bg-light dark:bg-bg-dark;
+}
+
+
+.form-label {
+    @apply block text-[11px] font-bold text-text-muted mb-1 ml-1;
+}
+
+
+    </style>
+</head>
+<body class="min-h-screen bg-bg-light text-text-main dark:bg-bg-dark dark:text-text-darkMain selection:bg-brand/30">
+<!-- Dynamic Island (Top Right, Compact) -->
+<div class="fixed top-4 right-4 z-[60] flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border border-black/10 dark:border-white/10 shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] scale-90 origin-top-right" id="dynamic-island">
+<div class="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full shadow-neu-inset-light dark:shadow-neu-inset-dark transition-all duration-500 opacity-0 hidden" id="sync-badge">
+<span class="w-1.5 h-1.5 rounded-full bg-aux-peach" id="sync-dot"></span>
+</div>
+<button class="p-1 rounded-full text-text-muted hover:text-brand transition-colors" id="mode-trip-toggle" title="Trip Mode">
+<i class="w-3.5 h-3.5" data-lucide="plane" id="trip-icon"></i>
+</button>
+<div class="w-px h-3 bg-black/20 dark:bg-white/20"></div>
+<button class="p-1 rounded-full text-text-muted hover:text-brand transition-colors" id="theme-toggle" title="Dark Mode">
+<i class="w-3.5 h-3.5" data-lucide="moon" id="theme-icon"></i>
+</button>
+</div>
+<!-- ===================== Desktop Sidebar ===================== -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 h-full w-56 bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-xl border-r border-white/70 dark:border-black/40 z-50 py-8 px-4" id="desktop-sidebar">
+<!-- App Title -->
+<div class="mb-8 px-2">
+<div class="flex items-center gap-2">
+<div class="flex items-center justify-center w-8 h-8 rounded-xl bg-brand shadow-brand-glow text-white shrink-0">
+<i class="w-4 h-4" data-lucide="wallet"></i>
+</div>
+<div>
+<p class="text-sm font-extrabold text-text-main dark:text-text-darkMain tracking-tight">Workie</p>
+<p class="text-[10px] font-bold text-text-muted">Finance Tracker</p>
+</div>
+</div>
+</div>
+<!-- Nav Items -->
+<nav class="flex flex-col gap-1 flex-1">
+<button class="sidebar-tab active flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="dashboard">
+<i class="w-4 h-4 shrink-0" data-lucide="home"></i>
+<span class="text-sm font-bold">主頁</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="calendar">
+<i class="w-4 h-4 shrink-0" data-lucide="calendar-days"></i>
+<span class="text-sm font-bold">月曆</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="records">
+<i class="w-4 h-4 shrink-0" data-lucide="list"></i>
+<span class="text-sm font-bold">記錄</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="expenses">
+<i class="w-4 h-4 shrink-0" data-lucide="receipt"></i>
+<span class="text-sm font-bold">支出</span>
+</button>
+<button class="sidebar-tab flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 text-text-muted hover:text-brand w-full text-left" data-tab="settings">
+<i class="w-4 h-4 shrink-0" data-lucide="settings"></i>
+<span class="text-sm font-bold">設定</span>
+</button>
+</nav>
+<!-- Bottom Controls -->
+<div class="flex flex-col gap-3 px-2">
+<div class="hidden flex items-center gap-2" id="sidebar-sync-badge">
+<span class="w-1.5 h-1.5 rounded-full bg-aux-peach" id="sidebar-sync-dot"></span>
+<span class="text-[10px] font-bold text-text-muted" id="sidebar-sync-label">同步中...</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 neu-btn text-text-muted hover:text-brand" id="sidebar-trip-toggle" title="Trip Mode">
+<i class="w-4 h-4" data-lucide="plane" id="sidebar-trip-icon"></i>
+</button>
+<button class="p-2 neu-btn text-text-muted hover:text-brand" id="sidebar-theme-toggle" title="Dark Mode">
+<i class="w-4 h-4" data-lucide="moon" id="sidebar-theme-icon"></i>
+</button>
+</div>
+</div>
+</aside>
+<!-- Mobile: original layout / Desktop: 3-col grid -->
+<div class="max-w-4xl mx-auto px-4 pt-0 lg:hidden" id="mobile-container">
+</div>
+<div class="desktop-main hidden lg:grid" id="desktop-container">
+<div class="desktop-main-col" id="desktop-main-col"></div>
+<div class="desktop-right-col" id="desktop-right-col"></div>
+</div>
+<!-- View sections (shared, moved by JS on resize) -->
+<div class="max-w-4xl mx-auto px-4 pt-14" id="views-root">
+<!-- ================= 主頁 (Dashboard) ================= -->
+<div class="view-section card-push-enter" id="view-dashboard">
+  <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+
+    <!-- 左欄：總目標進度卡 + 新增今日記錄 -->
+    <div class="flex flex-col gap-6">
+
+      <!-- 卡1：總目標進度 -->
+      <div class="neu-card p-6">
+        <div class="flex justify-between items-end mb-8">
+          <div>
+            <h2 class="text-s font-bold text-text-title dark:text-text-darkTitle mb-1">總目標進度</h2>
+            <div class="flex items-baseline gap-2">
+              <p class="text-4xl font-extrabold tracking-tight text-text-title dark:text-text-darkTitle" id="dash-current-total">$0</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="hidden flex justify-end mb-2" id="currency-toggle-container">
+              <div class="flex neu-inset p-1">
+                <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="curr-hkd">HKD</button>
+                <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="curr-eur">EUR</button>
+              </div>
+            </div>
+            <p class="text-sm font-bold text-aux-mint mb-0.5" id="dash-earned-total">(+$0)</p>
+            <p class="text-xs font-bold text-brand" id="dash-remaining-text">$0 to go</p>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between text-[12px] font-bold text-text-subtle dark:text-text-darkSubtle">
+            <span id="dash-progress-text">0%</span>
+            <span id="dash-goal-text">目標: $100,000</span>
+          </div>
+          <div class="neu-inset h-4 overflow-hidden p-0.1 bg-black/5 dark:bg-white/5">
+            <div class="bg-brand h-full rounded-full transition-all duration-1000 ease-out relative shadow-brand-glow overflow-hidden" id="dash-progress-bar" style="width: 0%">
+              <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-[200%] -translate-x-full animate-shimmer backdrop-blur-[1px]"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 卡2：新增今日記錄（快速輸入） -->
+      <div class="neu-card p-5">
+        <h2 class="text-sm font-bold mb-4 flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+          <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand">
+            <i class="w-4 h-4" data-lucide="plus"></i>
+          </div>
+          新增今日記錄
+        </h2>
+
+        <form class="space-y-4" id="record-form">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">日期</label>
+              <input class="neu-input" id="record-date" required type="date" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">時長 (hr)</label>
+              <div class="flex items-center gap-2">
+                <button class="neu-btn p-2" id="btn-duration-minus" type="button">
+                  <i class="w-4 h-4" data-lucide="minus"></i>
+                </button>
+                <div class="flex-1 text-center neu-inset py-2 text-sm font-bold text-text-body dark:text-text-darkBody">
+                  <span id="record-duration">1.5</span>
+                </div>
+                <button class="neu-btn p-2" id="btn-duration-plus" type="button">
+                  <i class="w-4 h-4" data-lucide="plus"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">學生 / 來源</label>
+            <select class="neu-input appearance-none" id="record-source" required>
+              <option disabled selected value="">請選擇學生...</option>
+            </select>
+          </div>
+
+          <div class="hidden p-3 neu-inset flex justify-between items-center" id="record-preview">
+            <span class="text-xs font-bold text-text-subtle dark:text-text-darkSubtle">預計收入</span>
+            <span class="text-base font-extrabold text-aux-mint" id="record-preview-amount">$0</span>
+          </div>
+
+          <button class="w-full neu-btn-primary py-3 text-sm" type="submit">儲存記錄</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 右欄：收入趨勢圖 + 最近記錄 -->
+    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
+
+      <!-- 卡3：收入趨勢圖 -->
+      <div class="neu-card p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-sm flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+            <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-aux-lavender">
+              <i class="w-4 h-4" data-lucide="bar-chart-2"></i>
+            </div>
+            收入趨勢
+          </h3>
+          <div class="flex neu-inset p-1">
+            <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="chart-type-weekly">單週</button>
+            <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="chart-type-cumulative">累積</button>
+          </div>
+        </div>
+
+        <div class="flex neu-inset p-1 mb-4" id="chart-period-container">
+          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" data-days="28">4週</button>
+          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" data-days="56">8週</button>
+          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" data-days="180">月</button>
+          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" data-days="365+">年</button>
+        </div>
+
+        <div class="h-48 w-full relative">
+          <canvas id="incomeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 卡4：最近記錄 preview -->
+      <div class="neu-card p-5">
+        <h3 class="font-bold text-sm mb-3 flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+          <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-subtle dark:text-text-darkSubtle">
+            <i class="w-4 h-4" data-lucide="clock"></i>
+          </div>
+          最近記錄
+          <button class="ml-auto text-[10px] font-bold text-brand hover:opacity-60 transition-opacity" onclick="switchTab('records')">
+            查看全部
+          </button>
+        </h3>
+        <div class="space-y-2" id="recent-records-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ================= 月曆 (Calendar) ================= -->
+<div class="view-section hidden" id="view-calendar">
+  <div class="flex flex-col gap-6">
+    <div class="neu-card p-4 pb-3 md:p-6" id="calendar-card"> <!-- ← 加上 id -->
+      <div class="flex items-center justify-between mt-3 mb-7">
+        <button class="neu-btn p-2" id="cal-prev">
+          <i class="w-5 h-5" data-lucide="chevron-left"></i>
+        </button>
+        <div class="text-center">
+          <h2 class="text-lg font-extrabold tracking-tight text-text-main dark:text-text-darkMain" id="cal-month-title"></h2>
+          <p class="text-xs font-bold text-aux-mint mt-1" id="cal-month-total">0</p>
+        </div>
+        <button class="neu-btn p-2" id="cal-next">
+          <i class="w-5 h-5" data-lucide="chevron-right"></i>
+        </button>
+      </div>
+      <div class="w-full">
+        <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-text-muted mb-2">
+          <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+        </div>
+        <div class="grid grid-cols-7 gap-1 md:gap-2" id="calendar-grid"></div>
+        <div class="mt-3 px-1" id="cal-day-panel"></div>
+      </div>
+    </div>
+    <!-- 底部資訊欄 -->
+    <div class="flex justify-around items-center px-2 pt-4 pb-1">
+      <div class="text-center">
+        <p class="text-[10px] font-bold text-text-muted mb-0.5">還有</p>
+        <p class="text-xl font-extrabold text-brand" id="cal-days-remaining">--</p>
+        <p class="text-[10px] font-bold text-text-muted">天出發</p>
+      </div>
+      <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+      <div class="text-center">
+        <p class="text-[10px] font-bold text-text-muted mb-0.5">每天需</p>
+        <p class="text-xl font-extrabold text-brand" id="cal-goal-amount">$--</p>
+        <p class="text-[10px] font-bold text-text-muted">達標</p>
+      </div>
+      <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+      <div class="text-center">
+        <p class="text-[10px] font-bold text-text-muted mb-0.5">已儲</p>
+        <p class="text-xl font-extrabold text-aux-mint" id="cal-saved-amount">$--</p>
+        <p class="text-[10px] font-bold text-text-muted">累積收入</p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ================= 所有記錄頁 (Records) ================= -->
+<div class="view-section hidden" id="view-records">
+
+  <!-- 頁頭：歷史記錄標題 -->
+  <div class="neu-card !flex items-center gap-3 p-4 mb-4 text-text-title dark:text-text-darkTitle">
+    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-mint">
+      <i class="w-5 h-5" data-lucide="list"></i>
+    </div>
+    <h2 class="text-lg font-bold">歷史記錄</h2>
+  </div>
+
+  <!-- 下面由 JS 動態渲染每週卡片 -->
+  <div class="flex flex-col gap-4" id="all-records-container"></div>
+</div>
+<!-- ================= 支出頁面 (Expenses) ================= -->
+<div class="view-section hidden" id="view-expenses">
+  <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+
+    <!-- 左欄：旅遊預算 + 支出追蹤 -->
+    <div class="flex flex-col gap-6">
+
+      <!-- 旅遊預算 Module（Trip Mode 專用） -->
+      <div class="hidden neu-card p-5" id="trip-budget-module">
+        <h2 class="text-lg font-bold mb-4 flex items-center justify-between text-brand">
+          <div class="flex items-center gap-2 text-text-main dark:text-text-darkMain">
+            <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-brand">
+              <i class="w-5 h-5" data-lucide="plane"></i>
+            </div>
+            旅遊預算
+          </div>
+        </h2>
+
+        <div class="mb-4 neu-inset p-3 flex justify-between items-center">
+          <span class="text-xs font-bold text-text-muted">出發日期</span>
+          <input class="neu-input w-auto py-1 text-xs" id="trip-departure-date" type="date" />
+        </div>
+
+        <div class="mb-5" id="trip-master-progress"></div>
+        <div class="space-y-3" id="trip-categories-container"></div>
+
+        <button class="mt-4 w-full neu-btn py-2 text-sm text-brand" onclick="addTripCategory()">+ 新增目的地</button>
+      </div>
+
+      <!-- 支出追蹤：八達通 + E-wallet Snapshot -->
+      <div class="neu-card p-5" id="smart-expense-module">
+        <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+          <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-blue-400">
+            <i class="w-5 h-5" data-lucide="smartphone"></i>
+          </div>
+          支出追蹤
+        </h2>
+
+        <p class="text-[10px] text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
+          請輸入本月 1 號至今的「累積總額」。系統會自動計算日均支出。跨月時數據將自動重置。
+        </p>
+
+        <form class="space-y-3 mb-5 neu-inset p-4" id="smart-expense-form">
+          <input class="neu-input" id="se-date" required type="date" />
+
+          <div class="space-y-3">
+            <!-- 八達通 -->
+            <div>
+              <div class="flex items-center gap-1.5 mb-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                <span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">八達通</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
+                  <input class="neu-input" id="se-oct-spent" min="0" required type="number" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總增值</label>
+                  <input class="neu-input" id="se-oct-reload" min="0" required type="number" />
+                </div>
+              </div>
+            </div>
+
+            <!-- E-wallet -->
+            <div>
+              <div class="flex items-center gap-1.5 mb-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                <span class="text-[10px] font-extrabold text-blue-600/80 dark:text-blue-300/70 tracking-wide">E-wallet</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總消費</label>
+                  <input class="neu-input" id="se-ew-spent" min="0" required type="number" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-blue-700/70 dark:text-blue-300/60 mb-1 ml-1">總轉帳</label>
+                  <input class="neu-input" id="se-ew-transfer" min="0" required type="number" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button class="w-full neu-btn py-2 text-sm text-blue-600 dark:text-blue-400" type="submit">新增快照</button>
+        </form>
+
+        <div class="flex neu-inset p-1 mb-3">
+          <button class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-blue-600 dark:text-blue-400 bg-bg-light dark:bg-bg-dark transition-all" id="se-tab-daily">日</button>
+          <button class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" id="se-tab-weekly">週</button>
+          <button class="flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all" id="se-tab-monthly">月</button>
+        </div>
+
+        <div class="h-48 w-full relative mb-4">
+          <canvas id="smartExpenseChart"></canvas>
+        </div>
+
+        <h3 class="text-sm font-bold mb-3 text-text-muted ml-1">歷史紀錄</h3>
+        <div class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar" id="smart-expense-list"></div>
+      </div>
+    </div>
+
+    <!-- 右欄：特別支出表單 + 支出紀錄 -->
+    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
+      <div class="neu-card p-5">
+        <h2 class="text-lg font-bold mb-5 flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+          <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-peach">
+            <i class="w-5 h-5" data-lucide="circle-dollar-sign"></i>
+          </div>
+          特別支出
+        </h2>
+
+        <!-- 特別支出輸入表單 -->
+        <form class="mb-8 neu-inset p-4 space-y-4" id="expense-form">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">目的</label>
+              <input class="neu-input" id="expense-purpose" required type="text" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">日期</label>
+              <input class="neu-input" id="expense-date" required type="date" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">金額 ($)</label>
+              <input class="neu-input" id="expense-amount" min="0" required type="number" />
+            </div>
+          </div>
+          <button class="w-full neu-btn py-2.5 text-sm text-brand" type="submit">新增支出</button>
+        </form>
+
+        <!-- 特別支出紀錄列表 -->
+        <h3 class="text-sm font-bold mb-4 text-text-muted ml-1">支出紀錄</h3>
+        <div class="space-y-3" id="expenses-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- ================= 設定頁 (Settings & Students) ================= -->
+<div class="view-section hidden" id="view-settings">
+  <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+
+    <!-- 左欄：管理學生 -->
+    <div class="flex flex-col gap-6">
+      <div class="neu-card p-5">
+
+        <!-- 區塊標題：管理學生 -->
+        <h2 class="text-lg font-bold flex items-center gap-2 text-text-title dark:text-text-darkTitle mb-5">
+          <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-lavender">
+            <i class="w-5 h-5" data-lucide="user-plus"></i>
+          </div>
+          管理學生
+        </h2>
+
+        <!-- 新增學生表單 -->
+        <form class="mb-8 space-y-4" id="add-student-form">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">學生姓名</label>
+              <input class="neu-input" id="new-s-name" type="text" required />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">年級</label>
+              <select class="neu-input appearance-none" id="new-s-grade">
+                <option>小一</option><option>小二</option><option>小三</option><option>小四</option><option>小五</option><option>小六</option>
+                <option selected>中一</option><option>中二</option><option>中三</option><option>中四</option><option>中五</option><option>中六</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">時薪 ($/hr)</label>
+              <input class="neu-input" id="new-s-rate" type="number" min="0" required />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">科目</label>
+              <select class="neu-input appearance-none" id="new-s-subject">
+                <option selected>英文</option><option>全科</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">地址簡稱</label>
+              <input class="neu-input" id="new-s-address-short" type="text" />
+            </div>
+
+            <!-- 這兩個半行：詳細地址 / 聯絡電話 -->
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">詳細地址（選填）</label>
+              <input class="neu-input" id="new-s-detail-address" type="text" />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">聯絡電話（選填）</label>
+              <input class="neu-input" id="new-s-phone" type="text" />
+            </div>
+          </div>
+
+          <button class="w-full neu-btn py-2.5 text-sm text-brand" type="submit">
+            新增學生
+          </button>
+        </form>
+
+        <!-- 現有學生列表標題 -->
+        <h3 class="text-sm font-bold text-text-subtle dark:text-text-darkSubtle mb-3 ml-1" id="students-count-title">
+          現有學生 (0)
+        </h3>
+        <div class="space-y-3 mb-1" id="students-list"></div>
+      </div>
+    </div>
+
+    <!-- 右欄：系統設定 + 備份 + Firebase -->
+    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
+      <div class="neu-card p-5">
+
+        <!-- 自訂目標設定 -->
+        <div>
+          <h3 class="text-sm font-bold mb-4 text-text-title dark:text-text-darkTitle">自訂目標設定</h3>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">自訂目標 ($)</label>
+              <input class="neu-input" id="setting-goal" type="number" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">起點金額 ($)</label>
+              <input class="neu-input" id="setting-initial" type="number" />
+            </div>
+          </div>
+          <button class="w-full neu-btn py-2 text-sm" id="btn-save-sys-settings">儲存設定</button>
+        </div>
+
+        <!-- 匯率同步 (Trip Mode) -->
+        <div class="hidden pt-6 mt-6 border-t border-black/5 dark:border-white/5" id="trip-settings-container">
+          <h3 class="text-sm font-bold mb-4 text-text-title dark:text-text-darkTitle">匯率同步</h3>
+          <div class="neu-inset p-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-bold text-text-label dark:text-text-darkLabel">即時匯率 (EUR to HKD)</label>
+              <button class="p-1.5 text-brand hover:bg-brand/10 rounded-lg transition-colors" onclick="fetchLiveRate(true)">
+                <i class="w-4 h-4" data-lucide="refresh-cw" id="refresh-rate-icon"></i>
+              </button>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-2xl font-extrabold text-text-title dark:text-text-darkTitle" id="display-exchange-rate">9</span>
+              <span class="text-[10px] text-text-subtle dark:text-text-darkSubtle" id="rate-last-updated">更新於: --</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 手動備份 -->
+        <div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
+          <h3 class="text-sm font-bold mb-4 text-text-title dark:text-text-darkTitle">手動備份</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <button class="neu-btn py-2 text-xs flex items-center justify-center gap-1" id="btn-export">
+              <i class="w-3 h-3" data-lucide="download"></i> 匯出
+            </button>
+            <button class="neu-btn py-2 text-xs flex items-center justify-center gap-1" id="btn-import-trigger">
+              <i class="w-3 h-3" data-lucide="upload"></i> 匯入
+            </button>
+            <input accept=".json" class="hidden" id="file-import" type="file" />
+          </div>
+        </div>
+
+        <!-- Firebase 同步 -->
+        <div class="pt-6 mt-6 border-t border-black/5 dark:border-white/5">
+          <h3 class="text-sm font-bold mb-2 text-text-title dark:text-text-darkTitle">Firebase 同步</h3>
+          <textarea class="neu-input text-[10px] font-mono mb-3" id="firebase-config-input" placeholder="貼上 Firebase Config..." rows="3"></textarea>
+          <button class="w-full neu-btn py-2 text-sm" id="btn-save-firebase">連線</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Sticky Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full bg-bg-light/80 dark:bg-bg-dark/80 backdrop-blur-xl border-t border-white/50 dark:border-white/5 z-50 pb-[env(safe-area-inset-bottom)]">
+<div class="max-w-4xl mx-auto px-4 py-3">
+<div class="flex justify-around items-center" id="tabs-container">
+<button class="nav-tab active" data-tab="dashboard">
+<i class="w-5 h-5 mb-0.5" data-lucide="home"></i>
+<span class="text-[9px] font-bold">主頁</span>
+</button>
+<button class="nav-tab" data-tab="calendar">
+<i class="w-5 h-5 mb-0.5" data-lucide="calendar-days"></i>
+<span class="text-[9px] font-bold">月曆</span>
+</button>
+<button class="nav-tab" data-tab="records">
+<i class="w-5 h-5 mb-0.5" data-lucide="list"></i>
+<span class="text-[9px] font-bold">記錄</span>
+</button>
+<button class="nav-tab" data-tab="expenses">
+<i class="w-5 h-5 mb-0.5" data-lucide="receipt"></i>
+<span class="text-[9px] font-bold">支出</span>
+</button>
+<button class="nav-tab" data-tab="settings">
+<i class="w-5 h-5 mb-0.5" data-lucide="settings"></i>
+<span class="text-[9px] font-bold">設定</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- ===================== Confirm Modal ===================== -->
+<div class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4" id="confirm-modal">
+<div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="confirm-modal-backdrop"></div>
+<div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
+<p class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed" id="confirm-modal-msg"></p>
+<div class="flex gap-3">
+<button class="flex-1 neu-btn py-2.5 text-sm text-text-muted" id="confirm-modal-cancel">取消</button>
+<button class="flex-1 neu-btn-primary py-2.5 text-sm" id="confirm-modal-ok">確認刪除</button>
+</div>
+</div>
+</div>
+<!-- ===================== Input Modal ===================== -->
+<div class="hidden fixed inset-0 z-[80] flex items-end justify-center pb-8 px-4" id="input-modal">
+<div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="input-modal-backdrop"></div>
+<div class="relative w-full max-w-sm neu-card p-6 flex flex-col gap-4">
+<p class="text-sm font-bold text-text-main dark:text-text-darkMain text-center leading-relaxed" id="input-modal-msg"></p>
+<input class="neu-input text-sm" id="input-modal-field" type="text"/>
+<div class="flex gap-3">
+<button class="flex-1 neu-btn py-2.5 text-sm text-text-muted" id="input-modal-cancel">取消</button>
+<button class="flex-1 neu-btn-primary py-2.5 text-sm" id="input-modal-ok">確認</button>
+</div>
+</div>
+</div>
+<!-- Toast Notification Container -->
+<!-- 手機：水平居中、頂部；桌面：靠右（避開左側 sidebar w-56 = 14rem） -->
+<div class="fixed top-5 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-70 flex flex-col items-center lg:items-end gap-2 pointer-events-none w-[min(90vw,22rem)]" id="toast-container">
+</div>
+<!-- Application Logic -->
+<script>
+        const getTodayString = () => {
+            const d = new Date();
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        function formatLocalDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        const state = {
+            GOAL: 100000,
+            INITIAL_AMOUNT: 57000,
+            activeTab: 'dashboard',
+            isDarkMode: false,
+            isTripMode: false,
+            displayCurrency: 'HKD',
+            exchangeRate: 8.35,
+            lastRateUpdate: null,
+            departureDate: '',
+            tripCategories: [
+                { id: 'cat_transport', name: 'Transport', type: 'base', items: [] },
+                { id: 'cat_housing', name: 'Housing', type: 'base', items: [] },
+                { id: 'cat_food', name: 'Food', type: 'base', items: [] },
+                { id: 'cat_misc', name: 'Miscellaneous', type: 'base', items: [] },
+                { id: 'cat_dest_vienna', name: 'Travel 1: Vienna', type: 'dest', items: [] }
+            ],
+            smartExpenses: [],
+            seChartTab: 'daily', // daily, weekly, monthly
+            sources: [], 
+            records: [], 
+            expenses: [],
+            formData: { date: getTodayString(), sourceId: '', duration: 1.5 },
+            chartPeriod: 28,
+            chartType: 'weekly',
+            currentMonthDate: new Date(),
+            editingSourceId: null,
+            editForm: {},
+            editingTripItemId: null,
+            editingTripItemName: '',
+            editingSourceId: null,
+            editForm: {},
+            editingTripItemId: null,
+            editingTripItemName: '',
+            editingTripCategoryId: null,
+            editingTripCategoryName: ''            
+        };
+
+
+
+
+        let chartInstance = null;
+        let smartChartInstance = null;
+        let db = null;
+        let isFirebaseActive = false;
+        let syncTimeout = null;
+        let isCloudUpdating = false;
+        let _scrollObserver = null;
+
+        function loadLocalData() {
+            const localData = localStorage.getItem('tutoring_data');
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    state.sources = parsed.sources || [];
+                    state.records = parsed.records || [];
+                    state.expenses = parsed.expenses || [];
+                    if (parsed.GOAL !== undefined) state.GOAL = parsed.GOAL;
+                    if (parsed.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = parsed.INITIAL_AMOUNT;
+                    if (parsed.isDarkMode !== undefined) state.isDarkMode = parsed.isDarkMode;
+                    if (parsed.isTripMode !== undefined) state.isTripMode = parsed.isTripMode;
+                    if (parsed.exchangeRate !== undefined) state.exchangeRate = parsed.exchangeRate;
+                    if (parsed.lastRateUpdate !== undefined) state.lastRateUpdate = parsed.lastRateUpdate;
+                    if (parsed.departureDate !== undefined) state.departureDate = parsed.departureDate;
+                    if (parsed.tripCategories !== undefined) state.tripCategories = parsed.tripCategories;
+                    if (parsed.smartExpenses !== undefined) state.smartExpenses = parsed.smartExpenses;
+                    
+                    if (state.isDarkMode) {
+                        document.documentElement.classList.add('dark');
+                        document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+                    }
+                } catch (e) {
+                    console.error("Local data parse error", e);
+                }
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('tutoring_data', JSON.stringify({
+                sources: state.sources,
+                records: state.records,
+                expenses: state.expenses,
+                GOAL: state.GOAL,
+                INITIAL_AMOUNT: state.INITIAL_AMOUNT,
+                isDarkMode: state.isDarkMode,
+                isTripMode: state.isTripMode,
+                exchangeRate: state.exchangeRate,
+                lastRateUpdate: state.lastRateUpdate,
+                departureDate: state.departureDate,
+                tripCategories: state.tripCategories,
+                smartExpenses: state.smartExpenses,
+                lastUpdated: Date.now()
+            }));
+            renderAll();
+                updateCalendarFooter();
+            if (isFirebaseActive && navigator.onLine) {
+                syncToCloud();
+            } else if (!navigator.onLine) {
+                setSyncStatus('offline');
+            }
+        }
+
+        async function fetchLiveRate(manual = false) {
+        const btnIcon = document.getElementById('refresh-rate-icon');
+        if (btnIcon && manual) btnIcon.classList.add('animate-spin_slow');
+
+        try {
+            // 改用 Frankfurter 新 endpoint（.dev/v1，最新官方建議）
+            const res = await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=HKD');
+            if (!res.ok) throw new Error('Network response was not ok');
+
+            const data = await res.json();
+            // 新格式：data.rates.HKD 仍然存在
+            if (data && data.rates && data.rates.HKD) {
+            state.exchangeRate = data.rates.HKD;
+            state.lastRateUpdate = Date.now();
+            saveState();
+            if (manual) showToast('匯率已更新！');
+            }
+        } catch (error) {
+            console.error('Failed to fetch rate:', error);
+            if (manual) showToast('匯率更新失敗，使用緩存/預設值', 'error');
+            if (!state.exchangeRate) state.exchangeRate = 8.35;
+        } finally {
+            if (btnIcon && manual) btnIcon.classList.remove('animate-spin_slow');
+            renderSettings();
+            renderDashboard();
+        }
+        }
+
+        function setSyncStatus(status) {
+        const badge = document.getElementById('sync-badge');
+        const dot = document.getElementById('sync-dot');
+        const sBadge = document.getElementById('sidebar-sync-badge');
+        const sDot = document.getElementById('sidebar-sync-dot');
+        const sLabel = document.getElementById('sidebar-sync-label');
+
+        badge.classList.remove('hidden', 'opacity-0');
+        if (sBadge) sBadge.classList.remove('hidden');
+        clearTimeout(syncTimeout);
+
+        if (status === 'connecting') {
+            dot.className = 'w-1.5 h-1.5 rounded-full bg-aux-peach animate-pulse_fast';
+            if (sDot) sDot.className = 'w-1.5 h-1.5 rounded-full bg-aux-peach animate-pulse_fast';
+            if (sLabel) sLabel.textContent = '同步中...';
+        } else if (status === 'synced') {
+            dot.className = 'w-1.5 h-1.5 rounded-full bg-aux-mint';
+            if (sDot) sDot.className = 'w-1.5 h-1.5 rounded-full bg-aux-mint';
+            if (sLabel) sLabel.textContent = '已同步';
+            syncTimeout = setTimeout(() => {
+                badge.classList.add('opacity-0', 'hidden');
+                if (sBadge) sBadge.classList.add('hidden');
+            }, 5000);
+        } else if (status === 'offline') {
+            dot.className = 'w-1.5 h-1.5 rounded-full bg-brand';
+            if (sDot) sDot.className = 'w-1.5 h-1.5 rounded-full bg-brand';
+            if (sLabel) sLabel.textContent = '離線';
+            syncTimeout = setTimeout(() => {
+                badge.classList.add('opacity-0', 'hidden');
+                if (sBadge) sBadge.classList.add('hidden');
+            }, 5000);
+        }
+    }
+
+        function initFirebase(configStr) {
+            if (!configStr) {
+                setSyncStatus('offline');
+                return;
+            }
+            try {
+                let cleanStr = configStr.replace(/(const|let|var)\s+firebaseConfig\s*=\s*/, '').replace(/;/g, '').trim();
+                const config = new Function("return " + cleanStr)();
+
+                // 【防呆機制】：偵測到使用者換了不同的 Firebase 專案，強制重載以套用，避免舊連線卡死
+                if (firebase.apps.length > 0) {
+                    if (firebase.app().options.projectId !== config.projectId) {
+                        console.warn("偵測到不同專案，正在重新整理以套用...");
+                        localStorage.setItem('firebase_config', configStr);
+                        location.reload();
+                        return;
+                    }
+                } else {
+                    firebase.initializeApp(config);
+                }
+
+                db = firebase.firestore();
+
+                // 將同步邏輯包裝成一個函數，確保在快取清除後才開始執行
+                const startSync = () => {
+                    isFirebaseActive = true;
+                    setSyncStatus('connecting');
+                    
+                    db.collection('appData').doc('tutoring_tracker').onSnapshot((doc) => {
+                        if (isCloudUpdating) return; 
+                        if (doc.exists) {
+                            const data = doc.data();
+                            state.sources = data.sources || [];
+                            state.records = data.records || [];
+                            state.expenses = data.expenses || [];
+                            if (data.GOAL !== undefined) state.GOAL = data.GOAL;
+                            if (data.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = data.INITIAL_AMOUNT;
+                            if (data.tripCategories !== undefined) state.tripCategories = data.tripCategories;
+                            if (data.smartExpenses !== undefined) state.smartExpenses = data.smartExpenses;
+                            if (data.tripDate !== undefined) {
+                                state.tripDate = data.tripDate;
+                                const dateInput = document.getElementById('trip-date-input');
+                                if (dateInput) dateInput.value = data.tripDate;
+                            }
+                            
+                            localStorage.setItem('tutoring_data', JSON.stringify(state));
+                            renderAll();
+                            setSyncStatus('synced'); // 成功獲取資料，設定為已同步
+                        } else {
+                            syncToCloud(); // 如果雲端沒資料，以上傳本地資料為主
+                        }
+                    }, (error) => {
+                        console.error("Firestore sync error:", error);
+                        showToast('資料庫連線被阻擋或權限不足！', 'error');
+                        setSyncStatus('offline');
+                    });
+                };
+
+                // 【核心修復】：自動為所有舊用戶執行一次「深度清除快取」
+                // 使用 localStorage 記錄，確保每台設備只會執行一次，不會拖慢以後的載入速度
+                if (!localStorage.getItem('firebase_cache_cleared_v1')) {
+                    db.clearPersistence()
+                        .then(() => {
+                            console.log("✅ 已自動幫用戶清除舊的 Firebase 快取！");
+                            localStorage.setItem('firebase_cache_cleared_v1', 'true');
+                            startSync(); 
+                        })
+                        .catch((err) => {
+                            // 如果用戶剛好開了多個分頁，清除動作可能會被阻擋，但我們依然讓他繼續連線
+                            console.warn("快取清除略過 (可能多個分頁同時開啟):", err);
+                            localStorage.setItem('firebase_cache_cleared_v1', 'true');
+                            startSync(); 
+                        });
+                } else {
+                    // 已經清過快取的用戶，直接進入正常的連線流程
+                    startSync(); 
+                }
+
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                showToast('Firebase 設定格式錯誤！', 'error');
+                setSyncStatus('offline');
+            }
+        }
+
+        function syncToCloud() {
+    if (!isFirebaseActive || !navigator.onLine) return;
+    isCloudUpdating = true;
+    setSyncStatus('connecting');
+
+    // 【核心修復】：過濾掉物件中所有的 undefined 值
+    // 使用 JSON 的特性，它會自動把值為 undefined 的屬性完全剃除，產出一個乾淨的物件
+    let dataToSave = JSON.parse(JSON.stringify(state));
+
+    // 多加一層保險：明確處理 tripDate，如果還是沒有值，給它空字串或 null
+    if (dataToSave.tripDate === undefined) {
+        dataToSave.tripDate = ""; 
+    }
+
+    db.collection('appData').doc('tutoring_tracker').set(dataToSave)
+        .then(() => {
+            isCloudUpdating = false;
+            setSyncStatus('synced');
+            console.log("✅ 雲端同步成功！");
+        })
+        .catch((error) => {
+            console.error("Firestore sync error:", error);
+            showToast('同步至雲端失敗！', 'error');
+            isCloudUpdating = false;
+            setSyncStatus('offline');
+        });
+}
+        function getCurrentTotal() {
+            const totalEarned = (state.records || []).reduce(
+                (sum, r) => sum + (Number(r.income) || 0),
+                0
+            );
+            const initial = Number(state.INITIAL_AMOUNT) || 0;  // ← 注意係 INITIAL_AMOUNT
+            return initial + totalEarned;
+        }
+
+        const formatMoney = (num) => num.toLocaleString();
+
+
+        const getWeekRange = (dateString) => {
+            const d = new Date(dateString);
+            const day = d.getDay() || 7; 
+            const monday = new Date(d);
+            monday.setDate(d.getDate() - day + 1);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            return `${monday.getMonth() + 1}/${monday.getDate()} - ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+        };
+        
+        const getStudentTotalIncome = (sourceId) => {
+            return state.records.filter(r => r.sourceId === sourceId).reduce((sum, r) => sum + r.income, 0);
+        };
+
+// ===================== Modal Utilities =====================
+function openModal(modalEl) {
+    modalEl.classList.remove('hidden');
+    const card = modalEl.querySelector('.neu-card');
+    const backdrop = modalEl.querySelector('[id$="-backdrop"]');
+    if (card) { card.classList.remove('modal-slide-down'); card.classList.add('modal-slide-up'); }
+    if (backdrop) { backdrop.classList.remove('modal-backdrop-out'); backdrop.classList.add('modal-backdrop-in'); }
+}
+
+function closeModal(modalEl, callback) {
+    const card = modalEl.querySelector('.neu-card');
+    const backdrop = modalEl.querySelector('[id$="-backdrop"]');
+    if (card) { card.classList.remove('modal-slide-up'); card.classList.add('modal-slide-down'); }
+    if (backdrop) { backdrop.classList.remove('modal-backdrop-in'); backdrop.classList.add('modal-backdrop-out'); }
+    setTimeout(() => {
+        modalEl.classList.add('hidden');
+        if (callback) callback();
+    }, 300);
+}
+
+function showConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('confirm-modal');
+    document.getElementById('confirm-modal-msg').textContent = message;
+    openModal(modal);
+
+    const ok = document.getElementById('confirm-modal-ok');
+    const cancel = document.getElementById('confirm-modal-cancel');
+    const backdrop = document.getElementById('confirm-modal-backdrop');
+
+    function cleanup() {
+        ok.removeEventListener('click', handleOk);
+        cancel.removeEventListener('click', handleCancel);
+        backdrop.removeEventListener('click', handleCancel);
+    }
+    function handleOk() { closeModal(modal, () => { cleanup(); onConfirm(); }); }
+    function handleCancel() { closeModal(modal, cleanup); }
+
+    ok.addEventListener('click', handleOk);
+    cancel.addEventListener('click', handleCancel);
+    backdrop.addEventListener('click', handleCancel);
+}
+
+function showInputModal(message, placeholder, onConfirm) {
+    const modal = document.getElementById('input-modal');
+    document.getElementById('input-modal-msg').textContent = message;
+    const field = document.getElementById('input-modal-field');
+    field.value = '';
+    field.placeholder = placeholder || '';
+    openModal(modal);
+    setTimeout(() => field.focus(), 150);
+
+    const ok = document.getElementById('input-modal-ok');
+    const cancel = document.getElementById('input-modal-cancel');
+    const backdrop = document.getElementById('input-modal-backdrop');
+
+    function cleanup() {
+        ok.removeEventListener('click', handleOk);
+        cancel.removeEventListener('click', handleCancel);
+        backdrop.removeEventListener('click', handleCancel);
+        field.removeEventListener('keydown', handleKey);
+    }
+    function handleOk() {
+        const val = field.value.trim();
+        if (!val) return;
+        closeModal(modal, () => { cleanup(); onConfirm(val); });
+    }
+    function handleCancel() { closeModal(modal, cleanup); }
+    function handleKey(e) { if (e.key === 'Enter') handleOk(); }
+
+    ok.addEventListener('click', handleOk);
+    cancel.addEventListener('click', handleCancel);
+    backdrop.addEventListener('click', handleCancel);
+    field.addEventListener('keydown', handleKey);
+}
+
+        function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+
+    // 不變：超過 2 個移除最舊的
+    while (container.children.length >= 2) container.firstChild.remove();
+
+    const toast = document.createElement('div');
+
+    const bgColor = type === 'success'
+        ? 'bg-bg-light dark:bg-bg-dark text-aux-mint'
+        : 'bg-bg-light dark:bg-bg-dark text-brand';
+
+    const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+
+    // ── A 修改：toast 初始 class ──
+    toast.className = `${bgColor} px-4 py-3 rounded-2xl shadow-neu-light dark:shadow-neu-dark
+        border border-white/50 dark:border-white/5 text-sm font-bold flex items-center gap-3
+        w-full transform transition-all duration-300 -translate-y-3 opacity-0 scale-95`;
+    //  ↑①    ↑②                    ↑③             ↑④         ↑⑤
+
+    // ── 圖示加 shrink-0 防止被文字擠壓 ──
+    toast.innerHTML = `<i data-lucide="${iconName}" class="w-5 h-5 shrink-0"></i>
+                       <span class="text-text-main dark:text-text-darkMain">${message}</span>`;
+
+    container.appendChild(toast);
+    lucide.createIcons();
+
+    // ── B 修改：滑入（移除隱藏 class，同步移除 scale-95）──
+    requestAnimationFrame(() => {
+        toast.classList.remove('-translate-y-3', 'opacity-0', 'scale-95');
+        //                      ↑⑥ 對應初始 class，三者必須一致
+    });
+
+    // ── C 不變：3.5 秒後滑出 ──
+    setTimeout(() => {
+        toast.classList.add('-translate-y-3', 'opacity-0', 'scale-95');
+        //                   ↑⑦ 與 B 完全對稱，確保進出動畫一致
+
+        // ── D 修改：等待時間從 400ms → 300ms，與 duration-300 同步 ──
+        setTimeout(() => toast.remove(), 300);
+        //                               ↑⑧
+    }, 3500);
+}
+
+// ===================== Desktop Layout =====================
+function isDesktop() {
+    return window.innerWidth >= 1024;
+}
+
+
+function initScrollReveal() {
+    const section = document.querySelector('.view-section:not(.hidden)');
+    if (!section) return;
+
+    if (_scrollObserver) {
+        _scrollObserver.disconnect();
+        _scrollObserver = null;
+    }
+
+    const cards = section.querySelectorAll('.neu-card');
+
+    _scrollObserver = new IntersectionObserver((entries) => {
+        entries
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+            .forEach((entry) => {
+                const card = entry.target;
+                const rect = entry.boundingClientRect;
+
+                if (entry.isIntersecting) {
+    void card.offsetWidth;          // ← 強制 reflow，讓瀏覽器 commit 當前 transform 狀態
+    card.classList.add('revealed'); // ← 現在有明確起點，transition 每次都會播放
+
+                } else {
+                    // ── 修正二：只有 card 完全離開真實畫面才重置，防止邊緣閃爍 ──
+                    const trulyAbove  = rect.bottom <= 0;              // card 完全在畫面上方以外
+                    const trulyBelow  = rect.top >= window.innerHeight; // card 完全在畫面下方以外
+
+                    if (!trulyAbove && !trulyBelow) {
+                        // card 仍在真實畫面邊緣（只是超出 rootMargin 緩衝區）
+                        // → 什麼都不做，保持當前 revealed 狀態，不閃爍
+                        return;
+                    }
+
+                    // card 確認完全離開畫面，才重置動畫狀態
+                    card.classList.remove('revealed');
+
+                    if (trulyAbove) {
+                        // ── 修正一：card 從頂部離開 → 標記 from-above ──
+                        // 下次向上滾動讓它重新進入時，會從上方落下
+                        card.classList.add('from-above');
+                    } else {
+                        // card 從底部離開 → 移除 from-above，恢復預設從下方浮起
+                        card.classList.remove('from-above');
+                    }
+                }
+            });
+    }, {
+        // ── 修正二：提高閾值，card 需要 15% 可見才觸發，減少邊緣誤觸 ──
+        threshold: 0.15,
+        // ── 修正二：加大底部緩衝，card 需深入畫面 80px 才算進入 ──
+        rootMargin: '0px 0px -80px 0px'
+    });
+
+    cards.forEach((card, i) => {
+        card.classList.remove('revealed', 'scroll-reveal', 'from-above');
+        void card.offsetWidth;
+        card.style.setProperty('--reveal-delay', `${i * 90}ms`);
+
+        const rect = card.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+
+        card.classList.add('scroll-reveal');
+        if (isVisible) {
+            card.classList.add('revealed');
+        }
+
+        _scrollObserver.observe(card);
+    });
+}
+
+function launchCelebration() {
+    const emojis = ['🎉','🎊','✨','🌟','💰','🥳','🎈','💎'];
+    const count = 22;
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            const el = document.createElement('div');
+            el.className = 'confetti-emoji';
+            el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.left = (Math.random() * 100) + 'vw';
+            el.style.bottom = '-2rem';
+            const dur = 2.2 + Math.random() * 1.8;
+            el.style.animationDuration = dur + 's';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), dur * 1000);
+        }, i * 80);
+    }
+    showToast('🎉 目標達成！恭喜！');
+}
+
+let navIdleTimer = null;
+const NAV_IDLE_DELAY = 3000;
+
+function resetNavIdle() {
+    const nav = document.querySelector('nav.fixed.bottom-0');
+    if (!nav) return;
+    nav.classList.remove('nav-idle');
+    clearTimeout(navIdleTimer);
+    navIdleTimer = setTimeout(() => {
+        nav.classList.add('nav-idle');
+    }, NAV_IDLE_DELAY);
+}
+
+function attachSwipeToDelete(containerEl, onDelete) {
+    containerEl.querySelectorAll('.swipe-wrapper').forEach(wrapper => {
+        const item = wrapper.querySelector('.swipe-item');
+        if (!item) return;
+        let startX = 0, startY = 0, currentX = 0, isHoriz = null;
+        const THRESHOLD = 68;
+
+        item.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            currentX = 0; isHoriz = null;
+            item.classList.add('is-swiping');
+        }, { passive: true });
+
+        item.addEventListener('touchmove', e => {
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            if (isHoriz === null) isHoriz = Math.abs(dx) > Math.abs(dy);
+            if (!isHoriz) return;
+            e.preventDefault();
+            currentX = Math.min(0, dx);
+            item.style.transform = `translateX(${currentX}px)`;
+        }, { passive: false });
+
+        item.addEventListener('touchend', () => {
+            item.classList.remove('is-swiping');
+            if (currentX < -THRESHOLD) {
+                item.style.transform = `translateX(-${THRESHOLD}px)`;
+                const id = wrapper.dataset.id;
+                if (id) setTimeout(() => onDelete(id), 80);
+            } else {
+                item.style.transform = '';
+            }
+        });
+    });
+}
+function updateSidebarState() {
+    // Sync sidebar tab active states
+    document.querySelectorAll('.sidebar-tab').forEach(btn => {
+        if (btn.dataset.tab === state.activeTab) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    // Sync trip icon
+    const tripIcon = document.getElementById('sidebar-trip-icon');
+    if (tripIcon) {
+        tripIcon.setAttribute('data-lucide', state.isTripMode ? 'plane-off' : 'plane');
+    }
+
+    // Sync theme icon
+    const themeIcon = document.getElementById('sidebar-theme-icon');
+    if (themeIcon) {
+        themeIcon.setAttribute('data-lucide', state.isDarkMode ? 'sun' : 'moon');
+    }
+
+    setTimeout(() => lucide.createIcons(), 50);
+}
+
+    function switchTab(newTab) {
+    if (!newTab || state.activeTab === newTab) return;
+
+    const TABORDER = ['dashboard', 'calendar', 'records', 'expenses', 'settings'];
+    const oldIndex = TABORDER.indexOf(state.activeTab);
+    const newIndex = TABORDER.indexOf(newTab);
+    const goingRight = newIndex > oldIndex;
+
+    state.activeTab = newTab;
+
+    document.querySelectorAll('.nav-tab, .sidebar-tab').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.tab === state.activeTab));
+
+    document.querySelectorAll('.view-section').forEach(sec => {
+        sec.classList.add('hidden');
+        sec.classList.remove('card-push-enter', 'card-push-enter-left');
+    });
+
+    const activeSec = document.getElementById(`view-${state.activeTab}`);
+    if (!activeSec) return;
+
+    activeSec.classList.remove('hidden');
+    void activeSec.offsetWidth;
+    activeSec.classList.add(goingRight ? 'card-push-enter' : 'card-push-enter-left');
+
+    renderAll(false);
+    updateSidebarState();
+    lucide.createIcons();
+
+    // 移除原本內聯的 cards.forEach(..._scrollObserver.observe(card))
+    // 讓 initScrollReveal 全權負責
+    setTimeout(initScrollReveal, 80);
+}
+
+        function renderDashboard() {
+            const totalEarned = (state.records || []).reduce((sum, r) => sum + (Number(r.income) || 0), 0);
+            const totalExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+            const effectiveGoal = (Number(state.GOAL) || 0) + totalExpenses;
+            const currentTotal = getCurrentTotal(); // = 起點金額 + 總收入
+            const progressPercentage = effectiveGoal > 0 ? Math.min((currentTotal / effectiveGoal) * 100, 100) : 0;
+
+            let displayTotal = currentTotal;          // 直接顯示 currentTotal
+            let displayEarned = totalEarned;
+            let displayGoal = effectiveGoal;
+            let displayRemaining = Math.max(0, effectiveGoal - currentTotal);
+            let symbol = '$';
+
+            if (state.isTripMode && state.displayCurrency === 'EUR') {
+                displayTotal = currentTotal / state.exchangeRate;
+                displayEarned = totalEarned / state.exchangeRate;
+                displayGoal = effectiveGoal / state.exchangeRate;
+                displayRemaining = displayRemaining / state.exchangeRate;
+                symbol = '€';
+            }
+
+            document.getElementById('dash-current-total').innerText =
+                `${symbol}${formatMoney(Math.round(displayTotal))}`;
+            document.getElementById('dash-earned-total').innerText =
+                `(+${symbol}${formatMoney(Math.round(displayEarned))})`;
+            document.getElementById('dash-goal-text').innerText =
+                `目標: ${symbol}${formatMoney(Math.round(displayGoal))}`;
+            document.getElementById('dash-progress-text').innerText =
+                `${progressPercentage.toFixed(1)}%`;
+            document.getElementById('dash-progress-text').style.color = progressPercentage < 5
+                ? 'var(--color-brand, #FF6B6B)'
+                : '';
+            document.getElementById('dash-remaining-text').innerText =
+                `${symbol}${formatMoney(Math.round(displayRemaining))} to go`;
+
+            const progressBar = document.getElementById('dash-progress-bar');
+            const progressPercentageClamped = Math.max(progressPercentage, progressPercentage > 0 ? 4 : 0);
+            progressBar.style.width = `${progressPercentageClamped}%`;
+            progressBar.style.opacity = progressPercentage > 0 ? '1' : '0';
+            
+            // Goal celebration
+            const celebKey = 'goalCelebrated_' + state.GOAL;
+            if (progressPercentage >= 100 && !localStorage.getItem(celebKey)) {
+                localStorage.setItem(celebKey, '1');
+                setTimeout(launchCelebration, 1000);
+            }
+
+            document.getElementById('record-date').value = state.formData.date;
+            document.getElementById('record-duration').innerText = state.formData.duration;
+            
+            const sourceSelect = document.getElementById('record-source');
+            sourceSelect.innerHTML = '<option value="" disabled selected>請選擇學生...</option>';
+            
+            if (state.sources.length === 0) {
+                sourceSelect.innerHTML = '<option value="" disabled selected>請先到設定頁新增學生</option>';
+            } else {
+                let sortedSourceIds = [...new Set(state.records.map(r => r.sourceId))];
+                state.sources.forEach(s => { if(!sortedSourceIds.includes(s.id)) sortedSourceIds.push(s.id); });
+                
+                sortedSourceIds.forEach(id => {
+                    const s = state.sources.find(src => src.id === id);
+                    if (s) {
+                        const totalIncome = getStudentTotalIncome(s.id);
+                        const addrShort = s.addressShort || (s.address ? s.address.split(' ')[0] : '無');
+                        const option = document.createElement('option');
+                        option.value = s.id;
+                        option.innerText = `${addrShort} ${s.name} ($${totalIncome}@${s.rate})`;
+                        if (state.formData.sourceId === s.id) option.selected = true;
+                        sourceSelect.appendChild(option);
+                    }
+                });
+            }
+
+            const previewDiv = document.getElementById('record-preview');
+            if (state.formData.sourceId && state.sources.find(src => src.id === state.formData.sourceId)) {
+                const s = state.sources.find(src => src.id === state.formData.sourceId);
+                let amt = s.rate * state.formData.duration;
+                if(state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                document.getElementById('record-preview-amount').innerText = `${symbol}${formatMoney(Math.round(amt))}`;
+                previewDiv.classList.remove('hidden');
+            } else {
+                previewDiv.classList.add('hidden');
+            }
+
+            
+            const tbody = document.getElementById('recent-records-body');
+            tbody.innerHTML = '';
+            if (state.records.length === 0) {
+                tbody.innerHTML = `
+                    <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
+                        <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                            <i data-lucide="inbox" class="w-5 h-5"></i>
+                        </div>
+                        <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
+                        <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
+                    </div>`;
+                lucide.createIcons();
+            } else {
+                            state.records.slice(0, 5).forEach(record => {
+                let recAmt = record.income;
+                if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
+                tbody.innerHTML += `
+                <div class="swipe-wrapper" data-id="${record.id}">
+                    <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
+                    <div class="swipe-item neu-inset p-3 flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-text-muted">${record.date.slice(5)}</span>
+                            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
+                            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            attachSwipeToDelete(tbody, id => deleteRecord(id));
+            }
+            renderChart();
+        }
+
+        function renderChart() {
+            const cutoffDate = new Date(getTodayString());
+            cutoffDate.setDate(cutoffDate.getDate() - state.chartPeriod);
+            const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            let runningCumulative = 0; 
+            const weeklyDataMap = {};
+
+            sortedRecords.forEach(record => {
+                const recDate = new Date(record.date);
+                if (recDate >= cutoffDate) {
+                    const weekLabel = getWeekRange(record.date);
+                    if (!weeklyDataMap[weekLabel]) {
+                        weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative };
+                    }
+                    let amt = record.income;
+                    if(state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                    weeklyDataMap[weekLabel].income += amt;
+                    runningCumulative += amt;
+                    weeklyDataMap[weekLabel].cumulative = runningCumulative;
+                }
+            });
+
+            const data = Object.values(weeklyDataMap);
+            const labels = data.map(d => d.name);
+            const dataset = data.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
+
+            const btnWeekly = document.getElementById('chart-type-weekly');
+            const btnCumulative = document.getElementById('chart-type-cumulative');
+            
+            if (state.chartType === 'weekly') {
+                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+            } else {
+                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+            }
+
+            const ctx = document.getElementById('incomeChart').getContext('2d');
+            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC'; 
+            const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            const textColor = state.isDarkMode ? '#9CA3AF' : '#9CA3AF';
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+
+            if (chartInstance) chartInstance.destroy();
+
+            const chartConfigType = state.chartType === 'weekly' ? 'bar' : 'line';
+
+            chartInstance = new Chart(ctx, {
+                type: chartConfigType,
+                data: {
+                    labels: labels.length ? labels : ['無資料'],
+                    datasets: [{
+                        label: state.chartType === 'weekly' ? '單週收入' : '期間累積',
+                        data: dataset.length ? dataset : [0],
+                        backgroundColor: state.chartType === 'weekly' ? mainColor : 'rgba(165, 180, 252, 0.2)',
+                        borderColor: mainColor,
+                        borderWidth: state.chartType === 'weekly' ? 0 : 3,
+                        fill: state.chartType === 'cumulative',
+                        tension: 0.4, 
+                        pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                        pointBorderColor: mainColor,
+                        pointBorderWidth: 2,
+                        pointRadius: state.chartType === 'cumulative' ? 4 : 0,
+                        borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+                        barThickness: 'flex',
+                        maxBarThickness: 30
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                            titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
+                            bodyColor: mainColor,
+                            borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 12,
+                            displayColors: false,
+                            callbacks: { label: (ctx) => `${symbol}${formatMoney(Math.round(ctx.raw))}` }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } } },
+                        y: { 
+                            grid: { color: gridColor, drawBorder: false }, 
+                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' }, callback: (val) => `${symbol}${val}` },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderCalendar() {
+            const year = state.currentMonthDate.getFullYear();
+            const month = state.currentMonthDate.getMonth();
+            document.getElementById('cal-month-title').innerText = `${year}年 ${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            let startingDay = firstDay.getDay() - 1;
+            if (startingDay === -1) startingDay = 6;
+            
+            const daysInMonth = lastDay.getDate();
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            let monthTotal = 0;
+            const todayStr = getTodayString();
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+
+            // --- 加上這段邏輯來判定是否要多顯示上個月的一週 ---
+            // 如果原本的起始留白 (startingDay) 加上當月天數 (daysInMonth) <= 35 (只有 5 行)
+            // 就強制把 startingDay 加上 7，這樣就會多渲染上個月 7 天，自動變成 6 行排版且不用下個月來補
+            let adjustedStartingDay = startingDay;
+            if (adjustedStartingDay + daysInMonth <= 35) {
+                adjustedStartingDay += 7;
+            }
+            
+            // 例外情況：如果是平年 2 月剛好 28 天，且 1 號是星期一 (startingDay 為 0)，
+            // 加 7 之後 7 + 28 = 35 還是只有 5 行，可以視需求再加 7 (總共加 14) 來維持 6 行。
+            if (adjustedStartingDay + daysInMonth <= 28) {
+                adjustedStartingDay += 7;
+            }
+            // ---------------------------------------------------
+
+            // 1. 產生上個月的最後幾天填補 1 號前的位置，並計算收入
+            const prevMonthDateObj = new Date(year, month - 1, 1);
+            const prevY = prevMonthDateObj.getFullYear();
+            const prevM = prevMonthDateObj.getMonth();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+
+            // 這裡把原本的 startingDay 換成我們算出來的 adjustedStartingDay
+            for (let i = 0; i < adjustedStartingDay; i++) {
+                const prevDay = prevMonthDays - adjustedStartingDay + i + 1;
+                const dStr = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(prevDay).padStart(2, '0')}`;
+                
+                const dayRecords = state.records.filter(r => r.date === dStr);
+                let dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                if(state.isTripMode && state.displayCurrency === 'EUR') dayIncome = dayIncome / state.exchangeRate;
+
+                const hasIncome = dayIncome > 0;
+                let baseClasses = `neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none`;
+                let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
+
+                if (hasIncome) {
+                    baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="${baseClasses}">
+                        <span class="text-[10px] font-bold text-text-muted/50">${prevDay}</span>
+                        <div class="flex-1 flex items-end justify-center pb-0.5">
+                            ${incomeHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. 產生當月的日期 (完全保留原文邏輯與設計)
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dayRecords = state.records.filter(r => r.date === dStr);
+                let dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                if(state.isTripMode && state.displayCurrency === 'EUR') dayIncome = dayIncome / state.exchangeRate;
+                monthTotal += dayIncome;
+
+                const isToday = dStr === todayStr;
+                const hasIncome = dayIncome > 0;
+                
+                let baseClasses = `neu-inset p-1.5 min-h-[50px] flex flex-col justify-between transition-all cursor-pointer active:scale-[0.95] active:shadow-neu-inset-light dark:active:shadow-neu-inset-dark select-none`;
+                let dateColor = "text-text-muted";
+                let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
+
+                if (isToday) {
+                    baseClasses += " ring-1 ring-brand/50 shadow-brand-glow";
+                    dateColor = "text-brand";
+                }
+                
+                if (hasIncome) {
+                    baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
+                }
+
+                grid.innerHTML += `<div class="${baseClasses}" data-date="${dStr}" onclick="openCalendarDay('${dStr}')">
+                        <span class="text-[10px] font-bold ${dateColor}">${i}</span>
+                        <div class="flex-1 flex items-end justify-center pb-0.5">
+                            ${incomeHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. 產生下個月的前幾天以填滿 42 格 (6 行)，並計算收入
+            const nextMonthDateObj = new Date(year, month + 1, 1);
+            const nextY = nextMonthDateObj.getFullYear();
+            const nextM = nextMonthDateObj.getMonth();
+            
+            // 這裡的 totalFilledCells 也要改用 adjustedStartingDay 來計算
+            const totalFilledCells = adjustedStartingDay + daysInMonth;
+            const nextMonthDaysToFill = 42 - totalFilledCells;
+
+            for (let i = 1; i <= nextMonthDaysToFill; i++) {
+                const dStr = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                const dayRecords = state.records.filter(r => r.date === dStr);
+                let dayIncome = dayRecords.reduce((sum, r) => sum + r.income, 0);
+                if(state.isTripMode && state.displayCurrency === 'EUR') dayIncome = dayIncome / state.exchangeRate;
+
+                const hasIncome = dayIncome > 0;
+                let baseClasses = `neu-inset p-1.5 min-h-[50px] flex flex-col justify-between opacity-40 pointer-events-none select-none`;
+                let incomeHtml = `<span class="text-text-muted/30 text-[10px] font-bold">-</span>`;
+
+                if (hasIncome) {
+                    baseClasses += ` bg-aux-mint/20 dark:bg-aux-mint/10 ring-1 ring-aux-mint/30`;
+                    incomeHtml = `<span class="text-[10px] sm:text-xs font-extrabold text-aux-mint tracking-tighter leading-none drop-shadow-sm">${symbol}${Math.round(dayIncome)}</span>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="${baseClasses}">
+                        <span class="text-[10px] font-bold text-text-muted/50">${i}</span>
+                        <div class="flex-1 flex items-end justify-center pb-0.5">
+                            ${incomeHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('cal-month-total').innerText = `${symbol}${formatMoney(Math.round(monthTotal))}`;
+        updateCalendarFooter();
+updateCalendarFooter();
+        }
+
+
+function openCalendarDay(dateStr) {
+    const panel = document.getElementById('cal-day-panel');
+    if (panel.dataset.open === dateStr) {
+        panel.dataset.open = '';
+        panel.classList.remove('open');
+        panel.innerHTML = '';
+        return;
+    }
+    panel.dataset.open = dateStr;
+    const dayRecords = state.records.filter(r => r.date === dateStr);
+    const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+    if (dayRecords.length === 0) {
+        panel.innerHTML = `<div class="neu-inset p-3 text-center text-xs font-bold text-text-muted">${dateStr.slice(5)} — 沒有記錄</div>`;
+    } else {
+        const total = dayRecords.reduce((s, r) => s + r.income, 0);
+        let html = `<div class="neu-inset p-3 space-y-2">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-extrabold text-text-main dark:text-text-darkMain">${dateStr.slice(5)}</span>
+                <span class="text-xs font-extrabold text-aux-mint">${symbol}${formatMoney(Math.round(total))}</span>
+            </div>`;
+        dayRecords.forEach(r => {
+            let amt = r.income;
+            if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+            html += `<div class="flex justify-between items-center py-1.5 border-t border-black/5 dark:border-white/5">
+                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${r.sourceName}</span>
+                <span class="text-xs font-bold text-aux-mint">${symbol}${Math.round(amt)}</span>
+            </div>`;
+        });
+        html += `</div>`;
+        panel.innerHTML = html;
+    }
+    panel.classList.remove('open');
+    void panel.offsetWidth;
+    panel.classList.add('open');
+}
+
+        function updateCalendarFooter() {
+    // 還有多少天
+    const depDate = state.departureDate;
+    const daysEl = document.getElementById('cal-days-remaining');
+    if (depDate && daysEl) {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const dep = new Date(depDate);
+        const diff = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+        daysEl.textContent = diff > 0 ? diff : '已出發';
+    } else if (daysEl) {
+        daysEl.textContent = '--';
+    }
+
+    // 每天仍需金額
+const goalEl = document.getElementById('cal-goal-amount');
+if (goalEl) {
+    const depDate = state.departureDate;
+    if (depDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dep = new Date(depDate);
+        const daysLeft = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+
+        if (daysLeft <= 0) {
+            goalEl.textContent = '--';
+        } else {
+            // 跟隨支出頁「每天需」的公式
+            let totalBudgetTrip = 0;
+            (state.tripCategories || []).forEach(cat => {
+                (cat.items || []).forEach(item => {
+                    totalBudgetTrip += Number(item.amount) || 0;
+                });
+            });
+            if (totalBudgetTrip === 0) totalBudgetTrip = Number(state.GOAL) || 0;
+
+            const totalEarnedTrip = (state.records || []).reduce(
+                (sum, r) => sum + (Number(r.income) || 0),
+                0
+            );
+            const specialExpensesTrip = (state.expenses || []).reduce(
+                (sum, e) => sum + (Number(e.amount) || 0),
+                0
+            );
+
+            const availableSavingsTrip = getCurrentTotal() - specialExpensesTrip;
+            const totalRemainingTrip = Math.max(0, totalBudgetTrip - availableSavingsTrip);
+            const perDayTrip = totalRemainingTrip / daysLeft;
+
+            goalEl.textContent = perDayTrip.toFixed(1);
+        }
+    } else {
+        goalEl.textContent = '--';
+    }
+}
+
+// 已儲金額（總儲蓄減起初金額）
+const savedEl = document.getElementById('cal-saved-amount');
+if (savedEl) {
+    const totalEarned = state.records.reduce((sum, r) => sum + (r.income || 0), 0);
+    savedEl.textContent = '$' + totalEarned.toLocaleString();
+}
+}
+
+        function renderRecords() {
+            const container = document.getElementById('all-records-container');
+            if (state.records.length === 0) {
+    container.innerHTML = `
+        <div class="flex flex-col items-center gap-3 py-12 text-center">
+            <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                <i data-lucide="clipboard-list" class="w-8 h-8"></i>
+            </div>
+            <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有記錄</p>
+            <p class="text-xs font-bold text-text-muted">返回主頁新增第一筆記錄</p>
+            <button onclick="switchTab('dashboard')" class="mt-1 px-5 py-2 neu-btn text-xs text-brand">前往新增 →</button>
+        </div>`;
+    lucide.createIcons();
+    return;
+}
+
+            const groups = {};
+            state.records.forEach(record => {
+                const d = new Date(record.date);
+                const monthKey = `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+                const weekKey = getWeekRange(record.date);
+                if (!groups[monthKey]) groups[monthKey] = {};
+                if (!groups[monthKey][weekKey]) groups[monthKey][weekKey] = [];
+                groups[monthKey][weekKey].push(record);
+            });
+
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+            let html = '';
+            Object.entries(groups).forEach(([month, weeks]) => {
+                html += `<div class="space-y-3 pb-3">
+                    <h3 class="text-base font-extrabold text-text-main dark:text-text-darkMain pl-1">${month}</h3>
+                    <div class="space-y-4">`;
+                
+                Object.entries(weeks).forEach(([week, weekRecords]) => {
+                    let weekTotal = weekRecords.reduce((sum, r) => sum + r.income, 0);
+                    if(state.isTripMode && state.displayCurrency === 'EUR') weekTotal = weekTotal / state.exchangeRate;
+                    
+                    html += `
+                        <div class="neu-inset overflow-hidden">
+                            <div class="bg-black/5 dark:bg-white/5 px-4 py-2 text-[10px] font-bold flex justify-between items-center">
+                                <span class="text-text-muted">${week}</span>
+                                <span class="text-aux-mint bg-aux-mint/10 px-2 py-0.5 rounded-md">週收入: ${symbol}${Math.round(weekTotal)}</span>
+                            </div>
+                            <div class="flex flex-col p-2 pb-3 space-y-1">
+                    `;
+                    weekRecords.forEach((record) => {
+                        let recAmt = record.income;
+                        if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
+                        html += `
+<div class="swipe-wrapper" data-id="${record.id}">
+    <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
+    <div class="swipe-item flex items-center justify-between p-2 rounded-xl bg-bg-light dark:bg-bg-dark">
+        <div class="flex flex-col">
+            <span class="text-[10px] font-bold text-text-muted">${record.date}</span>
+            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
+            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+    </div>
+</div>`;
+                    });
+                    html += `</div></div>`;
+                });
+                html += `</div></div>`;
+            });
+            container.innerHTML = html;
+            attachSwipeToDelete(container, id => deleteRecord(id));
+        }
+
+        function renderExpenses() {
+            const list = document.getElementById('expenses-list');
+            if (state.expenses.length === 0) {
+                list.innerHTML = `
+                    <div class="flex flex-col items-center gap-3 py-10 text-center">
+                        <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                            <i data-lucide="receipt" class="w-8 h-8"></i>
+                        </div>
+                        <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有支出記錄</p>
+                        <p class="text-xs font-bold text-text-muted">喺上方表格新增第一筆支出</p>
+                    </div>`;
+                lucide.createIcons();
+            } else {
+                const sortedExpenses = [...state.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const maxExpense = Math.max(...state.expenses.map(e => e.amount), 1);
+                
+                let html = '';
+                sortedExpenses.forEach(exp => {
+                    const percentage = (exp.amount / maxExpense) * 100;
+                    html += `
+                        <div class="relative overflow-hidden flex items-center justify-between p-3 neu-inset group">
+                            <div class="absolute left-0 top-0 bottom-0 bg-aux-peach/20 transition-all duration-500 rounded-l-xl" style="width: ${percentage}%"></div>
+                            <div class="relative z-10 flex flex-col">
+                                <span class="text-[10px] font-bold text-text-muted">${exp.date}</span>
+                                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${exp.purpose}</span>
+                            </div>
+                            <div class="relative z-10 flex items-center gap-3">
+                                <span class="text-sm font-extrabold text-aux-peach">-$${formatMoney(exp.amount)}</span>
+                                <button data-expense-delete-id="${exp.id}" class="p-1.5 text-text-muted dark:text-text-darkMuted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
+            }
+            
+            if(!document.getElementById('expense-date').value) {
+                document.getElementById('expense-date').value = getTodayString();
+            }
+        }
+
+        function renderTripBudget() {
+            console.log('renderTripBudget called');
+            if (!state.isTripMode) return;
+            
+            document.getElementById('trip-departure-date').value = state.departureDate;
+
+            const container = document.getElementById('trip-categories-container');
+            const masterProgressContainer = document.getElementById('trip-master-progress');
+            
+            // Waterfall Calculation Base (更新邏輯：起初金額->旅遊，後來收入->特別支出->旅遊)
+            const totalEarned = (state.records || []).reduce((sum, r) => sum + (Number(r.income) || 0), 0);
+            const specialExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+            const remainingEarned = Math.max(0, totalEarned - specialExpenses);
+            let availableSavings = getCurrentTotal() - specialExpenses;
+            if (availableSavings < 0) availableSavings = 0;
+
+            let totalBudget = 0;
+            state.tripCategories.forEach(cat => {
+                cat.total = cat.items.reduce((sum, item) => sum + item.amount, 0);
+                totalBudget += cat.total;
+            });
+            
+            let remainingSavings = availableSavings;
+            let html = '';
+            
+            // Priority Order
+            const order = ['cat_transport', 'cat_housing', 'cat_food', 'cat_misc'];
+            const sortedCats = [...state.tripCategories].sort((a, b) => {
+                let idxA = order.indexOf(a.id);
+                let idxB = order.indexOf(b.id);
+                if (idxA === -1) idxA = 999;
+                if (idxB === -1) idxB = 999;
+                return idxA - idxB;
+            });
+            
+            sortedCats.forEach((cat) => {
+                let allocated = Math.min(cat.total, Math.max(0, remainingSavings));
+                remainingSavings -= allocated;
+                let progress = cat.total > 0 ? (allocated / cat.total) * 100 : 0;
+                const isEditingCat = state.editingTripCategoryId === cat.id;
+
+                let itemsHtml = (cat.items || []).map(item => {
+                    const isEditing = state.editingTripItemId === item.id;
+
+                    if (!isEditing) {
+                        // 顯示模式
+                        return `
+                            <div class="flex justify-between items-center text-xs py-1.5 border-b border-black/5 dark:border-white/5">
+                                <span class="text-text-main dark:text-text-darkMain">${item.name}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-text-main dark:text-text-darkMain">$${item.amount}</span>
+                                    <button onclick="startEditTripItem('${item.id}', '${cat.id}', '${item.name.replace(/'/g, "\\'")}')"
+                                            class="text-text-muted hover:text-brand">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <button onclick="deleteTripItem('${cat.id}', '${item.id}')" class="text-brand hover:opacity-70">
+                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // 編輯模式
+                        return `
+                            <div class="flex justify-between items-center text-xs py-1.5 border-b border-black/5 dark:border-white/5">
+                                <input
+                                    type="text"
+                                    class="neu-input py-1 text-xs flex-1 mr-2"
+                                    id="edit-trip-item-name-${item.id}"
+                                    value="${state.editingTripItemName}"
+                                />
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="saveEditTripItem('${cat.id}', '${item.id}')" class="text-aux-mint hover:opacity-80">
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <button onclick="cancelEditTripItem()" class="text-text-muted hover:text-brand">
+                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+                
+                html += `
+                    <div class="relative overflow-hidden rounded-2xl border border-transparent dark:border-white/5 shadow-neu-inset-light dark:shadow-neu-inset-dark mb-3">
+                        <!-- Theme-based Light Blue Fill -->
+                        <div class="absolute left-0 top-0 bottom-0 bg-blue-100 dark:bg-blue-900/40 transition-all duration-700 ease-out" style="width: ${progress}%"></div>
+                        
+                        <div class="relative z-10 p-3">
+                            <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleAccordion('${cat.id}')">
+                        <span class="font-bold text-sm flex items-center gap-2 text-text-main dark:text-text-darkMain">
+                            <i data-lucide="chevron-down" id="chevron-${cat.id}" class="w-3.5 h-3.5 text-text-muted transition-transform duration-300"></i>
+                            ${
+                            !isEditingCat
+                                ? `
+                                <span>${cat.name}</span>
+                                <button onclick="event.stopPropagation(); startEditTripCategory('${cat.id}', '${cat.name.replace(/'/g, "\\'")}')" class="text-text-muted hover:text-brand">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                                ${cat.type === 'dest'
+                                    ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>`
+                                    : ''
+                                }
+                                `
+                                : `
+                                <input
+                                    type="text"
+                                    class="neu-input py-1 text-xs"
+                                    id="edit-trip-cat-name-${cat.id}"
+                                    value="${state.editingTripCategoryName}"
+                                    onclick="event.stopPropagation();"
+                                />
+                                <button onclick="event.stopPropagation(); saveEditTripCategory('${cat.id}')" class="text-aux-mint hover:opacity-80">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); cancelEditTripCategory()" class="text-text-muted hover:text-brand">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
+                                `
+                            }
+                        </span>
+                        <span class="text-xs font-bold text-text-muted">${allocated.toFixed(0)} / ${cat.total}</span>
+                        </div>
+                            <div id="acc-${cat.id}" class="hidden mt-3 space-y-1 bg-white/50 dark:bg-black/20 p-2 rounded-xl backdrop-blur-sm overflow-hidden" style="transition: max-height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;">
+                                ${itemsHtml}
+                                <div class="flex gap-2 mt-3">
+                                    <input type="text" id="new-item-name-${cat.id}" placeholder="Item Name" class="neu-input py-1.5 text-xs flex-1 bg-white dark:bg-black/50">
+                                    <input type="number" id="new-item-amt-${cat.id}" placeholder="$" class="neu-input py-1.5 text-xs w-20 bg-white dark:bg-black/50">
+                                    <button onclick="addTripItem('${cat.id}')" class="neu-btn px-3 text-xs text-brand font-extrabold bg-white dark:bg-black/50">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            
+            let totalRemaining = Math.max(0, totalBudget - availableSavings);
+            let daysRemaining = 0;
+            if (state.departureDate) {
+                let diff = new Date(state.departureDate) - new Date();
+                daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            }
+            let dailyTarget = daysRemaining > 0 ? (totalRemaining / daysRemaining).toFixed(1) : 0;
+            let masterProgress = totalBudget > 0 ? Math.min((Math.max(0, availableSavings) / totalBudget) * 100, 100) : 0;
+            
+            masterProgressContainer.innerHTML = `
+                <div class="flex justify-between text-xs font-bold text-text-muted mb-1.5">
+                    <span>總進度: ${masterProgress.toFixed(1)}%</span>
+                    <span class="text-aux-mint">每天需 $${dailyTarget}達標</span>
+                </div>
+                <div class="h-2.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden shadow-neu-inset-light dark:shadow-neu-inset-dark">
+    <div class="h-full bg-aux-mint rounded-full transition-all duration-1000 ease-out relative shadow-aux-mint-glow overflow-hidden" style="width: ${masterProgress}%">
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-[200%] -translate-x-full animate-shimmer backdrop-blur-[1px]"></div>
+    </div>
+</div>
+                <div class="flex justify-between text-[10px] font-bold text-text-muted mt-1.5">
+                    <span>可用資金: $${availableSavings}</span>
+                    <span>總旅遊預算: $${totalBudget}</span>
+                </div>
+            `;
+        }
+
+        window.toggleAccordion = function(catId) {
+    const el = document.getElementById(`acc-${catId}`);
+    const chevron = document.getElementById(`chevron-${catId}`);
+    const isOpen = !el.classList.contains('hidden');
+
+    if (isOpen) {
+        el.style.maxHeight = el.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+            el.style.maxHeight = '0px';
+            el.style.opacity = '0';
+        });
+        setTimeout(() => el.classList.add('hidden'), 300);
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+        el.classList.remove('hidden');
+        el.style.maxHeight = '0px';
+        el.style.opacity = '0';
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.maxHeight = el.scrollHeight + 'px';
+                el.style.opacity = '1';
+            });
+        });
+        setTimeout(() => el.style.maxHeight = 'none', 300);
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    }
+};
+
+        window.addTripItem = function(catId) {
+            const name = document.getElementById(`new-item-name-${catId}`).value;
+            const amount = parseFloat(document.getElementById(`new-item-amt-${catId}`).value);
+            if (!name || isNaN(amount)) return;
+            
+            const cat = state.tripCategories.find(c => c.id === catId);
+            if (cat) {
+                cat.items.push({ id: Date.now().toString(), name, amount });
+                saveState();
+            }
+        };
+
+        window.deleteTripItem = function(catId, itemId) {
+            const cat = state.tripCategories.find(c => c.id === catId);
+            if (cat) {
+                cat.items = cat.items.filter(i => i.id !== itemId);
+                saveState();
+            }
+        };
+
+        window.startEditTripItem = function (itemId, catId, currentName) {
+        state.editingTripItemId = itemId;
+        state.editingTripItemName = currentName || '';
+        renderTripBudget();
+        const input = document.getElementById(`edit-trip-item-name-${itemId}`);
+        if (input) {
+            input.focus();
+            input.select();
+        }
+        };
+
+        window.startEditTripCategory = function (catId, currentName) {
+        state.editingTripCategoryId = catId;
+        state.editingTripCategoryName = currentName || '';
+        renderTripBudget();
+        const input = document.getElementById(`edit-trip-cat-name-${catId}`);
+        if (input) {
+            input.focus();
+            input.select();
+        }
+        };
+
+        window.cancelEditTripCategory = function () {
+        state.editingTripCategoryId = null;
+        state.editingTripCategoryName = '';
+        renderTripBudget();
+        };
+
+        window.saveEditTripCategory = function (catId) {
+        const input = document.getElementById(`edit-trip-cat-name-${catId}`);
+        if (!input) return;
+        const newName = input.value.trim();
+        if (!newName) return;
+
+        const cat = (state.tripCategories || []).find(c => c.id === catId);
+        if (!cat) return;
+
+        cat.name = newName;
+        state.editingTripCategoryId = null;
+        state.editingTripCategoryName = '';
+        saveState(); // 會觸發 renderTripBudget
+        };
+
+        window.cancelEditTripItem = function () {
+        state.editingTripItemId = null;
+        state.editingTripItemName = '';
+        renderTripBudget();
+        };
+
+        window.saveEditTripItem = function (catId, itemId) {
+        const input = document.getElementById(`edit-trip-item-name-${itemId}`);
+        if (!input) return;
+
+        const newName = input.value.trim();
+        if (!newName) return;
+
+        const cat = (state.tripCategories || []).find(c => c.id === catId);
+        if (!cat) return;
+
+        const item = (cat.items || []).find(i => i.id === itemId);
+        if (!item) return;
+
+        item.name = newName;
+        state.editingTripItemId = null;
+        state.editingTripItemName = '';
+        saveState();
+        };
+
+        window.addTripCategory = function() {
+    showInputModal('輸入目的地名稱', '例：Travel 2: Prague', (name) => {
+        state.tripCategories.push({
+            id: 'cat_dest_' + Date.now(),
+            name: name.trim(),
+            type: 'dest',
+            items: []
+        });
+        saveState();
+        showToast(`「${name.trim()}」已新增`);
+    });
+};
+
+        window.deleteTripCategory = function(catId) {
+    const cat = state.tripCategories.find(c => c.id === catId);
+    if (!cat) return;
+    showConfirmModal(`確定要刪除「${cat.name}」及其所有項目？`, () => {
+        state.tripCategories = state.tripCategories.filter(c => c.id !== catId);
+        saveState();
+        showToast(`「${cat.name}」已刪除`);
+    });
+};
+
+function getTrackedMonthExpenseTotal(monthKey) {
+    const records = state.smartExpenses || [];
+    if (!records.length) return 0;
+
+    const monthRecords = records
+        .filter(r => r.date && r.date.startsWith(monthKey))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (!monthRecords.length) return 0;
+
+    let total = 0;
+
+    for (let i = 0; i < monthRecords.length; i++) {
+        const curr = monthRecords[i];
+
+        const ewSpent   = Number(curr.ewSpent   ?? 0);
+        const octSpent  = Number(curr.octSpent  ?? 0);
+        const octReload = Number(curr.octReload ?? 0);
+
+        const currTotal = ewSpent + octSpent - octReload;
+
+        let diffExp = currTotal;
+        if (i > 0) {
+            const prev = monthRecords[i - 1];
+            const prevTotal =
+                Number(prev.ewSpent   ?? 0) +
+                Number(prev.octSpent  ?? 0) -
+                Number(prev.octReload ?? 0);
+
+            diffExp = currTotal - prevTotal;
+        }
+
+        if (isFinite(diffExp) && diffExp > 0) {
+            total += diffExp;
+        }
+    }
+
+    return Math.round(total);
+}
+
+function backfillTrackedMonthExpenses() {
+    if (!state.smartExpenses.length) return;
+
+    const sorted = [...state.smartExpenses].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const monthKeys = [...new Set(sorted.map(r => r.date.slice(0, 7)))];
+
+    monthKeys.forEach(monthKey => {
+        const recordsOfMonth = sorted.filter(r => r.date.startsWith(monthKey));
+        if (!recordsOfMonth.length) return;
+
+        // 搵該月最後一日（根據該月最後一條記錄嘅月份）
+        const anyDate = new Date(monthKey + '-01');
+        const lastDayDate = new Date(anyDate.getFullYear(), anyDate.getMonth() + 1, 0);
+        const lastDayStr = formatLocalDate(lastDayDate);
+
+        // 如果該月 smartExpenses 入面冇「最後一日」記錄，就略過（你尚未填完）
+        const hasLastDayRecord = recordsOfMonth.some(r => r.date === lastDayStr);
+        if (!hasLastDayRecord) return;
+
+        const total = getTrackedMonthExpenseTotal(monthKey);
+        if (total <= 0) return;
+
+        const labelMonth = (lastDayDate.getMonth() + 1).toString(); // 1..12
+        const purpose = `${labelMonth}月消費（來自追蹤）`;
+
+        // 避免重覆：刪除同一月份、同名舊 entry（無論之前有冇手動或自動寫入）
+        state.expenses = state.expenses.filter(e =>
+            !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+        );
+
+        state.expenses.push({
+            id: `${monthKey}-tracked`,
+            date: lastDayStr,
+            purpose,
+            amount: Math.round(total)
+        });
+    });
+}
+
+function renderSmartExpenses() {
+    if (!document.getElementById('se-date').value) {
+        document.getElementById('se-date').value = getTodayString();
+    }
+
+    const listContainer = document.getElementById('smart-expense-list');
+    const sorted = [...(state.smartExpenses || [])].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let listHtml = '';
+    let rawChartData = [];
+
+    const months = [...new Set(sorted.map(e => e.date.slice(0, 7)))];
+
+    months.forEach(m => {
+        const mRecords = sorted.filter(e => e.date.startsWith(m));
+
+        for (let i = 0; i < mRecords.length; i++) {
+            const curr = mRecords[i];
+
+            const currCumExp =
+    (Number(curr.ewSpent) || 0) +
+    (Number(curr.octSpent) || 0) -
+    (Number(curr.octReload) || 0);
+
+let diffExp = currCumExp;
+let days = parseInt(curr.date.slice(8, 10), 10);
+let label = curr.date.slice(5);
+
+if (i > 0) {
+    const prev = mRecords[i - 1];
+    const prevCumExp =
+        (Number(prev.ewSpent) || 0) +
+        (Number(prev.octSpent) || 0) -
+        (Number(prev.octReload) || 0);
+
+    diffExp = currCumExp - prevCumExp;
+    days = parseInt(curr.date.slice(8, 10), 10) - parseInt(prev.date.slice(8, 10), 10);
+    label = `${prev.date.slice(5)} to ${curr.date.slice(5)}`;
+}
+
+if (!isFinite(diffExp) || diffExp < 0) diffExp = 0;
+if (days <= 0) days = 1;
+
+const dailyAvg = diffExp / days;
+
+// 每條 snapshot 對應一段期間，供「日」圖表展開成逐日數據
+const periodStart = i === 0
+    ? 1
+    : parseInt(mRecords[i - 1].date.slice(8, 10), 10) + 1;
+const periodEnd = parseInt(curr.date.slice(8, 10), 10);
+
+rawChartData.push({
+    dateStr: curr.date,
+    label,
+    diffExp,
+    days,
+    dailyAvg,
+    month: m,
+    periodStart,
+    periodEnd
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
+            listHtml = `
+                <div class="neu-inset p-3 flex justify-between items-center">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-text-muted">${curr.date}</span>
+                        <span class="text-[10px] font-bold text-text-main dark:text-text-darkMain">
+                            八達通: $${Number(curr.octSpent || 0)} | E-wallet: $${Number(curr.ewSpent || 0)}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-extrabold text-aux-peach">日均: $${dailyAvg.toFixed(1)}</span>
+                        <button data-smart-expense-delete-id="${curr.id}" class="p-1.5 text-text-muted dark:text-text-darkMuted hover:text-brand rounded-lg transition-all" title="刪除紀錄">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+                        </button>
+                    </div>
+                </div>
+            ` + listHtml;
+        }
+    });
+
+    if (sorted.length === 0) {
+        listContainer.innerHTML = `<div class="p-4 text-center text-xs font-bold text-text-muted neu-inset">尚未有任何紀錄。</div>`;
+    } else {
+        listContainer.innerHTML = listHtml;
+    }
+
+    const tabs = ['se-tab-daily', 'se-tab-weekly', 'se-tab-monthly'];
+    tabs.forEach(t => {
+        document.getElementById(t).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+    });
+    document.getElementById(`se-tab-${state.seChartTab}`).className = "flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+
+    let finalLabels = [];
+    let finalData = [];
+
+    if (state.seChartTab === 'daily') {
+    const today = new Date();
+    const past30 = [];
+
+    for (let offset = 29; offset >= 0; offset--) {
+        const dt = new Date(today);
+        dt.setDate(today.getDate() - offset);
+
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+
+        past30.push(`${y}-${m}-${d}`);
+    }
+
+    finalLabels = past30.map(dateStr => dateStr.slice(5));
+
+    finalData = past30.map(dateStr => {
+        const monthKey = dateStr.slice(0, 7);
+        const dayNum = parseInt(dateStr.slice(8, 10), 10);
+
+        const segs = rawChartData
+            .filter(d => d.month === monthKey)
+            .sort((a, b) => a.periodStart - b.periodStart);
+
+        if (!segs.length) return 0;
+
+        const matched = segs.find(seg => dayNum >= seg.periodStart && dayNum <= seg.periodEnd);
+        if (matched) return matched.dailyAvg;
+
+        if (dayNum < segs[0].periodStart) return segs[0].dailyAvg;
+
+        return segs[segs.length - 1].dailyAvg;
+    });
+} else if (state.seChartTab === 'weekly') {
+        let weekGroups = {};
+        rawChartData.forEach(d => {
+            const week = getWeekRange(d.dateStr);
+            if (!weekGroups[week]) weekGroups[week] = { totalExp: 0, totalDays: 0 };
+            weekGroups[week].totalExp += d.diffExp;
+            weekGroups[week].totalDays += d.days;
+        });
+        finalLabels = Object.keys(weekGroups);
+        finalData = Object.values(weekGroups).map(g => g.totalExp / (g.totalDays || 1));
+    } else if (state.seChartTab === 'monthly') {
+        let monthGroups = {};
+        rawChartData.forEach(d => {
+            if (!monthGroups[d.month]) monthGroups[d.month] = { totalExp: 0, totalDays: 0 };
+            monthGroups[d.month].totalExp += d.diffExp;
+            monthGroups[d.month].totalDays += d.days;
+        });
+        finalLabels = Object.keys(monthGroups);
+        finalData = Object.values(monthGroups).map(g => g.totalExp / (g.totalDays || 1));
+    }
+
+    const ctx = document.getElementById('smartExpenseChart').getContext('2d');
+    const textColor = '#9CA3AF';
+    const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+    if (smartChartInstance) smartChartInstance.destroy();
+
+    smartChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: finalLabels.length ? finalLabels : ['無資料'],
+            datasets: [{
+                label: '日均支出 ($)',
+                data: finalData.length ? finalData : [0],
+                backgroundColor: '#A5B4FC',
+                borderRadius: 4,
+                barThickness: 'flex',
+                maxBarThickness: 30
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                    titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
+                    bodyColor: '#A5B4FC',
+                    borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    callbacks: { label: (ctx) => `$${ctx.raw.toFixed(1)}/日` }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: gridColor, drawBorder: false },
+                    ticks: {
+                        color: textColor,
+                        font: { family: 'Inter', size: 10, weight: '600' },
+                        callback: (val) => `$${val}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+        window.deleteSmartExpense = function(id) {
+            const target = (state.smartExpenses || []).find(e => String(e.id) === String(id));
+            if (!target) return;
+
+            showConfirmModal('確定要刪除此追蹤紀錄？', () => {
+                state.smartExpenses = (state.smartExpenses || []).filter(e => String(e.id) !== String(id));
+
+                const monthKey = target.date.slice(0, 7);
+                const d = new Date(target.date);
+                const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+                const isLastDayOfMonth = d.getDate() === lastDayOfMonth.getDate();
+
+                if (isLastDayOfMonth) {
+                    const labelMonth = String(d.getMonth() + 1);
+                    const purpose = `${labelMonth}月消費（來自追蹤）`;
+
+                    state.expenses = (state.expenses || []).filter(e =>
+                        !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+                    );
+                }
+
+                saveState();
+                showToast('紀錄已刪除');
+                renderSmartExpenses();
+                renderExpenses();
+                renderDashboard();
+                renderTripBudget();
+                renderCalendar();
+                updateCalendarFooter();
+            });
+        };
+
+        function renderSettings() {
+            document.getElementById('students-count-title').innerText = `現有學生 (${state.sources.length})`;
+            const list = document.getElementById('students-list');
+            list.innerHTML = '';
+
+            if (state.sources.length === 0) {
+                // 新 empty state 卡片
+                list.innerHTML = `
+                    <div class="neu-inset p-5 flex flex-col items-center justify-center text-center gap-2">
+                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-neu-light dark:shadow-neu-dark text-aux-lavender mb-1 bg-aux-lavender/10">
+                            <i class="w-5 h-5" data-lucide="user-plus"></i>
+                        </div>
+                        <p class="text-sm font-bold text-text-subtle dark:text-text-darkSubtle">
+                            仲未有學生記錄
+                        </p>
+                        <p class="text-[11px] text-text-muted dark:text-text-darkMuted leading-snug">
+                            先喺上面輸入學生資料，之後日曆同記錄頁就會自動幫你追蹤每一次補習收入。
+                        </p>
+                    </div>
+                `;
+            } else {
+                state.sources.forEach(source => {
+                    if (state.editingSourceId === source.id) {
+                        list.innerHTML += `
+                            <div class="neu-inset p-4 space-y-3">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" id="edit-name" value="${state.editForm.name}" class="neu-input py-1.5 text-xs">
+                                    <select id="edit-grade" class="neu-input py-1.5 text-xs appearance-none">
+                                        ${['小一','小二','小三','小四','小五','小六','中一','中二','中三','中四','中五','中六'].map(g => `<option ${state.editForm.grade===g?'selected':''}>${g}</option>`).join('')}
+                                    </select>
+                                    <select id="edit-subject" class="neu-input py-1.5 text-xs appearance-none">
+                                        ${['英文','全科'].map(s => `<option ${state.editForm.subject===s?'selected':''}>${s}</option>`).join('')}
+                                    </select>
+                                    <input type="number" id="edit-rate" value="${state.editForm.rate}" class="neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-detail-address" value="${state.editForm.detailAddress || ''}" placeholder="詳細地址（選填）" class="col-span-2 neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-phone" value="${state.editForm.phone || ''}" placeholder="聯絡電話（選填）" class="col-span-2 neu-input py-1.5 text-xs">
+                                </div>
+                                <div class="flex justify-end gap-2 mt-2">
+                                    <button onclick="cancelEdit()" class="px-3 py-1.5 text-xs font-bold text-text-muted neu-btn">取消</button>
+                                    <button onclick="saveEdit()" class="px-4 py-1.5 text-xs neu-btn-primary">儲存</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        list.innerHTML += `
+                            <div class="neu-inset p-3 relative flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-aux-lavender/20 text-aux-lavender flex items-center justify-center font-extrabold text-base shrink-0 shadow-neu-inset-light dark:shadow-neu-inset-dark">
+                                    ${source.name.charAt(0)}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="font-bold text-sm text-text-main dark:text-text-darkMain">${source.name}</h4>
+                                        <span class="text-sm font-extrabold text-brand">$${source.rate}<span class="text-[9px] text-text-muted font-normal">/hr</span></span>
+                                    </div>
+                                    <p class="text-[10px] font-bold text-text-muted">
+                                    ${source.grade} • ${source.subject} • ${(source.addressShort || '無地址')}
+                                    </p>
+                                    ${source.detailAddress ? `
+                                    <p class="text-[10px] text-text-muted mt-0.5">
+                                        地址：${source.detailAddress}
+                                    </p>
+                                    ` : ''}
+                                    ${source.phone ? `
+                                    <p class="text-[10px] text-text-muted mt-0.5">
+                                        電話：${source.phone}
+                                    </p>
+                                    ` : ''}
+                                </div>
+                                <div class="flex flex-col gap-1 ml-1">
+                                    <button onclick="startEdit('${source.id}')" class="p-1.5 text-text-muted hover:text-aux-lavender rounded-lg"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                    <button onclick="deleteSource('${source.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+            document.getElementById('setting-goal').value = state.GOAL;
+            document.getElementById('setting-initial').value = state.INITIAL_AMOUNT;
+            
+            // Update Exchange Rate UI
+            document.getElementById('display-exchange-rate').innerText = state.exchangeRate ? state.exchangeRate.toFixed(4) : '8.3500';
+            if (state.lastRateUpdate) {
+                const d = new Date(state.lastRateUpdate);
+                document.getElementById('rate-last-updated').innerText = `更新於: ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+            }
+        }
+
+        function startEdit(id) {
+        const source = state.sources.find(s => s.id === id);
+        if (!source) return;
+
+        state.editingSourceId = id;
+        state.editForm = {
+            name: source.name,
+            grade: source.grade,
+            subject: source.subject,
+            rate: source.rate,
+            addressShort: source.addressShort || '',
+            detailAddress: source.detailAddress || '',
+            phone: source.phone || ''
+        };
+
+        renderSettings();
+        }
+
+        function saveEdit() {
+        const source = state.sources.find(s => s.id === state.editingSourceId);
+        if (!source) return;
+
+        source.name = document.getElementById('edit-name').value.trim();
+        source.grade = document.getElementById('edit-grade').value;
+        source.subject = document.getElementById('edit-subject').value;
+        source.rate = parseFloat(document.getElementById('edit-rate').value) || 0;
+        source.addressShort = document.getElementById('edit-address-short').value.trim();
+        source.detailAddress = document.getElementById('edit-detail-address').value.trim() || '';
+        source.phone = document.getElementById('edit-phone').value.trim() || '';
+
+        state.editingSourceId = null;
+        saveState();
+        renderSettings();
+        }
+
+        function cancelEdit() {
+        state.editingSourceId = null;
+        renderSettings();
+        }
+
+        function renderAll(updateTabs = true) {
+            if(updateTabs) {
+                document.querySelectorAll('.nav-tab').forEach(btn => {
+                    if (btn.dataset.tab === state.activeTab) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+                document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
+                document.getElementById(`view-${state.activeTab}`).classList.remove('hidden');
+            }
+            
+            const tripIcon = document.getElementById('trip-icon');
+            if (state.isTripMode) {
+                tripIcon.classList.add('text-brand');
+                document.getElementById('trip-budget-module').classList.remove('hidden');
+                document.getElementById('currency-toggle-container').classList.remove('hidden');
+                document.getElementById('trip-settings-container').classList.remove('hidden');
+                
+                if(state.displayCurrency === 'HKD') {
+                    document.getElementById('curr-hkd').className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                    document.getElementById('curr-eur').className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                } else {
+                    document.getElementById('curr-eur').className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                    document.getElementById('curr-hkd').className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                }
+            } else {
+                tripIcon.classList.remove('text-brand');
+                document.getElementById('trip-budget-module').classList.add('hidden');
+                document.getElementById('currency-toggle-container').classList.add('hidden');
+                document.getElementById('trip-settings-container').classList.add('hidden');
+            }
+
+            renderDashboard();
+            renderCalendar();
+            renderRecords();
+            renderExpenses();
+            renderSettings();
+            updateCalendarFooter();
+            renderTripBudget();
+            renderSmartExpenses();
+            lucide.createIcons();
+        }
+
+        window.deleteRecord = function(id) {
+    showConfirmModal('確定要刪除這筆記錄嗎？\n總收入將會相應扣除。', () => {
+        state.records = state.records.filter(r => r.id !== id);
+        saveState();
+        showToast('記錄已刪除');
+    });
+};
+
+        window.deleteExpense = function(id) {
+            showConfirmModal('確定要刪除此特別支出？', () => {
+                state.expenses = state.expenses.filter(e => String(e.id) !== String(id));
+                saveState();
+                showToast('特別支出已刪除');
+                renderExpenses();
+                renderDashboard();
+                renderTripBudget();
+                renderCalendar();
+                updateCalendarFooter();
+            });
+        };
+        window.deleteSource = function(id) {
+    const source = state.sources.find(s => s.id === id);
+    if (!source) return;
+    showConfirmModal(`確定要刪除學生「${source.name}」？\n相關記錄不會被刪除。`, () => {
+        state.sources = state.sources.filter(s => s.id !== id);
+        if (state.formData.sourceId === id) state.formData.sourceId = '';
+        saveState();
+        showToast(`學生「${source.name}」已刪除`);
+    });
+};
+
+        window.startEdit = function(id) {
+            const source = state.sources.find(s => s.id === id);
+            state.editingSourceId = id;
+            state.editForm = { ...source };
+            renderSettings();
+            lucide.createIcons();
+        };
+
+        window.cancelEdit = function() {
+            state.editingSourceId = null;
+            renderSettings();
+            lucide.createIcons();
+        };
+
+        window.saveEdit = function() {
+            const name = document.getElementById('edit-name').value;
+            const rate = parseFloat(document.getElementById('edit-rate').value);
+            if (!name || isNaN(rate)) return;
+
+            state.sources = state.sources.map(s => s.id === state.editingSourceId ? {
+                ...s, name, grade: document.getElementById('edit-grade').value,
+                subject: document.getElementById('edit-subject').value, rate,
+                addressShort: document.getElementById('edit-address-short').value
+            } : s);
+            
+            state.editingSourceId = null;
+            saveState();
+        };
+
+        function initEvents() {
+            // Dynamic Island Scroll Logic
+            let lastScrollY = window.scrollY;
+            window.addEventListener('scroll', () => {
+                const island = document.getElementById('dynamic-island');
+                if (window.scrollY > lastScrollY && window.scrollY > 50) {
+                    island.style.transform = 'translateY(-150%) scale(0.9)';
+                } else {
+                    island.style.transform = 'translateY(0) scale(0.9)';
+                }
+                lastScrollY = window.scrollY;
+            });
+
+            document.querySelectorAll('.nav-tab, .sidebar-tab').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tab = e.currentTarget.dataset.tab;
+                    if (tab) switchTab(tab);
+                });
+            });
+
+            document.getElementById('record-date').addEventListener('change', (e) => { state.formData.date = e.target.value; });
+            document.getElementById('record-source').addEventListener('change', (e) => { state.formData.sourceId = e.target.value; renderDashboard(); });
+            document.getElementById('btn-duration-minus').addEventListener('click', () => { state.formData.duration = Math.max(0.5, state.formData.duration - 0.5); renderDashboard(); });
+            document.getElementById('btn-duration-plus').addEventListener('click', () => { state.formData.duration += 0.5; renderDashboard(); });
+            
+            document.getElementById('record-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!state.formData.sourceId) return showToast('請先選擇學生！', 'error');
+                const s = state.sources.find(src => src.id === state.formData.sourceId);
+                
+                const newRecord = {
+                    id: Date.now(), date: state.formData.date, sourceId: s.id,
+                    sourceName: `${s.name} (${s.grade})`, duration: state.formData.duration,
+                    income: s.rate * state.formData.duration
+                };
+                state.records.unshift(newRecord);
+                state.records.sort((a, b) => new Date(b.date) - new Date(a.date));
+                state.formData.sourceId = '';
+                state.formData.duration = 1.5;
+                saveState();
+                showToast('記錄已成功儲存！');
+            });
+
+            document.getElementById('expense-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newExpense = {
+                    id: Date.now(),
+                    date: document.getElementById('expense-date').value,
+                    purpose: document.getElementById('expense-purpose').value,
+                    amount: parseFloat(document.getElementById('expense-amount').value)
+                };
+                state.expenses.push(newExpense);
+                e.target.reset();
+                document.getElementById('expense-date').value = getTodayString();
+                saveState();
+                showToast('支出紀錄已新增');
+            });
+
+            document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
+            document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
+            
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    state.chartPeriod = parseInt(e.target.dataset.days);
+                    document.querySelectorAll('.chart-period-btn').forEach(b => {
+                        b.className = 'chart-period-btn flex-1 px-3 py-1 text-10px font-bold rounded-lg text-text-muted transition-all';
+                    });
+                    e.target.className = 'chart-period-btn flex-1 px-3 py-1 text-10px font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all';
+                    renderChart();
+                });
+            });
+
+
+// --- 下一個月按鈕 (Next) ---
+// --- Next ---
+document.getElementById('cal-next').addEventListener('click', () => {
+    state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
+    renderCalendar();
+    lucide.createIcons();
+});
+// --- Prev ---
+document.getElementById('cal-prev').addEventListener('click', () => {
+    state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+    renderCalendar();
+    lucide.createIcons();
 });
 
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+// ── Calendar card 手勢支援（修正版） ──
+(function () {
+    const card = document.getElementById('calendar-card');
+    if (!card) return;
 
-  // 1. 對 Frankfurter API：完全唔攔，交返俾瀏覽器處理（避免 CORS + SW 夾硬 cache）
-  if (url.origin === 'https://api.frankfurter.app') {
-    return; // 不調用 respondWith
-  }
+    // pan-y: 瀏覽器處理垂直 scroll，JS 處理水平 swipe
+    card.style.touchAction = 'pan-y';
 
-  // 2. 只處理同源請求（你自己 site 的資源）
-  if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request);
-      })
-    );
-  }
-  // 3. 其他第三方資源：照樣放過，由瀏覽器自己處理
+    const THRESHOLD = 0.36;   // 36% card 寬度 → 自動完成
+    const FLICK_VEL = 320;    // px/s → 快速 flick 亦觸發
+
+    let startX = 0, startY = 0, isDragging = false, swipeDir = 0;
+    let isAnimating = false, currentTx = 0, cardW = 0;
+    let velBuf = [], lastVX = 0, lastVT = 0;
+
+    function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
+    function easeOutBack(t)  { const c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+
+    function trackVel(x) {
+        const now = performance.now(), dt = now - lastVT;
+        if (dt > 0 && dt < 100) { velBuf.push((x - lastVX) / dt * 1000); if (velBuf.length > 6) velBuf.shift(); }
+        lastVX = x; lastVT = now;
+    }
+    function getVel() { return velBuf.length ? velBuf.reduce((a, b) => a + b, 0) / velBuf.length : 0; }
+
+    function setTx(tx) {
+        card.style.transition = 'none';
+        card.style.transform  = 'translateX(' + tx + 'px)';
+        card.style.opacity    = String(1 - Math.min(1, Math.abs(tx) / cardW) * 0.08);
+    }
+    function clearStyle() {
+        card.style.transition = '';
+        card.style.transform  = '';
+        card.style.opacity    = '';
+    }
+
+    function rAFAnim(from, to, dur, easeF, done) {
+        const s = performance.now();
+        (function tick(now) {
+            const t = Math.min((now - s) / dur, 1);
+            setTx(from + (to - from) * easeF(t));
+            if (t < 1) { requestAnimationFrame(tick); return; }
+            if (done) done();
+        })(performance.now());
+    }
+
+    function snapBack() {
+        rAFAnim(currentTx, 0, 400, easeOutBack, function () { clearStyle(); isAnimating = false; });
+    }
+
+    function completeSwipe() {
+        var fly = swipeDir === 1 ? -(cardW + 24) : (cardW + 24);
+        var spd = Math.max(Math.abs(getVel()), 400);
+        var dur = Math.min(360, Math.max(100, Math.abs(fly - currentTx) / spd * 1000));
+        var rev = swipeDir === 1 ? 36 : -36;
+        rAFAnim(currentTx, fly, dur, easeOutQuint, function () {
+            // 更新月份內容（card 已滑出畫面外，不可見）
+            if (swipeDir === 1) state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() + 1);
+            else                state.currentMonthDate.setMonth(state.currentMonthDate.getMonth() - 1);
+            renderCalendar();
+            lucide.createIcons();
+
+            // 從反方向滑入
+            card.style.transition = 'none';
+            card.style.transform  = 'translateX(' + rev + 'px)';
+            card.style.opacity    = '0.1';
+            requestAnimationFrame(function () { requestAnimationFrame(function () {
+                card.style.transition = 'transform 340ms cubic-bezier(0.16,1,0.3,1), opacity 260ms ease';
+                card.style.transform  = 'translateX(0)';
+                card.style.opacity    = '1';
+                setTimeout(function () { clearStyle(); isAnimating = false; }, 360);
+            }); });
+        });
+    }
+
+    card.addEventListener('touchstart', function (e) {
+        if (isAnimating) return;
+        var t = e.touches[0];
+        startX = t.clientX; startY = t.clientY;
+        isDragging = false; swipeDir = 0; currentTx = 0;
+        cardW = card.getBoundingClientRect().width;
+        velBuf = []; lastVX = startX; lastVT = performance.now();
+    }, { passive: true });
+
+    // passive: false 必要，才能呼叫 e.preventDefault() 阻止垂直 scroll 干擾
+    card.addEventListener('touchmove', function (e) {
+        if (isAnimating) return;
+        var t  = e.touches[0];
+        var dx = t.clientX - startX;
+        var dy = t.clientY - startY;
+        if (!isDragging) {
+            if (Math.abs(dx) < 8) return;                  // 移動量太小，繼續等
+            if (Math.abs(dy) > Math.abs(dx)) return;       // 垂直方向多 → 交給 scroll
+            isDragging = true;
+            swipeDir = dx < 0 ? 1 : -1;                   // 1 = 下個月, -1 = 上個月
+        }
+        e.preventDefault();                                // 鎖定水平，防止 scroll 干擾
+        trackVel(t.clientX);
+        var inDirDx = swipeDir === 1 ? Math.min(0, dx) : Math.max(0, dx);
+        currentTx = inDirDx + (dx - inDirDx) * 0.10;     // 反方向 10% rubber-band
+        setTx(currentTx);
+    }, { passive: true  });
+
+    card.addEventListener('touchend', function () {
+        if (!isDragging || isAnimating) { isDragging = false; return; }
+        isDragging = false;
+        isAnimating = true;
+        var vel      = getVel();
+        var velInDir = swipeDir === 1 ? -vel : vel;        // 正值 = 朝滑動方向
+        if (Math.abs(currentTx) / cardW >= THRESHOLD || velInDir > FLICK_VEL) completeSwipe();
+        else snapBack();
+    }, { passive: true });
+
+    card.addEventListener('touchcancel', function () {
+        if (!isDragging) return;
+        isDragging = false;
+        isAnimating = true;
+        snapBack();
+    }, { passive: true });
+})();
+
+
+            document.getElementById('add-student-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newSource = {
+                id: `s_${Date.now()}`,
+                name: document.getElementById('new-s-name').value,
+                grade: document.getElementById('new-s-grade').value,
+                subject: document.getElementById('new-s-subject').value,
+                rate: parseFloat(document.getElementById('new-s-rate').value),
+                addressShort: document.getElementById('new-s-address-short').value,
+                detailAddress: document.getElementById('new-s-detail-address').value.trim() || '',
+                phone: document.getElementById('new-s-phone').value.trim() || ''
+            };
+            state.sources.push(newSource);
+            e.target.reset();
+            saveState();
+            showToast('學生資料已新增！');
+            });
+
+            document.getElementById('btn-save-sys-settings').addEventListener('click', () => {
+                const newGoal = parseFloat(document.getElementById('setting-goal').value);
+                const newInitial = parseFloat(document.getElementById('setting-initial').value);
+                
+                if (!isNaN(newGoal) && newGoal >= 0) state.GOAL = newGoal;
+                if (!isNaN(newInitial) && newInitial >= 0) state.INITIAL_AMOUNT = newInitial;
+                
+                saveState();
+                showToast('設定已儲存！');
+            });
+
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                state.isDarkMode = !state.isDarkMode;
+                if (state.isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                    document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.getElementById('theme-icon').setAttribute('data-lucide', 'moon');
+                }
+                saveState();
+            });
+
+            document.getElementById('mode-trip-toggle').addEventListener('click', () => {
+                state.isTripMode = !state.isTripMode;
+                saveState();
+                showToast(state.isTripMode ? 'Trip Mode 已開啟' : 'Trip Mode 已關閉');
+            });
+
+            document.getElementById('curr-hkd').addEventListener('click', () => { state.displayCurrency = 'HKD'; renderAll(); });
+            document.getElementById('curr-eur').addEventListener('click', () => { state.displayCurrency = 'EUR'; renderAll(); });
+
+            document.getElementById('trip-departure-date').addEventListener('change', (e) => { state.departureDate = e.target.value; saveState(); });
+
+            document.getElementById('smart-expense-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const inputDate = document.getElementById('se-date').value;
+    if (!inputDate) {
+        showToast('請先選擇日期', 'error');
+        return;
+    }
+
+    // 檢查上個月最後一日是否已填
+    const dateObj = new Date(inputDate);
+    if (dateObj.getDate() !== 1) {
+        const prevMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 0);
+        const prevMonthStr = formatLocalDate(prevMonthDate).slice(0, 7);
+        const hasPrevMonthRecords = state.smartExpenses.some(r => r.date.startsWith(prevMonthStr));
+
+        if (hasPrevMonthRecords) {
+            const lastDayStr = formatLocalDate(prevMonthDate);
+            const hasLastDayRecord = state.smartExpenses.some(r => r.date === lastDayStr);
+            if (!hasLastDayRecord) {
+                showToast(`${lastDayStr.slice(5)} 未有追蹤紀錄`, 'error');
+                return;
+            }
+        }
+    }
+
+    const newRecord = {
+        id: Date.now().toString(),
+        date: inputDate,
+        octSpent: parseFloat(document.getElementById('se-oct-spent').value) || 0,
+        octReload: parseFloat(document.getElementById('se-oct-reload').value) || 0,
+        ewSpent: parseFloat(document.getElementById('se-ew-spent').value) || 0,
+        ewTransfer: parseFloat(document.getElementById('se-ew-transfer').value) || 0
+    };
+
+    // 同日 snapshot 只留最新
+    state.smartExpenses = state.smartExpenses.filter(r => r.date !== inputDate);
+    state.smartExpenses.push(newRecord);
+
+    // 如果係當月最後一日，自動寫入 / 更新「x月消費（來自追蹤）」
+    const checkDate = new Date(inputDate);
+    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0);
+    const isLastDayOfMonth = checkDate.getDate() === lastDayOfMonth.getDate();
+
+    if (isLastDayOfMonth) {
+        const monthKey = inputDate.slice(0, 7);
+        const total = getTrackedMonthExpenseTotal(monthKey);
+
+        if (total > 0) {
+            const labelMonth = String(checkDate.getMonth() + 1);
+            const purpose = `${labelMonth}月消費（來自追蹤）`;
+
+            state.expenses = (state.expenses || []).filter(e =>
+                !(e.purpose === purpose && e.date.slice(0, 7) === monthKey)
+            );
+
+            state.expenses.push({
+                id: `${monthKey}-tracked`,
+                date: inputDate,
+                purpose,
+                amount: Math.round(total)
+            });
+        }
+    }
+
+    e.target.reset();
+    document.getElementById('se-date').value = getTodayString();
+    showToast('快照已新增！');
+    saveState();
+    });// 令右欄特別支出即時更新
+
+            document.getElementById('se-tab-daily').addEventListener('click', () => { state.seChartTab = 'daily'; renderSmartExpenses(); });
+            document.getElementById('se-tab-weekly').addEventListener('click', () => { state.seChartTab = 'weekly'; renderSmartExpenses(); });
+            document.getElementById('se-tab-monthly').addEventListener('click', () => { state.seChartTab = 'monthly'; renderSmartExpenses(); });
+
+            document.getElementById('btn-export').addEventListener('click', () => {
+                const jsonStr = JSON.stringify(state, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const d = new Date();
+                const filename = `tutoring_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+                const a = document.createElement('a'); a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast(`資料已匯出至 ${filename}`);
+            });
+
+            document.getElementById('btn-import-trigger').addEventListener('click', () => document.getElementById('file-import').click());
+            document.getElementById('file-import').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        if (parsed.sources && parsed.records) {
+                            Object.assign(state, parsed);
+                            saveState();
+                            showToast('進度恢復成功！');
+                        } else showToast('檔案格式不正確！', 'error');
+                    } catch (error) { showToast('讀取失敗！', 'error'); }
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            });
+
+            document.getElementById('btn-save-firebase').addEventListener('click', () => {
+                const configStr = document.getElementById('firebase-config-input').value.trim();
+                if (configStr) {
+                    localStorage.setItem('firebase_config', configStr);
+                    initFirebase(configStr);
+                    showToast('Firebase 設定已儲存！');
+                } else {
+                    localStorage.removeItem('firebase_config');
+                    isFirebaseActive = false;
+                    db = null;
+                    setSyncStatus('offline');
+                    showToast('已清除 Firebase 設定。');
+                }
+            });
+
+            window.addEventListener('online', () => { if(isFirebaseActive) syncToCloud(); });
+            window.addEventListener('offline', () => setSyncStatus('offline'));
+        }
+
+        // Initialize App
+        loadLocalData(); 
+        initEvents();
+        backfillTrackedMonthExpenses();
+        saveState();    
+        
+        // Fetch Live Exchange Rate on mount and set interval
+        if (!state.exchangeRate) state.exchangeRate = 8.35;
+        fetchLiveRate();
+        setInterval(() => fetchLiveRate(), 600000); // 10 minutes
+
+        renderAll(); 
+	// Nav idle
+['touchstart', 'touchmove', 'mousedown', 'mousemove', 'keydown', 'scroll'].forEach(evt => {
+    document.addEventListener(evt, resetNavIdle, { passive: true });
 });
+resetNavIdle();
+setTimeout(initScrollReveal, 80);
+
+// Sidebar button events
+document.getElementById('sidebar-theme-toggle').addEventListener('click', () => {
+    document.getElementById('theme-toggle').click();
+    updateSidebarState();
+});
+
+document.getElementById('sidebar-trip-toggle').addEventListener('click', () => {
+    document.getElementById('mode-trip-toggle').click();
+    updateSidebarState();
+});
+
+// Delete button delegation
+document.addEventListener('click', (e) => {
+    const expenseBtn = e.target.closest('[data-expense-delete-id]');
+    if (expenseBtn) {
+        const id = expenseBtn.dataset.expenseDeleteId;
+        if (id) {
+            window.deleteExpense(id);
+            return;
+        }
+    }
+
+    const smartExpenseBtn = e.target.closest('[data-smart-expense-delete-id]');
+    if (smartExpenseBtn) {
+        const id = smartExpenseBtn.dataset.smartExpenseDeleteId;
+        if (id) {
+            window.deleteSmartExpense(id);
+            return;
+        }
+    }
+});
+
+window.addEventListener('resize', () => {
+    updateSidebarState();
+});
+
+updateSidebarState();
+
+        const savedConfig = localStorage.getItem('firebase_config');
+        if (savedConfig) {
+            document.getElementById('firebase-config-input').value = savedConfig;
+            initFirebase(savedConfig);
+        } else {
+            setSyncStatus('offline'); 
+        }
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.error('SW error:', e));
+  });
+}
+
+    </script>
+</div></body>
+</html>
