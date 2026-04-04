@@ -3,6 +3,13 @@
 <html class="light" lang="zh-HK">
 <head>
 <meta charset="utf-8"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF6B6B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Workie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
 <title>Workie - Soft UI Tracker</title>
 <!-- Google Fonts: Inter -->
@@ -3360,6 +3367,14 @@ updateSidebarState();
         } else {
             setSyncStatus('offline'); 
         }
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.error('SW error:', e));
+  });
+}
 
     </script>
 </div></body>
