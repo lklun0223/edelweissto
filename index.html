@@ -281,60 +281,58 @@ nav.nav-idle .max-w-4xl {
 }
         }
 
+
+
+
         body {
-        overflow-x: hidden;
-        padding-bottom: calc(100px + env(safe-area-inset-bottom));
-        transition: background-color 0.5s ease, color 0.5s ease;
+            overflow-x: hidden;
+            padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            transition: background-color 1s ease, color 1s ease;
 
-        /* 淺色主題：米白底 + 稍暖橙黃／淡藍流動漸變 */
-        background:
-            radial-gradient(circle at 0% 0%,   rgba(255, 238, 228, 0.60), transparent 55%), /* 暖橙光暈 */
-            radial-gradient(circle at 100% 100%, rgba(255, 246, 218, 0.60), transparent 55%), /* 黃白光暈 */
-            radial-gradient(circle at 0% 100%, rgba(215, 235, 255, 0.40), transparent 55%),  /* 淡藍作平衡 */
-            linear-gradient(135deg, #FDFBF7, #FFF7EF, #FFF4E1);
-        background-size: 220% 220%;
-        animation: softGradientMove 9s ease-in-out infinite;
+            /* 淺色：白色更白，有色光暈更飽和 */
+            background:
+                radial-gradient(circle at 0% 0%,   rgba(255, 220, 200, 0.75), transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(255, 240, 190, 0.75), transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(200, 225, 255, 0.55), transparent 50%),
+                linear-gradient(135deg, #FFFFFF, #FFFAF2, #FFF6E6);
+            background-size: 240% 240%;
+            animation: softGradientMove 5s ease-in-out infinite;
         }
 
-        /* Dark mode：黑到銀灰的柔和金屬漸變（純灰階，無色相） */
+        /* Dark mode：黑色更黑，銀灰對比更強 */
         .dark body {
-        overflow-x: hidden;
-        padding-bottom: calc(100px + env(safe-area-inset-bottom));
-        transition: background-color 0.5s ease, color 0.5s ease;
+            overflow-x: hidden;
+            padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            transition: background-color 1s ease, color 1s ease;
 
-        /* 深色主題：黑到銀灰的較強金屬漸變（純灰階） */
-        background:
-            radial-gradient(circle at 0% 0%,   rgba(210, 210, 210, 0.12), transparent 55%), /* 更亮銀灰 */
-            radial-gradient(circle at 100% 100%, rgba(70, 70, 70, 0.12),  transparent 55%), /* 更深石墨灰 */
-            radial-gradient(circle at 0% 100%, rgba(160, 160, 160, 0.09), transparent 55%), /* 中灰 */
-            linear-gradient(145deg, #020202, #101010, #1f1f1f);
-        background-size: 260% 260%;
-        animation: softMetalMove 8s ease-in-out infinite;
+            background:
+                radial-gradient(circle at 0% 0%,   rgba(230, 230, 230, 0.18), transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(50, 50, 50, 0.18),  transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(140, 140, 140, 0.12), transparent 50%),
+                linear-gradient(145deg, #000000, #0a0a0a, #1a1a1a);
+            background-size: 280% 280%;
+            animation: softMetalMove 5s ease-in-out infinite;
         }
 
-        /* Dark mode 金屬感灰階流動動畫（加快） */
+        @keyframes softGradientMove {
+            0%   { background-position: 0% 30%; }
+            50%  { background-position: 100% 70%; }
+            100% { background-position: 0% 30%; }
+        }
+
         @keyframes softMetalMove {
-        0%   { background-position: 0% 35%; }
-        50%  { background-position: 100% 65%; }
-        100% { background-position: 0% 35%; }
+            0%   { background-position: 0% 35%; }
+            50%  { background-position: 100% 65%; }
+            100% { background-position: 0% 35%; }
         }
 
-        /* Dark mode 金屬感灰階流動動畫 */
-        @keyframes softMetalMove {
-        0%   { background-position: 0% 40%; }
-        50%  { background-position: 100% 60%; }
-        100% { background-position: 0% 40%; }
-        }
-
-        /* 尊重減少動態設定：兩個 mode 一齊停動畫 */
         @media (prefers-reduced-motion: reduce) {
-        body,
-        .dark body {
-            animation: none;
-            background-size: auto;
+            body,
+            .dark body {
+                animation: none;
+                background-size: auto;
+            }
         }
-        }
-
 
 
 
@@ -635,8 +633,8 @@ nav.nav-idle .max-w-4xl {
 </div>
 <!-- ================= 月曆 (Calendar) ================= -->
 <div class="view-section hidden" id="view-calendar">
-  <div class="flex flex-col gap-6">
-    <div class="neu-card p-4 pb-3 md:p-6" id="calendar-card"> <!-- ← 加上 id -->
+  <div class="flex flex-col gap-2">
+    <div class="neu-card p-4 pb-1 md:p-6" id="calendar-card"> <!-- ← 加上 id -->
       <div class="flex items-center justify-between mt-3 mb-7">
         <button class="neu-btn p-2" id="cal-prev">
           <i class="w-5 h-5" data-lucide="chevron-left"></i>
@@ -658,7 +656,7 @@ nav.nav-idle .max-w-4xl {
       </div>
     </div>
     <!-- 底部資訊欄 -->
-    <div class="flex justify-around items-center px-2 pt-4 pb-1">
+    <div class="flex justify-around items-center px-2 pt-2 pb-1">
       <div class="text-center">
         <p class="text-[10px] font-bold text-text-muted mb-0.5">還有</p>
         <p class="text-xl font-extrabold text-brand" id="cal-days-remaining">--</p>
@@ -1021,8 +1019,7 @@ nav.nav-idle .max-w-4xl {
 </div>
 <!-- Toast Notification Container -->
 <!-- 手機：水平居中、頂部；桌面：靠右（避開左側 sidebar w-56 = 14rem） -->
-<div class="fixed top-5 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-70 flex flex-col items-center lg:items-end gap-2 pointer-events-none w-[min(90vw,22rem)]" id="toast-container">
-</div>
+<div class="fixed top-16 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-70 flex flex-col items-center lg:items-end gap-2 pointer-events-none w-[min(90vw,22rem)]" id="toast-container">
 <!-- Application Logic -->
 <script>
         const getTodayString = () => {
@@ -1086,6 +1083,8 @@ nav.nav-idle .max-w-4xl {
         let syncTimeout = null;
         let isCloudUpdating = false;
         let _scrollObserver = null;
+        let _pendingDelete = null;      // { id, record, timer }
+        let _undoToastEl = null;        // 追蹤緊嘅 undo toast DOM
 
         function loadLocalData() {
             const localData = localStorage.getItem('tutoring_data');
@@ -1229,6 +1228,8 @@ nav.nav-idle .max-w-4xl {
                     
                     db.collection('appData').doc('tutoring_tracker').onSnapshot((doc) => {
                         if (isCloudUpdating) return; 
+                        if (isCloudUpdating) return;
+                        if (_pendingDelete) return;   // ← 新增：有 pending delete 時唔覆蓋 state
                         if (doc.exists) {
                             const data = doc.data();
                             state.sources = data.sources || [];
@@ -1767,7 +1768,7 @@ function updateSidebarState() {
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
-                            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
+                            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all block" title="刪除">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -2032,7 +2033,7 @@ function openCalendarDay(dateStr) {
     const dayRecords = state.records.filter(r => r.date === dateStr);
     const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
     if (dayRecords.length === 0) {
-        panel.innerHTML = `<div class="neu-inset p-3 text-center text-xs font-bold text-text-muted">${dateStr.slice(5)} — 沒有記錄</div>`;
+        panel.innerHTML = `<div class="neu-inset p-3 text-center text-xs font-bold text-text-muted">${dateStr.slice(5)} — 沒有記錄</div><div class="pb-3"></div>`;
     } else {
         const total = dayRecords.reduce((s, r) => s + r.income, 0);
         let html = `<div class="neu-inset p-3 space-y-2">
@@ -2048,7 +2049,7 @@ function openCalendarDay(dateStr) {
                 <span class="text-xs font-bold text-aux-mint">${symbol}${Math.round(amt)}</span>
             </div>`;
         });
-        html += `</div>`;
+        html += `</div><div class="pb-3"></div>`;
         panel.innerHTML = html;
     }
     panel.classList.remove('open');
@@ -2178,7 +2179,7 @@ if (savedEl) {
         </div>
         <div class="flex items-center gap-3">
             <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
-            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all hidden lg:block" title="刪除">
+            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all block" title="刪除">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
         </div>
@@ -3018,11 +3019,93 @@ rawChartData.push({
         }
 
         window.deleteRecord = function(id) {
-    showConfirmModal('確定要刪除這筆記錄嗎？\n總收入將會相應扣除。', () => {
-        state.records = state.records.filter(r => r.id !== id);
+    // 如果有上一個 pending delete 未完成，先即時執行佢
+    if (_pendingDelete) {
+        clearTimeout(_pendingDelete.timer);
+        state.records = state.records.filter(r => r.id !== _pendingDelete.id);
+        _pendingDelete = null;
         saveState();
-        showToast('記錄已刪除');
+    }
+
+    // 搵返要刪嘅 record 做備份
+    const recordToDelete = state.records.find(r => String(r.id) === String(id));
+    if (!recordToDelete) return;
+
+    // 建立 pending delete
+    _pendingDelete = {
+        id: id,
+        record: recordToDelete,
+        timer: setTimeout(() => {
+            // 5秒後真正刪除
+            state.records = state.records.filter(r => String(r.id) !== String(_pendingDelete?.id));
+            _pendingDelete = null;
+            _undoToastEl = null;
+            saveState();
+        }, 5000)
+    };
+
+    // 從 state 移走（只係 in-memory，冇 saveState）
+    state.records = state.records.filter(r => String(r.id) !== String(id));
+    renderAll();
+
+    // 顯示 Undo Toast
+    _showUndoToast(recordToDelete.sourceName || '記錄');
+};
+
+function _showUndoToast(name) {
+    // 移除上一個 undo toast（如有）
+    if (_undoToastEl && _undoToastEl.parentNode) {
+        _undoToastEl.remove();
+    }
+
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'bg-bg-light dark:bg-bg-dark px-4 py-3 rounded-2xl shadow-neu-light dark:shadow-neu-dark border border-white/50 dark:border-white/5 text-sm font-bold flex items-center gap-3 w-full transform transition-all duration-300 -translate-y-3 opacity-0 scale-95 pointer-events-auto';
+    toast.innerHTML = `
+        <i data-lucide="trash-2" class="w-5 h-5 shrink-0 text-brand"></i>
+        <span class="flex-1 text-text-main dark:text-text-darkMain">已刪除 ${name}</span>
+        <button onclick="window._undoDelete()" class="text-brand text-xs font-extrabold hover:opacity-70 transition-opacity px-2 py-1 neu-btn">
+            撤銷
+        </button>
+    `;
+    container.appendChild(toast);
+    _undoToastEl = toast;
+
+    lucide.createIcons();
+
+    requestAnimationFrame(() => {
+        toast.classList.remove('-translate-y-3', 'opacity-0', 'scale-95');
     });
+
+    // 5秒後自動消失
+    setTimeout(() => {
+        toast.classList.add('-translate-y-3', 'opacity-0', 'scale-95');
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+window._undoDelete = function() {
+    if (!_pendingDelete) return;
+
+    // 取消 timer
+    clearTimeout(_pendingDelete.timer);
+
+    // 復原 record（insert 返原本位置）
+    state.records.push(_pendingDelete.record);
+    // 按日期排返（你現有 app 係 desc by date）
+    state.records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    _pendingDelete = null;
+
+    // 移除 toast
+    if (_undoToastEl && _undoToastEl.parentNode) {
+        _undoToastEl.classList.add('-translate-y-3', 'opacity-0', 'scale-95');
+        setTimeout(() => _undoToastEl?.remove(), 300);
+        _undoToastEl = null;
+    }
+
+    renderAll();
+    showToast('已撤銷刪除 ✓');
 };
 
         window.deleteExpense = function(id) {
