@@ -648,7 +648,7 @@ nav.nav-idle .max-w-4xl {
 </div>
 <!-- ================= 月曆 (Calendar) ================= -->
 <div class="view-section hidden pt-4" id="view-calendar">
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col gap-3">
     <div class="neu-card p-4 pb-1 md:p-6" id="calendar-card"> <!-- ← 加上 id -->
       <div class="flex items-center justify-between mt-3 mb-7">
         <button class="neu-btn p-2" id="cal-prev">
@@ -1250,7 +1250,6 @@ nav.nav-idle .max-w-4xl {
                         if (_pendingDelete) return;   // ← 新增：有 pending delete 時唔覆蓋 state
                         if (doc.exists) {
                             const data = doc.data();
-                            showToast(`同步：scheduled ${(data.scheduled || []).length} 筆`, 'info');
                             state.sources = data.sources || [];
                             state.records = data.records || [];
                             state.expenses = data.expenses || [];
@@ -2022,7 +2021,7 @@ function updateSidebarState() {
 
                 const hasScheduled = state.scheduled && state.scheduled.some(s => s.date === dStr);
                 const scheduledDot = hasScheduled
-                    ? `<span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-aux-mint shadow-sm"></span>`
+                    ? `<span class="absolute top-2.5 right-2 w-1.5 h-1.5 rounded-full bg-aux-mint shadow-sm"></span>`
                     : '';
 
                 grid.innerHTML += `<div class="${baseClasses} relative" data-date="${dStr}" onclick="openCalendarDay('${dStr}')">
