@@ -1250,9 +1250,11 @@ nav.nav-idle .max-w-4xl {
                         if (_pendingDelete) return;   // ← 新增：有 pending delete 時唔覆蓋 state
                         if (doc.exists) {
                             const data = doc.data();
+                            showToast(`同步：scheduled ${(data.scheduled || []).length} 筆`, 'info');
                             state.sources = data.sources || [];
                             state.records = data.records || [];
                             state.expenses = data.expenses || [];
+                            state.scheduled = data.scheduled || [];
                             if (data.GOAL !== undefined) state.GOAL = data.GOAL;
                             if (data.INITIAL_AMOUNT !== undefined) state.INITIAL_AMOUNT = data.INITIAL_AMOUNT;
                             if (data.tripCategories !== undefined) state.tripCategories = data.tripCategories;
@@ -1319,7 +1321,9 @@ nav.nav-idle .max-w-4xl {
 
     db.collection('appData').doc('tutoring_tracker').set(dataToSave)
         .then(() => {
-            isCloudUpdating = false;
+            setTimeout(() => {
+                isCloudUpdating = false;
+            }, 1000);
             setSyncStatus('synced');
             console.log("✅ 雲端同步成功！");
         })
@@ -2368,7 +2372,8 @@ updateCalendarFooter();
             sourceId,
             sourceName: source.name,
             duration: s.duration,
-            startTime
+            startTime,
+            income: (source.rate || 0) * (s.duration || 0)
         };
 
         state.scheduled.push(entry);
