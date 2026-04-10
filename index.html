@@ -551,6 +551,7 @@ nav.nav-idle .max-w-4xl {
       </div>
 
       <!-- 卡2：新增今日記錄（快速輸入） -->
+      <div id="today-scheduled-container" class="hidden"></div>
       <div class="neu-card p-5">
         <h2 class="text-sm font-bold mb-4 flex items-center gap-2 text-text-title dark:text-text-darkTitle">
           <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand">
@@ -1811,6 +1812,63 @@ function updateSidebarState() {
             attachSwipeToDelete(tbody, id => deleteRecord(id));
             }
             renderChart();
+            renderTodayScheduled();
+        }
+
+                function renderTodayScheduled() {
+            const container = document.getElementById('today-scheduled-container');
+            if (!container) return;
+
+            const today = getTodayString();
+            const todayItems = (state.scheduled || []).filter(s => s.date === today);
+
+            if (todayItems.length === 0) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+
+            const itemsHtml = todayItems.map(s => {
+                const source = state.sources.find(src => src.id === s.sourceId);
+                const income = source ? Math.round(source.rate * s.duration) : '?';
+                const displayAmt = (state.isTripMode && state.displayCurrency === 'EUR' && source)
+                    ? Math.round((source.rate * s.duration) / state.exchangeRate)
+                    : income;
+                const timeStr = s.startTime ? `${_fmt24to12(s.startTime)} · ` : '';
+
+                return `
+                <div class="flex items-center justify-between neu-inset px-3 py-2.5">
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-xs font-extrabold text-text-main dark:text-text-darkMain">${s.sourceName}</span>
+                        <span class="text-[10px] font-bold text-text-muted">${timeStr}${s.duration}小時 · 預計 ${symbol}${displayAmt}</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="confirmScheduled('${s.id}')"
+                            class="neu-btn-primary px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-1">
+                            <i data-lucide="check" class="w-3 h-3"></i>確認
+                        </button>
+                        <button onclick="deleteScheduled('${s.id}')"
+                            class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all neu-btn">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="neu-card p-4 border-2 border-brand/20 dark:border-brand/30">
+                    <h3 class="text-xs font-extrabold text-brand flex items-center gap-2 mb-3">
+                        <div class="p-1 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand">
+                            <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i>
+                        </div>
+                        今日預約補習 (${todayItems.length})
+                    </h3>
+                    <div class="space-y-2">${itemsHtml}</div>
+                </div>`;
+            lucide.createIcons();
         }
 
         function renderChart() {
@@ -2183,6 +2241,31 @@ updateCalendarFooter();
             `</div>`;
         }
 
+        // 已確認記錄
+        const confirmedRecords = state.records.filter(r => r.date === dateStr);
+        let confirmedHtml = '';
+        if (confirmedRecords.length > 0) {
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+            confirmedHtml = `
+                <div class="mt-3">
+                    <p class="text-[10px] font-extrabold text-aux-mint ml-1 mb-1.5">✓ 已確認記錄</p>
+                    <div class="space-y-1.5">` +
+                confirmedRecords.map(r => {
+                    let dispAmt = r.income;
+                    if (state.isTripMode && state.displayCurrency === 'EUR') dispAmt = dispAmt / state.exchangeRate;
+                    return `
+                        <div class="flex items-center justify-between neu-inset px-3 py-2">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${r.sourceName}</span>
+                                <span class="text-[10px] font-bold text-text-muted">${r.duration}小時</span>
+                            </div>
+                            <span class="text-xs font-extrabold text-aux-mint">${symbol}${Math.round(dispAmt)}</span>
+                        </div>`;
+                }).join('') +
+                `</div>
+                </div>`;
+        }
+
         panel.innerHTML = `
             <div class="neu-inset p-3 space-y-3">
                 <div class="flex items-center justify-between mb-1">
@@ -2246,6 +2329,7 @@ updateCalendarFooter();
                 </button>
             </div>
             ${existingHtml}
+            ${confirmedHtml}
             <div class="pb-3"></div>
         `;
         lucide.createIcons();
@@ -2404,7 +2488,7 @@ updateCalendarFooter();
             id: Date.now(),
             date: s.date,
             sourceId: s.sourceId,
-            sourceName: s.sourceName,
+            sourceName: `${source.name} (${source.grade})`,
             duration: s.duration,
             income
         };
