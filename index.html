@@ -82,6 +82,7 @@
                         shimmer: 'shimmer 2s infinite',
                         pulse_fast: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         spin_slow: 'spin 2s linear infinite',
+                        spin_3x: 'spin 2s linear 3',
                     },
                     keyframes: {
                         shimmer: {
@@ -109,6 +110,20 @@
     100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+#students-overflow {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#students-overflow.open {
+    max-height: 2000px;
+}
+#students-toggle-icon {
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#students-toggle-icon.open {
+    transform: rotate(180deg);
+}
 
 .scroll-reveal {
     opacity: 0;
@@ -912,9 +927,13 @@ nav.nav-idle .max-w-4xl {
         </form>
 
         <!-- 現有學生列表標題 -->
-        <h3 class="text-sm font-bold text-text-subtle dark:text-text-darkSubtle mb-3 ml-1" id="students-count-title">
-          現有學生 (0)
-        </h3>
+        <div class="flex items-center justify-between mb-3 ml-1">
+            <h3 class="text-sm font-bold text-text-subtle dark:text-text-darkSubtle" id="students-count-title">現有學生 (0)</h3>
+            <button onclick="toggleStudentsList()" id="students-toggle-btn" class="hidden items-center gap-1 text-[10px] font-bold text-text-muted hover:text-text-main transition-colors">
+                <span id="students-toggle-label">展開</span>
+                <i data-lucide="chevron-down" class="w-3 h-3" id="students-toggle-icon"></i>
+            </button>
+        </div>
         <div class="space-y-3 mb-1" id="students-list"></div>
       </div>
     </div>
@@ -1087,6 +1106,7 @@ nav.nav-idle .max-w-4xl {
             editingTripItemName: '',
             editingTripCategoryId: null,
             editingTripCategoryName: '',
+            studentsExpanded: false,
             scheduled: []            
         };
 
@@ -1132,6 +1152,19 @@ nav.nav-idle .max-w-4xl {
             }
         }
 
+        // 清理已過期超過7日嘅預約（防止殘留）
+        function cleanupExpiredScheduled() {
+            const today = new Date(getTodayString());
+            const cutoff = new Date(today);
+            cutoff.setDate(cutoff.getDate() - 7);
+            const before = state.scheduled.length;
+            state.scheduled = state.scheduled.filter(s => new Date(s.date) >= cutoff);
+            if (state.scheduled.length !== before) {
+                saveState();
+                console.log(`清理了 ${before - state.scheduled.length} 個過期預約`);
+            }
+        }
+
         function saveState() {
             localStorage.setItem('tutoring_data', JSON.stringify({
                 sources: state.sources,
@@ -1160,7 +1193,12 @@ nav.nav-idle .max-w-4xl {
 
         async function fetchLiveRate(manual = false) {
             const btnIcon = document.getElementById('refresh-rate-icon');
-            if (btnIcon && manual) btnIcon.classList.add('animate-spin_slow');
+            if (btnIcon && manual) {
+            btnIcon.classList.remove('animate-spin_3x');
+            void btnIcon.offsetWidth; // force reflow，確保 animation 重新開始
+            btnIcon.classList.add('animate-spin_3x');
+            setTimeout(() => btnIcon.classList.remove('animate-spin_3x'), 6100);
+        };
             
             try {
                 const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=HKD');
@@ -1177,7 +1215,7 @@ nav.nav-idle .max-w-4xl {
                 if (manual) showToast('匯率更新失敗，使用緩存/預設值', 'error');
                 if (!state.exchangeRate) state.exchangeRate = 8.35;
             } finally {
-                if (btnIcon && manual) btnIcon.classList.remove('animate-spin_slow');
+                if (btnIcon && manual) btnIconclassList.remove('animate-spin_slow');
                 renderSettings();
                 renderDashboard();
             }
@@ -2233,9 +2271,14 @@ updateCalendarFooter();
                             <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${s.sourceName}</span>
                             <span class="text-[10px] font-bold text-text-muted">${_fmt24to12(s.startTime)} · ${s.duration}小時</span>
                         </div>
-                        <button onclick="deleteScheduled('${s.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="移除">
-                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                        </button>
+                                                <div class="flex items-center gap-1">
+                            <button onclick="editScheduled('${s.id}', '${dateStr}')" class="p-1.5 text-text-muted hover:text-aux-lavender rounded-lg transition-all" title="編輯">
+                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteScheduled('${s.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="移除">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
                     </div>`
                 ).join('') +
             `</div>`;
@@ -2472,12 +2515,13 @@ updateCalendarFooter();
     window.deleteScheduled = function(id) {
             state.scheduled = state.scheduled.filter(s => String(s.id) !== String(id));
             saveState();
-            // 重新 render
+            renderCalendar();
+            // 重新 render panel
             const panel = document.getElementById('cal-day-panel');
-            if (panel.dataset.open) _renderScheduleForm(panel, panel.dataset.open);
+            if (panel && panel.dataset.open) _renderScheduleForm(panel, panel.dataset.open);
         };
 
-        window.confirmScheduled = function(id) {
+    window.confirmScheduled = function(id) {
         const s = state.scheduled.find(s => String(s.id) === String(id));
         if (!s) return;
         const source = state.sources.find(src => src.id === s.sourceId);
@@ -2497,9 +2541,76 @@ updateCalendarFooter();
         state.records.sort((a, b) => new Date(b.date) - new Date(a.date));
         state.scheduled = state.scheduled.filter(sc => String(sc.id) !== String(id));
         saveState();
+        renderCalendar();
         showToast(`✓ 已記錄 ${s.sourceName} $${income}`);
     };
 
+            window.editScheduled = function(id, dateStr) {
+            const s = state.scheduled.find(s => String(s.id) === String(id));
+            if (!s) return;
+
+            // 預填學生
+            const sourceSelect = document.getElementById('sch-source');
+            if (sourceSelect) sourceSelect.value = s.sourceId;
+
+            // 預填時長
+            window._schState.duration = s.duration;
+            const durDisplay = document.getElementById('sch-duration-display');
+            if (durDisplay) durDisplay.textContent = s.duration;
+
+            // 預填時間
+            if (s.startTime) {
+                const [hStr, mStr] = s.startTime.split(':');
+                let h = parseInt(hStr), m = parseInt(mStr);
+                window._schState.totalMinutes = h * 60 + m;
+                window._schState.ampm = h >= 12 ? 'PM' : 'AM';
+                const timeDisplay = document.getElementById('sch-time-display');
+                if (timeDisplay) timeDisplay.textContent = _fmt24to12(s.startTime);
+                const ampmBtn = document.getElementById('sch-ampm-btn');
+                if (ampmBtn) ampmBtn.textContent = window._schState.ampm;
+            }
+
+            // 改按鈕文字 + 記住係 edit mode
+            const saveBtn = document.querySelector(`[onclick="saveScheduled('${dateStr}')"]`);
+            if (saveBtn) {
+                saveBtn.textContent = '更新預約';
+                saveBtn.onclick = () => updateScheduled(id, dateStr);
+            }
+
+            // scroll 返表單頂
+            document.getElementById('sch-source')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        window.updateScheduled = function(id, dateStr) {
+            const s = window._schState;
+            const sourceId = document.getElementById('sch-source')?.value;
+            if (!sourceId) { showToast('請選擇學生', 'error'); return; }
+
+            const source = state.sources.find(src => src.id === sourceId);
+            if (!source) return;
+
+            const h = Math.floor(s.totalMinutes / 60) % 24;
+            const m = s.totalMinutes % 60;
+            const startTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+            // 刪舊 + 加新（保留原 id）
+            state.scheduled = state.scheduled.filter(sc => String(sc.id) !== String(id));
+            state.scheduled.push({
+                id: Number(id),
+                date: dateStr,
+                sourceId,
+                sourceName: source.name,
+                duration: s.duration,
+                startTime,
+                income: (source.rate || 0) * (s.duration || 0)
+            });
+
+            saveState();
+            showToast(`已更新 ${source.name} 的預約`);
+
+            const panel = document.getElementById('cal-day-panel');
+            _renderScheduleForm(panel, dateStr);
+        };
 
         function updateCalendarLayout() {
             const view = document.getElementById('view-calendar');
@@ -3322,16 +3433,19 @@ rawChartData.push({
         };
 
         function renderSettings() {
-            document.getElementById('students-count-title').innerText = `現有學生 (${state.sources.length})`;
+                        document.getElementById('students-count-title').innerText = `現有學生 (${state.sources.length})`;
             const list = document.getElementById('students-list');
             list.innerHTML = '';
 
             if (state.sources.length === 0) {
                 list.innerHTML = `<div class="p-6 text-center text-sm font-bold text-text-muted neu-inset">尚未新增任何學生。</div>`;
             } else {
-                state.sources.forEach(source => {
+                const PREVIEW = 3;
+                const showToggle = state.sources.length > PREVIEW;
+
+                const buildCard = (source) => {
                     if (state.editingSourceId === source.id) {
-                        list.innerHTML += `
+                        return `
                             <div class="neu-inset p-4 space-y-3">
                                 <div class="grid grid-cols-2 gap-2">
                                     <input type="text" id="edit-name" value="${state.editForm.name}" class="neu-input py-1.5 text-xs">
@@ -3342,17 +3456,17 @@ rawChartData.push({
                                         ${['英文','全科'].map(s => `<option ${state.editForm.subject===s?'selected':''}>${s}</option>`).join('')}
                                     </select>
                                     <input type="number" id="edit-rate" value="${state.editForm.rate}" class="neu-input py-1.5 text-xs">
-                                    <input type="text" id="edit-detail-address" value="${state.editForm.detailAddress || ''}" placeholder="詳細地址（選填）" class="col-span-2 neu-input py-1.5 text-xs">
-                                    <input type="text" id="edit-phone" value="${state.editForm.phone || ''}" placeholder="聯絡電話（選填）" class="col-span-2 neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-address-short" value="${state.editForm.addressShort || ''}" placeholder="地址簡稱" class="neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-detail-address" value="${state.editForm.detailAddress || ''}" placeholder="詳細地址（選填）" class="neu-input py-1.5 text-xs">
+                                    <input type="text" id="edit-phone" value="${state.editForm.phone || ''}" placeholder="聯絡電話（選填）" class="neu-input py-1.5 text-xs">
                                 </div>
                                 <div class="flex justify-end gap-2 mt-2">
                                     <button onclick="cancelEdit()" class="px-3 py-1.5 text-xs font-bold text-text-muted neu-btn">取消</button>
                                     <button onclick="saveEdit()" class="px-4 py-1.5 text-xs neu-btn-primary">儲存</button>
                                 </div>
-                            </div>
-                        `;
+                            </div>`;
                     } else {
-                        list.innerHTML += `
+                        return `
                             <div class="neu-inset p-3 relative flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl bg-aux-lavender/20 text-aux-lavender flex items-center justify-center font-extrabold text-base shrink-0 shadow-neu-inset-light dark:shadow-neu-inset-dark">
                                     ${source.name.charAt(0)}
@@ -3363,27 +3477,57 @@ rawChartData.push({
                                         <span class="text-sm font-extrabold text-brand">$${source.rate}<span class="text-[9px] text-text-muted font-normal">/hr</span></span>
                                     </div>
                                     <p class="text-[10px] font-bold text-text-muted">
-                                    ${source.grade} • ${source.subject} • ${(source.addressShort || '無地址')}
+                                        ${source.grade} • ${source.subject} • ${(source.addressShort || '無地址')}
                                     </p>
-                                    ${source.detailAddress ? `
-                                    <p class="text-[10px] text-text-muted mt-0.5">
-                                        地址：${source.detailAddress}
-                                    </p>
-                                    ` : ''}
-                                    ${source.phone ? `
-                                    <p class="text-[10px] text-text-muted mt-0.5">
-                                        電話：${source.phone}
-                                    </p>
-                                    ` : ''}
+                                    ${source.detailAddress ? `<p class="text-[10px] text-text-muted mt-0.5">地址：${source.detailAddress}</p>` : ''}
+                                    ${source.phone ? `<p class="text-[10px] text-text-muted mt-0.5">電話：${source.phone}</p>` : ''}
                                 </div>
                                 <div class="flex flex-col gap-1 ml-1">
                                     <button onclick="startEdit('${source.id}')" class="p-1.5 text-text-muted hover:text-aux-lavender rounded-lg"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
                                     <button onclick="deleteSource('${source.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                                 </div>
-                            </div>
-                        `;
+                            </div>`;
                     }
-                });
+                };
+
+                const previewCards = state.sources.slice(0, PREVIEW).map(buildCard).join('');
+                const overflowCards = state.sources.slice(PREVIEW).map(buildCard).join('');
+
+
+
+                list.innerHTML = `
+                    <div class="space-y-2">${previewCards}</div>
+                    ${showToggle ? `<div id="students-overflow" class="space-y-2 mt-2">${overflowCards}</div>` : ''}
+                `;
+
+                // 控制頂部按鈕顯示
+                const toggleBtn = document.getElementById('students-toggle-btn');
+                const toggleLabel = document.getElementById('students-toggle-label');
+                const toggleIcon = document.getElementById('students-toggle-icon');
+                if (toggleBtn) {
+                    if (showToggle) {
+                        toggleBtn.classList.remove('hidden');
+                        toggleBtn.classList.add('flex');
+
+                        // 還原舊展開狀態
+                        const overflow = document.getElementById('students-overflow');
+                        if (state.studentsExpanded && overflow) {
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    overflow.classList.add('open');
+                                    if (toggleIcon) toggleIcon.classList.add('open');
+                                });
+                            });
+                            toggleLabel.textContent = '收起';
+                        } else {
+                            if (overflow) overflow.classList.remove('open');
+                            toggleLabel.textContent = `顯示全部 ${state.sources.length - PREVIEW} 位`;
+                        }
+                    } else {
+                        toggleBtn.classList.add('hidden');
+                        toggleBtn.classList.remove('flex');
+                    }
+                }
             }
 
             document.getElementById('setting-goal').value = state.GOAL;
@@ -3614,12 +3758,32 @@ window._undoDelete = function() {
             state.sources = state.sources.map(s => s.id === state.editingSourceId ? {
                 ...s, name, grade: document.getElementById('edit-grade').value,
                 subject: document.getElementById('edit-subject').value, rate,
-                addressShort: document.getElementById('edit-address-short').value
+                addressShort: document.getElementById('edit-address-short').value,
+                detailAddress: document.getElementById('edit-detail-address').value,
+                phone: document.getElementById('edit-phone').value
             } : s);
             
             state.editingSourceId = null;
             saveState();
         };
+
+        window.toggleStudentsList = function() {
+            state.studentsExpanded = !state.studentsExpanded;
+            const overflow = document.getElementById('students-overflow');
+            const icon = document.getElementById('students-toggle-icon');
+            const label = document.getElementById('students-toggle-label');
+            if (!overflow) return;
+            if (state.studentsExpanded) {
+                overflow.classList.add('open');
+                if (icon) icon.classList.add('open');
+                if (label) label.textContent = '收起';
+            } else {
+                overflow.classList.remove('open');
+                if (icon) icon.classList.remove('open');
+                if (label) label.textContent = `顯示全部 ${state.sources.length - 3} 位`;
+            }
+        };
+
 
         function initEvents() {
             // Dynamic Island Scroll Logic
