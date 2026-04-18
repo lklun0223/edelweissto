@@ -542,10 +542,11 @@ nav.nav-idle .max-w-4xl {
           </div>
           <div class="text-right">
             <div class="hidden flex justify-end mb-2" id="currency-toggle-container">
-              <div class="flex neu-inset p-1">
-                <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="curr-hkd">HKD</button>
-                <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="curr-eur">EUR</button>
-              </div>
+              <div class="relative flex neu-inset p-1" id="chart-type-toggle">
+                <div id="chart-type-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:50%; left:4px;"></div>
+                <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="chart-type-weekly">單週</button>
+                <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="chart-type-cumulative">累積</button>
+            </div>
             </div>
             <p class="text-sm font-bold text-aux-mint mb-0.5" id="dash-earned-total">(+$0)</p>
             <p class="text-xs font-bold text-brand" id="dash-remaining-text">$0 to go</p>
@@ -621,30 +622,65 @@ nav.nav-idle .max-w-4xl {
 
       <!-- 卡3：收入趨勢圖 -->
       <div class="neu-card p-5">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="font-bold text-sm flex items-center gap-2 text-text-title dark:text-text-darkTitle">
-            <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-aux-lavender">
-              <i class="w-4 h-4" data-lucide="bar-chart-2"></i>
+            <!-- Header row -->
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-sm flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+                    <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-aux-lavender">
+                        <i class="w-4 h-4" data-lucide="bar-chart-2"></i>
+                    </div>
+                    收入趨勢
+                </h3>
+                <div class="flex neu-inset p-1">
+                    <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="chart-type-weekly">單週</button>
+                    <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="chart-type-cumulative">累積</button>
+                </div>
             </div>
-            收入趨勢
-          </h3>
-          <div class="flex neu-inset p-1">
-            <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="chart-type-weekly">單週</button>
-            <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="chart-type-cumulative">累積</button>
-          </div>
-        </div>
 
-        <div class="flex neu-inset p-1 mb-4" id="chart-period-container">
-          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" data-days="28">4週</button>
-          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" data-days="56">8週</button>
-          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" data-days="180">月</button>
-          <button class="chart-period-btn flex-1 px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" data-days="365+">年</button>
-        </div>
+            <!-- Period buttons -->
+            <div class="relative flex neu-inset p-1 mb-3" id="chart-period-container">
+                <div id="chart-period-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:33.33%; left:4px;"></div>
+                <button class="chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" data-weeks="4">4週</button>
+                <button class="chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" data-weeks="8">8週</button>
+                <button class="chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" data-weeks="all">全部</button>
+            </div>
 
-        <div class="h-48 w-full relative">
-          <canvas id="incomeChart"></canvas>
+            <!-- Summary chip -->
+            <div id="chart-summary-chip" class="mb-3 hidden">
+                <span id="chart-summary-text" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"></span>
+            </div>
+
+            
+
+            <div id="chart-canvas-area" class="relative w-full">
+                <!-- Fixed Y axis overlay -->
+                <canvas id="yAxisCanvas" class="absolute top-0 left-0 pointer-events-none" style="z-index:2; height:192px;"></canvas>
+                <!-- Scrollable chart -->
+                <div id="chart-scroll-container" class="w-full overflow-x-auto no-scrollbar" style="-webkit-overflow-scrolling: touch;">
+                    <div id="chart-wrapper" class="h-48 relative" style="min-width: 100%;">
+    <canvas id="incomeChart"></canvas>
+    
+</div>
+                </div>
+                <!-- Scroll fade right -->
+                <div id="chart-scroll-fade" class="pointer-events-none absolute top-0 right-0 h-full w-10 transition-opacity duration-300"
+                    style="background: linear-gradient(to left, var(--color-bg-fade, #FDFBF7), transparent); z-index:3; opacity:1;"></div>
+                <!-- Scroll fade left -->
+                <div id="chart-scroll-fade-left" class="pointer-events-none absolute top-0 h-full w-10 transition-opacity duration-300"
+                    style="background: linear-gradient(to right, var(--color-bg-fade, #FDFBF7), transparent); z-index:1; opacity:0; left: var(--y-axis-width, 50px);"></div>
+                </div>
+
+                <div id="chart-info-bar" class="mt-3 rounded-2xl px-3 py-2.5 hidden"
+                    style="
+                        background: var(--card-bg, rgba(255,255,255,0.78));
+                        border: 1px solid rgba(0,0,0,0.06);
+                        box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+                        backdrop-filter: blur(10px);
+                        -webkit-backdrop-filter: blur(10px);
+                    ">
+                    <div id="chart-info-content" class="text-[11px] leading-4"
+                        style="color: var(--text-secondary, #4A4A4A);"></div>
+                </div>
         </div>
-      </div>
 
       <!-- 卡4：最近記錄 preview -->
       <div class="neu-card p-5">
@@ -1849,11 +1885,13 @@ function updateSidebarState() {
             });
             attachSwipeToDelete(tbody, id => deleteRecord(id));
             }
+            _initChartPeriodBtns();
+            _initChartTypeBtns();
             renderChart();
             renderTodayScheduled();
         }
 
-                function renderTodayScheduled() {
+        function renderTodayScheduled() {
             const container = document.getElementById('today-scheduled-container');
             if (!container) return;
 
@@ -1910,103 +1948,452 @@ function updateSidebarState() {
         }
 
         function renderChart() {
-            const cutoffDate = new Date(getTodayString());
-            cutoffDate.setDate(cutoffDate.getDate() - state.chartPeriod);
+            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+
+            // ── 計算週目標線 ──────────────────────────────────
+            let weeklyTarget = 0;
+            let showTargetLine = false;
+            if (state.isTripMode && state.departureDate) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dep = new Date(state.departureDate);
+                const daysRemaining = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+                if (daysRemaining > 0) {
+                    let totalBudget = 0;
+                    state.tripCategories.forEach(cat => {
+                        cat.items.forEach(item => { totalBudget += Number(item.amount) || 0; });
+                    });
+                    if (totalBudget === 0) totalBudget = Number(state.GOAL) || 0;
+                    const specialExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+                    const availableSavings = Math.max(0, getCurrentTotal() - specialExpenses);
+                    const totalRemaining = Math.max(0, totalBudget - availableSavings);
+                    const dailyTarget = totalRemaining / daysRemaining;
+                    if (dailyTarget > 0) {
+                        weeklyTarget = dailyTarget * 7;
+                        if (state.isTripMode && state.displayCurrency === 'EUR') weeklyTarget = weeklyTarget / state.exchangeRate;
+                        showTargetLine = true;
+                    }
+                }
+            }
+
+            // ── 建立週資料 ────────────────────────────────────
             const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            let runningCumulative = 0; 
+            let runningCumulative = 0;
             const weeklyDataMap = {};
 
             sortedRecords.forEach(record => {
-                const recDate = new Date(record.date);
-                if (recDate >= cutoffDate) {
-                    const weekLabel = getWeekRange(record.date);
-                    if (!weeklyDataMap[weekLabel]) {
-                        weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative };
-                    }
-                    let amt = record.income;
-                    if(state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
-                    weeklyDataMap[weekLabel].income += amt;
-                    runningCumulative += amt;
-                    weeklyDataMap[weekLabel].cumulative = runningCumulative;
+                const weekLabel = getWeekRange(record.date);
+                if (!weeklyDataMap[weekLabel]) {
+                    weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: 0, scheduled: 0, _date: record.date };
+                }
+                let amt = record.income;
+                if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                weeklyDataMap[weekLabel].income += amt;
+                runningCumulative += amt;
+                weeklyDataMap[weekLabel].cumulative = runningCumulative;
+            });
+
+            // ── 預約收入疊加 ──────────────────────────────────
+            (state.scheduled || []).forEach(entry => {
+                const weekLabel = getWeekRange(entry.date);
+                if (!weeklyDataMap[weekLabel]) {
+                    weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative, scheduled: 0, _date: entry.date };
+                }
+                let amt = entry.income || 0;
+                if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+                weeklyDataMap[weekLabel].scheduled += amt;
+            });
+
+            const allData = Object.values(weeklyDataMap);
+
+            // ── Viewport 計算 ─────────────────────────────────
+            if (!state.chartViewport) state.chartViewport = { weeks: 4 };
+            const vp = state.chartViewport;
+            const totalWeeks = allData.length;
+            const viewData = allData; // 永遠畫晒全部
+            const labels = viewData.map(d => d.name);
+            const confirmedDataset = viewData.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
+            const scheduledDataset = viewData.map(d => state.chartType === 'weekly' ? (d.scheduled || 0) : 0);
+
+            
+            // ── 按鈕樣式 (sliding pill) ───────────────────────
+            const btnWeekly = document.getElementById('chart-type-weekly');
+            const btnCumulative = document.getElementById('chart-type-cumulative');
+            const typePill = document.getElementById('chart-type-pill');
+            const typeToggle = document.getElementById('chart-type-toggle');
+
+            if (btnWeekly && btnCumulative) {
+                const isWeekly = state.chartType === 'weekly';
+                btnWeekly.className = `relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isWeekly ? 'text-brand' : 'text-text-muted'}`;
+                btnCumulative.className = `relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${!isWeekly ? 'text-brand' : 'text-text-muted'}`;
+                if (typePill && typeToggle) {
+                    requestAnimationFrame(() => {
+                        const btnW = typeToggle.offsetWidth / 2;
+                        typePill.style.width = btnW + 'px';
+                        typePill.style.left = (isWeekly ? 0 : btnW) + 'px';
+                    });
+                }
+            }
+
+            const periodPill = document.getElementById('chart-period-pill');
+            const periodContainer = document.getElementById('chart-period-container');
+            const periodBtns = ['4', '8', 'all'];
+            document.querySelectorAll('.chart-period-btn').forEach((btn, idx) => {
+                const isActive = String(btn.dataset.weeks) === String(vp.weeks);
+                btn.className = `chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isActive ? 'text-brand' : 'text-text-muted'}`;
+                if (isActive && periodPill && periodContainer) {
+                    requestAnimationFrame(() => {
+                        const btnW = periodContainer.offsetWidth / 3;
+                        periodPill.style.width = btnW + 'px';
+                        periodPill.style.left = (idx * btnW) + 'px';
+                    });
                 }
             });
 
-            const data = Object.values(weeklyDataMap);
-            const labels = data.map(d => d.name);
-            const dataset = data.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
-
-            const btnWeekly = document.getElementById('chart-type-weekly');
-            const btnCumulative = document.getElementById('chart-type-cumulative');
-            
-            if (state.chartType === 'weekly') {
-                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-            } else {
-                btnCumulative.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-                btnWeekly.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-            }
-
-            const ctx = document.getElementById('incomeChart').getContext('2d');
-            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC'; 
+            // ── Chart 顏色 ────────────────────────────────────
+            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC';
             const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-            const textColor = state.isDarkMode ? '#9CA3AF' : '#9CA3AF';
-            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+            const textColor = '#9CA3AF';
+
+            const confirmedRadius = confirmedDataset.map((v, i) =>
+                scheduledDataset[i] > 0
+                    ? { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 }
+                    : { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
+            );
+
 
             if (chartInstance) chartInstance.destroy();
 
             const chartConfigType = state.chartType === 'weekly' ? 'bar' : 'line';
 
-            chartInstance = new Chart(ctx, {
+            // ── Datasets ──────────────────────────────────────
+            const datasets = [{
+                label: state.chartType === 'weekly' ? '確認收入' : '期間累積',
+                data: confirmedDataset.length ? confirmedDataset : [0],
+                backgroundColor: state.chartType === 'weekly' ? mainColor : 'rgba(165,180,252,0.2)',
+                borderColor: mainColor,
+                borderWidth: state.chartType === 'weekly' ? 0 : 3,
+                fill: state.chartType === 'cumulative',
+                tension: 0.4,
+                pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+                pointBorderColor: mainColor,
+                pointBorderWidth: 2,
+                pointRadius: state.chartType === 'cumulative' ? 4 : 0,
+                borderRadius: state.chartType === 'weekly' ? confirmedRadius : 0,
+                barThickness: 'flex',
+                maxBarThickness: 30,
+                order: 1
+            }];
+
+            if (state.chartType === 'weekly') {
+                datasets.push({
+                    label: '預約收入',
+                    data: scheduledDataset,
+                    backgroundColor: 'rgba(123,198,126,0.28)',
+                    borderColor: 'rgba(123,198,126,0.5)',
+                    borderWidth: 1,
+                    borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+                    barThickness: 'flex',
+                    maxBarThickness: 30,
+                    order: 2
+                });
+            }
+
+           
+
+            // ── Y 軸上限 ──────────────────────────────────────
+            const allVals = [...confirmedDataset, ...scheduledDataset.map((s, i) => (confirmedDataset[i] || 0) + s)];
+            if (showTargetLine) allVals.push(weeklyTarget);
+            const yMax = allVals.length ? Math.max(...allVals) * 1.2 : undefined;
+            // 根據週數設定 canvas 寬度
+            const chartWrapper = document.getElementById('chart-wrapper');
+            const scrollEl = document.getElementById('chart-scroll-container');
+            const containerW = scrollEl ? scrollEl.offsetWidth : 300;
+            const vwks = vp.weeks === 'all' ? totalWeeks : Number(vp.weeks);
+            const visibleWeeks = vp.weeks === 'all' ? totalWeeks : Math.min(Number(vp.weeks), totalWeeks);
+const mobileBase = Math.min(containerW, 300); // 以手機寬度為基準，最大 390px
+const barW = Math.floor(mobileBase / visibleWeeks);
+const totalW = Math.max(totalWeeks * barW, containerW);
+            if (chartWrapper) chartWrapper.style.width = totalW + 'px';
+            
+
+            let selectedBarIndex = null;
+
+function renderChartInfo(idx) {
+    const infoBar = document.getElementById('chart-info-bar');
+    const infoContent = document.getElementById('chart-info-content');
+    if (!infoBar || !infoContent) return;
+
+    if (idx === null || idx === undefined) {
+        infoBar.classList.add('hidden');
+        infoContent.innerHTML = '';
+        return;
+    }
+
+    const week = viewData[idx];
+    if (!week) {
+        infoBar.classList.add('hidden');
+        infoContent.innerHTML = '';
+        return;
+    }
+
+    const isDark = state.isDarkMode;
+    const sym = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+    const lastDailyAvg = state._lastDailyAvg || 0;
+    const combinedTarget = (lastDailyAvg * 7) + (showTargetLine ? weeklyTarget : 0);
+    const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
+
+    infoBar.classList.remove('hidden');
+    infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
+    infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
+    infoBar.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.05)';
+    infoContent.style.color = isDark ? '#E5E7EB' : '#4A4A4A';
+
+    const scheduledBlock = week.scheduled > 0 ? `
+        <div style="
+            padding:6px 8px;
+            border-radius:12px;
+            background:${isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)'};
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+        ">
+            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">預約</span>
+            <span style="font-weight:700; color:${isDark ? '#86efac' : '#16a34a'};">+${sym}${formatMoney(Math.round(week.scheduled))}</span>
+        </div>
+    ` : '';
+
+    const diffBlock = diff !== null ? `
+        <div style="
+            padding:6px 8px;
+            border-radius:12px;
+            background:${diff >= 0
+                ? (isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)')
+                : (isDark ? 'rgba(248,113,113,0.10)' : 'rgba(239,68,68,0.10)')};
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+        ">
+            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">與目標差</span>
+            <span style="font-weight:700; color:${diff >= 0
+                ? (isDark ? '#86efac' : '#16a34a')
+                : (isDark ? '#fca5a5' : '#dc2626')};">
+                ${diff >= 0 ? '↑' : '↓'} ${diff >= 0 ? '+' : ''}${sym}${formatMoney(Math.round(diff))}
+            </span>
+        </div>
+    ` : '';
+
+    infoContent.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
+                    ${week.name}
+                </span>
+                <button type="button" id="chart-info-close" style="
+                    border:none;
+                    background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};
+                    color:${isDark ? '#9CA3AF' : '#6B7280'};
+                    width:22px;
+                    height:22px;
+                    border-radius:999px;
+                    font-size:12px;
+                    line-height:22px;
+                    text-align:center;
+                    padding:0;
+                    cursor:pointer;
+                ">×</button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;">
+                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
+                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">確認</div>
+                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.income))}</div>
+                </div>
+
+                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
+                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">累積</div>
+                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.cumulative))}</div>
+                </div>
+            </div>
+
+            ${scheduledBlock}
+            ${diffBlock}
+        </div>
+    `;
+
+    const closeBtn = document.getElementById('chart-info-close');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            selectedBarIndex = null;
+            infoBar.classList.add('hidden');
+            infoContent.innerHTML = '';
+        };
+    }
+}
+
+            chartInstance = new Chart(document.getElementById('incomeChart').getContext('2d'), {
                 type: chartConfigType,
                 data: {
                     labels: labels.length ? labels : ['無資料'],
-                    datasets: [{
-                        label: state.chartType === 'weekly' ? '單週收入' : '期間累積',
-                        data: dataset.length ? dataset : [0],
-                        backgroundColor: state.chartType === 'weekly' ? mainColor : 'rgba(165, 180, 252, 0.2)',
-                        borderColor: mainColor,
-                        borderWidth: state.chartType === 'weekly' ? 0 : 3,
-                        fill: state.chartType === 'cumulative',
-                        tension: 0.4, 
-                        pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
-                        pointBorderColor: mainColor,
-                        pointBorderWidth: 2,
-                        pointRadius: state.chartType === 'cumulative' ? 4 : 0,
-                        borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
-                        barThickness: 'flex',
-                        maxBarThickness: 30
-                    }]
+                    datasets
                 },
+                plugins: [{
+                    id: 'yAxisMirror',
+                    afterDraw(chart) {
+                        const yAxisCanvas = document.getElementById('yAxisCanvas');
+                        if (!yAxisCanvas) return;
+                        const yScale = chart.scales['y'];
+                        const ctx2 = yAxisCanvas.getContext('2d');
+                        const dpr = window.devicePixelRatio || 1;
+                        const w = yScale.right + 4;
+                        const h = chart.height;
+                        yAxisCanvas.width = w * dpr;
+                        yAxisCanvas.height = h * dpr;
+                        yAxisCanvas.style.width = w + 'px';
+                        yAxisCanvas.style.height = h + 'px';
+                        document.documentElement.style.setProperty('--y-axis-width', w + 'px');
+                        ctx2.scale(dpr, dpr);
+                        const bgColor = state.isDarkMode ? '#1A1B1E' : '#FDFBF7';
+                        ctx2.fillStyle = bgColor;
+                        ctx2.fillRect(0, 0, w, h);
+                        ctx2.drawImage(
+                            chart.canvas,
+                            0, 0, w * dpr, h * dpr,
+                            0, 0, w, h
+                        );
+                    }
+                },
+                {
+                id: 'targetLine',
+                afterDraw(chart) {
+                    if (state.chartType !== 'weekly') return;
+                    const ctx = chart.ctx;
+                    const yScale = chart.scales['y'];
+                    const xScale = chart.scales['x'];
+
+                    
+                    // 每日需指導線
+                    const lastDailyAvg = state._lastDailyAvg || 0;
+                    if (lastDailyAvg > 0 || showTargetLine) {
+                        let weeklyNeed = lastDailyAvg * 7;
+                        if (state.isTripMode && state.displayCurrency === 'EUR') weeklyNeed = weeklyNeed / state.exchangeRate;
+                        const combinedTarget = weeklyNeed + (showTargetLine ? weeklyTarget : 0);
+                        const y2 = yScale.getPixelForValue(combinedTarget);
+                        const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([4, 4]);
+                        ctx.strokeStyle = 'rgba(120,120,120,0.4)';
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(xScale.left, y2);
+                        ctx.lineTo(xScale.right, y2);
+                        ctx.stroke();
+                        // label
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = 'rgba(120,120,120,0.7)';
+                        ctx.font = '600 9px Inter';
+                        ctx.fillText(`每週需 ${symbol}${formatMoney(Math.round(combinedTarget))}`, xScale.left + 4, y2 - 4);
+                        ctx.restore();
+                    }
+                }
+            }],
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 800, easing: 'easeOutQuart' },
-                    plugins: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 800, easing: 'easeOutQuart' },
+    onClick: (event, elements, chart) => {
+        const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        if (!points.length) return;
+
+        const idx = points[0].index;
+
+        if (selectedBarIndex === idx) {
+            selectedBarIndex = null;
+            renderChartInfo(null);
+            return;
+        }
+
+        selectedBarIndex = idx;
+        renderChartInfo(idx);
+    },
+    plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
-                            titleColor: state.isDarkMode ? '#E5E7EB' : '#4A4A4A',
-                            bodyColor: mainColor,
-                            borderColor: state.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                            borderWidth: 1,
-                            padding: 10,
-                            cornerRadius: 12,
-                            displayColors: false,
-                            callbacks: { label: (ctx) => `${symbol}${formatMoney(Math.round(ctx.raw))}` }
-                        }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } } },
-                        y: { 
-                            grid: { color: gridColor, drawBorder: false }, 
-                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' }, callback: (val) => `${symbol}${val}` },
-                            beginAtZero: true
+                        enabled: false,
+                    },  
+                },
+                layout: { padding: { left: 0 } },
+                scales: {
+                        x: {
+                            stacked: state.chartType === 'weekly',
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } }
+                        },
+                        y: {
+                            stacked: state.chartType === 'weekly',
+                            grid: { color: gridColor, drawBorder: false },
+                            ticks: {
+                                color: textColor,
+                                font: { family: 'Inter', size: 10, weight: '600' },
+                                callback: (val) => `${symbol}${val}`
+                            },
+                            beginAtZero: true,
+                            ...(yMax ? { max: yMax } : {})
                         }
                     }
                 }
             });
+
+            setTimeout(() => { if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth; }, 50);
         }
+
+            // ── Scroll fade hint ──────────────────────────────
+            const fadEl = document.getElementById('chart-scroll-fade');
+            const fadeScrollEl = document.getElementById('chart-scroll-container');
+            if (fadeScrollEl && fadEl) {
+                const fadeLeftEl = document.getElementById('chart-scroll-fade-left');
+const updateFade = () => {
+    const atEnd = fadeScrollEl.scrollLeft + fadeScrollEl.clientWidth >= fadeScrollEl.scrollWidth - 4;
+    const atStart = fadeScrollEl.scrollLeft <= 4;
+    const bgColor = state.isDarkMode ? '#1A1B1E' : '#FDFBF7';
+    fadEl.style.opacity = atEnd ? '0' : '1';
+    fadEl.style.setProperty('--color-bg-fade', bgColor);
+    if (fadeLeftEl) {
+        fadeLeftEl.style.opacity = atStart ? '0' : '1';
+        fadeLeftEl.style.setProperty('--color-bg-fade', bgColor);
+    }
+};
+                fadeScrollEl.removeEventListener('scroll', updateFade);
+                fadeScrollEl.addEventListener('scroll', updateFade);
+                setTimeout(updateFade, 100);
+            }
+
+                window.shiftChartView = function(dir) {
+            if (!state.chartViewport) state.chartViewport = { weeks: 8, offset: 0 };
+            state.chartViewport.offset = Math.max(0, (state.chartViewport.offset || 0) - dir);
+            renderChart();
+        };
+
+        function _initChartPeriodBtns() {
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const w = e.currentTarget.dataset.weeks;
+                    if (!state.chartViewport) state.chartViewport = { weeks: 8, offset: 0 };
+                    state.chartViewport.weeks = w === 'all' ? 'all' : parseInt(w);
+                    state.chartViewport.offset = 0;
+                    renderChart();
+                });
+            });
+        }
+
+        function _initChartTypeBtns() {
+            const btnW = document.getElementById('chart-type-weekly');
+            const btnC = document.getElementById('chart-type-cumulative');
+            if (btnW) btnW.addEventListener('click', () => { state.chartType = 'weekly'; renderChart(); });
+            if (btnC) btnC.addEventListener('click', () => { state.chartType = 'cumulative'; renderChart(); });
+        }
+
+        
 
         function renderCalendar() {
             const year = state.currentMonthDate.getFullYear();
@@ -3236,6 +3623,7 @@ if (!isFinite(diffExp) || diffExp < 0) diffExp = 0;
 if (days <= 0) days = 1;
 
 const dailyAvg = diffExp / days;
+state._lastDailyAvg = dailyAvg; // 儲起最後一個時間段嘅日均
 
 // 每條 snapshot 對應一段期間，供「日」圖表展開成逐日數據
 const periodStart = i === 0
@@ -3349,6 +3737,120 @@ rawChartData.push({
 
     if (smartChartInstance) smartChartInstance.destroy();
 
+    let selectedBarIndex = null;
+
+function renderChartInfo(idx) {
+    const infoBar = document.getElementById('chart-info-bar');
+    const infoContent = document.getElementById('chart-info-content');
+    if (!infoBar || !infoContent) return;
+
+    if (idx === null || idx === undefined) {
+        infoBar.classList.add('hidden');
+        infoContent.innerHTML = '';
+        return;
+    }
+
+    const week = viewData[idx];
+    if (!week) {
+        infoBar.classList.add('hidden');
+        infoContent.innerHTML = '';
+        return;
+    }
+
+    const isDark = state.isDarkMode;
+    const sym = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+    const lastDailyAvg = state._lastDailyAvg || 0;
+    const combinedTarget = (lastDailyAvg * 7) + (showTargetLine ? weeklyTarget : 0);
+    const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
+
+    infoBar.classList.remove('hidden');
+    infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
+    infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
+    infoBar.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.05)';
+    infoContent.style.color = isDark ? '#E5E7EB' : '#4A4A4A';
+
+    const scheduledBlock = week.scheduled > 0 ? `
+        <div style="
+            padding:6px 8px;
+            border-radius:12px;
+            background:${isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)'};
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+        ">
+            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">預約</span>
+            <span style="font-weight:700; color:${isDark ? '#86efac' : '#16a34a'};">+${sym}${formatMoney(Math.round(week.scheduled))}</span>
+        </div>
+    ` : '';
+
+    const diffBlock = diff !== null ? `
+        <div style="
+            padding:6px 8px;
+            border-radius:12px;
+            background:${diff >= 0
+                ? (isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)')
+                : (isDark ? 'rgba(248,113,113,0.10)' : 'rgba(239,68,68,0.10)')};
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+        ">
+            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">與目標差</span>
+            <span style="font-weight:700; color:${diff >= 0
+                ? (isDark ? '#86efac' : '#16a34a')
+                : (isDark ? '#fca5a5' : '#dc2626')};">
+                ${diff >= 0 ? '↑' : '↓'} ${diff >= 0 ? '+' : ''}${sym}${formatMoney(Math.round(diff))}
+            </span>
+        </div>
+    ` : '';
+
+    infoContent.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
+                    ${week.name}
+                </span>
+                <button type="button" id="chart-info-close" style="
+                    border:none;
+                    background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};
+                    color:${isDark ? '#9CA3AF' : '#6B7280'};
+                    width:22px;
+                    height:22px;
+                    border-radius:999px;
+                    font-size:12px;
+                    line-height:22px;
+                    text-align:center;
+                    padding:0;
+                    cursor:pointer;
+                ">×</button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;">
+                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
+                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">確認</div>
+                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.income))}</div>
+                </div>
+
+                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
+                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">累積</div>
+                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.cumulative))}</div>
+                </div>
+            </div>
+
+            ${scheduledBlock}
+            ${diffBlock}
+        </div>
+    `;
+
+    const closeBtn = document.getElementById('chart-info-close');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            selectedBarIndex = null;
+            infoBar.classList.add('hidden');
+            infoContent.innerHTML = '';
+        };
+    }
+}
+
     smartChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -3359,13 +3861,32 @@ rawChartData.push({
                 backgroundColor: '#A5B4FC',
                 borderRadius: 4,
                 barThickness: 'flex',
-                maxBarThickness: 30
+                maxBarThickness: 30,
+                categoryPercentage: 0.9,
+                barPercentage: 0.85     
             }]
         },
+        
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            clip: false,
             animation: { duration: 600, easing: 'easeOutQuart' },
+            onClick: (event, elements, chart) => {
+                const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                if (!points.length) return;
+
+                const idx = points[0].index;
+
+                if (selectedBarIndex === idx) {
+                    selectedBarIndex = null;
+                    renderChartInfo(null);
+                    return;
+                }
+
+                selectedBarIndex = idx;
+                renderChartInfo(idx);
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -3598,12 +4119,16 @@ rawChartData.push({
                 document.getElementById('currency-toggle-container').classList.remove('hidden');
                 document.getElementById('trip-settings-container').classList.remove('hidden');
                 
-                if(state.displayCurrency === 'HKD') {
-                    document.getElementById('curr-hkd').className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-                    document.getElementById('curr-eur').className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-                } else {
-                    document.getElementById('curr-eur').className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-                    document.getElementById('curr-hkd').className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                const elHKD = document.getElementById('curr-hkd');
+                const elEUR = document.getElementById('curr-eur');
+                if (elHKD && elEUR) {
+                    if (state.displayCurrency === 'HKD') {
+                        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                    } else {
+                        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+                        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+                    }
                 }
             } else {
                 tripIcon.classList.remove('text-brand');
@@ -3838,16 +4363,15 @@ window._undoDelete = function() {
                 showToast('支出紀錄已新增');
             });
 
-            document.getElementById('chart-type-weekly').addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
-            document.getElementById('chart-type-cumulative').addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
-            
+            const btnW = document.getElementById('chart-type-weekly');
+            const btnC = document.getElementById('chart-type-cumulative');
+            if (btnW) btnW.addEventListener('click', () => { state.chartType = 'weekly'; renderDashboard(); });
+            if (btnC) btnC.addEventListener('click', () => { state.chartType = 'cumulative'; renderDashboard(); });
+
             document.querySelectorAll('.chart-period-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    state.chartPeriod = parseInt(e.target.dataset.days);
-                    document.querySelectorAll('.chart-period-btn').forEach(b => {
-                        b.className = 'chart-period-btn flex-1 px-3 py-1 text-10px font-bold rounded-lg text-text-muted transition-all';
-                    });
-                    e.target.className = 'chart-period-btn flex-1 px-3 py-1 text-10px font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all';
+                    if (!state.chartViewport) state.chartViewport = {};
+                    state.chartViewport.weeks = e.currentTarget.dataset.weeks;
                     renderChart();
                 });
             });
@@ -4036,9 +4560,11 @@ document.getElementById('cal-prev').addEventListener('click', () => {
                 showToast(state.isTripMode ? 'Trip Mode 已開啟' : 'Trip Mode 已關閉');
             });
 
-            document.getElementById('curr-hkd').addEventListener('click', () => { state.displayCurrency = 'HKD'; renderAll(); });
-            document.getElementById('curr-eur').addEventListener('click', () => { state.displayCurrency = 'EUR'; renderAll(); });
-
+            const btnHKD = document.getElementById('curr-hkd');
+            const btnEUR = document.getElementById('curr-eur');
+            if (btnHKD) btnHKD.addEventListener('click', () => { state.displayCurrency = 'HKD'; renderAll(); });
+            if (btnEUR) btnEUR.addEventListener('click', () => { state.displayCurrency = 'EUR'; renderAll(); });
+            
             document.getElementById('trip-departure-date').addEventListener('change', (e) => { state.departureDate = e.target.value; saveState(); });
 
             document.getElementById('smart-expense-form').addEventListener('submit', (e) => {
