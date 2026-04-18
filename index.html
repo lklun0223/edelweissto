@@ -669,7 +669,7 @@ nav.nav-idle .max-w-4xl {
                     style="background: linear-gradient(to right, var(--color-bg-fade, #FDFBF7), transparent); z-index:1; opacity:0; left: var(--y-axis-width, 50px);"></div>
                 </div>
 
-                <div id="chart-info-bar" class="mt-3 rounded-2xl px-3 py-2.5 hidden"
+                <div id="chart-info-bar" class="mt-3 rounded-2xl px-3 py-2.5 overflow-hidden pointer-events-none opacity-0 translate-y-2 max-h-0 transition-all duration-300 ease-out"
                     style="
                         background: var(--card-bg, rgba(255,255,255,0.78));
                         border: 1px solid rgba(0,0,0,0.06);
@@ -680,20 +680,18 @@ nav.nav-idle .max-w-4xl {
                     <div id="chart-info-content" class="text-[11px] leading-4"
                         style="color: var(--text-secondary, #4A4A4A);"></div>
                 </div>
+
         </div>
 
       <!-- 卡4：最近記錄 preview -->
-      <div class="neu-card p-5">
-        <h3 class="font-bold text-sm mb-3 flex items-center gap-2 text-text-title dark:text-text-darkTitle">
+      <div class="neu-card p-5 cursor-pointer active:opacity-70 transition-opacity" onclick="switchTab('records')">
+        <h3 class="font-bold text-sm flex items-center gap-2 text-text-title dark:text-text-darkTitle">
           <div class="p-1.5 rounded-lg shadow-neu-light dark:shadow-neu-dark text-text-subtle dark:text-text-darkSubtle">
             <i class="w-4 h-4" data-lucide="clock"></i>
           </div>
           最近記錄
-          <button class="ml-auto text-[10px] font-bold text-brand hover:opacity-60 transition-opacity" onclick="switchTab('records')">
-            查看全部
-          </button>
+          <i class="w-3.5 h-3.5 ml-auto text-text-subtle dark:text-text-darkSubtle" data-lucide="chevron-right"></i>
         </h3>
-        <div class="space-y-2" id="recent-records-body"></div>
       </div>
     </div>
   </div>
@@ -753,6 +751,15 @@ nav.nav-idle .max-w-4xl {
       <i class="w-5 h-5" data-lucide="list"></i>
     </div>
     <h2 class="text-lg font-bold">歷史記錄</h2>
+    <button
+    id="records-toggle-all"
+    type="button"
+    class="ml-auto p-1.5 rounded-lg text-text-muted/70 hover:text-brand hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center justify-center"
+    aria-label="展開或收起所有月份"
+    >
+    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-300 ease-out"></i>
+    </button>
+
   </div>
 
   <!-- 下面由 JS 動態渲染每週卡片 -->
@@ -797,10 +804,10 @@ nav.nav-idle .max-w-4xl {
         </h2>
 
         <p class="text-[10px] text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
-          請輸入本月 1 號至今的「累積總額」。系統會自動計算日均支出。跨月時數據將自動重置。
+          請輸入至今的「累積總額」以自動計算日均支出。
         </p>
 
-        <form class="space-y-3 mb-5 neu-inset p-4" id="smart-expense-form">
+        <form class="space-y-3 mb-5" id="smart-expense-form">
           <input class="neu-input" id="se-date" required type="date" />
 
           <div class="space-y-3">
@@ -1851,22 +1858,25 @@ function updateSidebarState() {
 
             
             const tbody = document.getElementById('recent-records-body');
-            tbody.innerHTML = '';
-            if (state.records.length === 0) {
-                tbody.innerHTML = `
-                    <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
-                        <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
-                            <i data-lucide="inbox" class="w-5 h-5"></i>
-                        </div>
-                        <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
-                        <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
-                    </div>`;
-                lucide.createIcons();
-            } else {
-                            state.records.slice(0, 5).forEach(record => {
-                let recAmt = record.income;
-                if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
-                tbody.innerHTML += `
+if (tbody) {
+    tbody.innerHTML = '';
+
+    if (state.records.length === 0) {
+        tbody.innerHTML = `
+            <div class="p-5 neu-inset flex flex-col items-center gap-2 text-center">
+                <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                    <i data-lucide="inbox" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs font-bold text-text-muted">尚未有任何記錄</p>
+                <p class="text-[10px] text-text-muted/70 font-bold">↑ 用上方表單新增第一筆記錄</p>
+            </div>`;
+        lucide.createIcons();
+    } else {
+        state.records.slice(0, 5).forEach(record => {
+            let recAmt = record.income;
+            if (state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
+
+            tbody.innerHTML += `
                 <div class="swipe-wrapper" data-id="${record.id}">
                     <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
                     <div class="swipe-item neu-inset p-3 flex items-center justify-between">
@@ -1882,13 +1892,16 @@ function updateSidebarState() {
                         </div>
                     </div>
                 </div>`;
-            });
-            attachSwipeToDelete(tbody, id => deleteRecord(id));
-            }
-            _initChartPeriodBtns();
-            _initChartTypeBtns();
-            renderChart();
-            renderTodayScheduled();
+        });
+
+        attachSwipeToDelete(tbody, id => deleteRecord(id));
+    }
+}
+
+_initChartPeriodBtns();
+_initChartTypeBtns();
+renderChart();
+renderTodayScheduled();
         }
 
         function renderTodayScheduled() {
@@ -2124,26 +2137,37 @@ function renderChartInfo(idx) {
     const infoContent = document.getElementById('chart-info-content');
     if (!infoBar || !infoContent) return;
 
+    // 收起：冇 index / 取消選中
     if (idx === null || idx === undefined) {
-        infoBar.classList.add('hidden');
-        infoContent.innerHTML = '';
+        infoBar.classList.remove('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+        infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+        setTimeout(() => {
+            if (selectedBarIndex === null) infoContent.innerHTML = '';
+        }, 220);
         return;
     }
 
     const week = viewData[idx];
     if (!week) {
-        infoBar.classList.add('hidden');
-        infoContent.innerHTML = '';
+        infoBar.classList.remove('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+        infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+        setTimeout(() => {
+            if (selectedBarIndex === null) infoContent.innerHTML = '';
+        }, 220);
         return;
     }
 
-    const isDark = state.isDarkMode;
+    const isDark = state.isTripMode ? state.isDarkMode : state.isDarkMode;
     const sym = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
     const lastDailyAvg = state._lastDailyAvg || 0;
     const combinedTarget = (lastDailyAvg * 7) + (showTargetLine ? weeklyTarget : 0);
     const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
+    const dailyAvg = week.income / 7;
 
-    infoBar.classList.remove('hidden');
+    // 展開動畫
+    infoBar.classList.remove('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+    infoBar.classList.add('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+
     infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
     infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
     infoBar.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.05)';
@@ -2186,9 +2210,14 @@ function renderChartInfo(idx) {
     infoContent.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
-                    ${week.name}
-                </span>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
+                        ${week.name}
+                    </span>
+                    <span style="font-size:10px; font-weight:700; color:${isDark ? '#86efac' : '#16a34a'};">
+                        日均 ${sym}${formatMoney(Math.round(dailyAvg))}
+                    </span>
+                </div>
                 <button type="button" id="chart-info-close" style="
                     border:none;
                     background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};
@@ -2225,11 +2254,15 @@ function renderChartInfo(idx) {
     if (closeBtn) {
         closeBtn.onclick = () => {
             selectedBarIndex = null;
-            infoBar.classList.add('hidden');
-            infoContent.innerHTML = '';
+            infoBar.classList.remove('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+            infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+            setTimeout(() => {
+                if (selectedBarIndex === null) infoContent.innerHTML = '';
+            }, 220);
         };
     }
 }
+
 
             chartInstance = new Chart(document.getElementById('incomeChart').getContext('2d'), {
                 type: chartConfigType,
@@ -3079,78 +3112,204 @@ updateCalendarFooter();
         }
         }
 
-        function renderRecords() {
-            const container = document.getElementById('all-records-container');
-            if (state.records.length === 0) {
-    container.innerHTML = `
-        <div class="flex flex-col items-center gap-3 py-12 text-center">
-            <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
-                <i data-lucide="clipboard-list" class="w-8 h-8"></i>
-            </div>
-            <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有記錄</p>
-            <p class="text-xs font-bold text-text-muted">返回主頁新增第一筆記錄</p>
-            <button onclick="switchTab('dashboard')" class="mt-1 px-5 py-2 neu-btn text-xs text-brand">前往新增 →</button>
-        </div>`;
-    lucide.createIcons();
-    return;
+        // 月份展開狀態（放喺 renderRecords 外面）
+let recordsExpandAll = false;
+const recordsExpandedMonths = {};
+
+function renderRecords() {
+    const container = document.getElementById('all-records-container');
+    if (!container) return;
+
+    if (state.records.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center gap-3 py-12 text-center">
+                <div class="p-4 rounded-2xl shadow-neu-light dark:shadow-neu-dark text-text-muted">
+                    <i data-lucide="clipboard-list" class="w-8 h-8"></i>
+                </div>
+                <p class="text-sm font-bold text-text-main dark:text-text-darkMain">未有記錄</p>
+                <p class="text-xs font-bold text-text-muted">返回主頁新增第一筆記錄</p>
+                <button onclick="switchTab('dashboard')" class="mt-1 px-5 py-2 neu-btn text-xs text-brand">前往新增 →</button>
+            </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+
+const groups = {};
+state.records.forEach(record => {
+
+    const d = new Date(record.date);
+    const monthKey = `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+    const weekKey = getWeekRange(record.date);
+    if (!groups[monthKey]) groups[monthKey] = {};
+    if (!groups[monthKey][weekKey]) groups[monthKey][weekKey] = [];
+    groups[monthKey][weekKey].push(record);
+});
+
+
+    const now = new Date();
+    const currentMonthLabel = `${now.getFullYear()}年 ${now.getMonth() + 1}月`;
+
+    Object.entries(groups).forEach(([month, weeks]) => {
+        const isCurrentMonth = month === currentMonthLabel;
+
+        const expanded = recordsExpandAll
+            ? true
+            : (month in recordsExpandedMonths ? recordsExpandedMonths[month] : isCurrentMonth);
+        recordsExpandedMonths[month] = expanded;
+
+        const sectionId = `records-month-${month.replace(/[^0-9A-Za-z]/g, '')}`;
+
+        html += `
+            <div class="space-y-2 pb-3 border-b border-black/5 dark:border-white/5 last:border-b-0">
+                <div class="flex items-center justify-between pl-1 pr-1.5">
+                    <h3 class="text-base font-extrabold text-text-main dark:text-text-darkMain">
+                        ${month}
+                    </h3>
+                    <button
+                        type="button"
+                        class="p-1 rounded-lg text-text-muted/70 hover:text-brand hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center justify-center"
+                        data-month-toggle="${month.replace(/'/g, "\\\\'")}"
+                        aria-label="${expanded ? '收起月份記錄' : '展開月份記錄'}"
+                    >
+                        <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-300 ease-out ${expanded ? 'rotate-180' : ''}"></i>
+                    </button>
+
+                </div>
+                <div id="${sectionId}" class="space-y-4 overflow-hidden transition-all duration-300 ease-out ${expanded ? 'max-h-[2000px] opacity-100 translate-y-0 pt-1' : 'max-h-0 opacity-0 -translate-y-1 pointer-events-none'}">
+        `;
+
+        Object.entries(weeks).forEach(([week, weekRecords]) => {
+            let weekTotal = weekRecords.reduce((sum, r) => sum + r.income, 0);
+            if (state.isTripMode && state.displayCurrency === 'EUR') weekTotal = weekTotal / state.exchangeRate;
+
+            html += `
+                <div class="neu-inset overflow-hidden">
+                    <div class="bg-black/5 dark:bg-white/5 px-4 py-2 text-[10px] font-bold flex justify-between items-center">
+                        <span class="text-text-muted">${week}</span>
+                        <span class="text-aux-mint bg-aux-mint/10 px-2 py-0.5 rounded-md">週收入: ${symbol}${Math.round(weekTotal)}</span>
+                    </div>
+                    <div class="flex flex-col p-2 pb-3 space-y-1">
+            `;
+            weekRecords.forEach((record) => {
+                let recAmt = record.income;
+                if (state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
+                html += `
+                    <div class="swipe-wrapper" data-id="${record.id}">
+                        <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
+                        <div class="swipe-item flex items-center justify-between p-2 rounded-xl bg-bg-light dark:bg-bg-dark">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-bold text-text-muted">${record.date}</span>
+                                <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
+                                <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all block" title="刪除">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            html += `</div></div>`;
+        });
+
+        html += `</div></div>`;
+    });
+
+    container.innerHTML = html;
+    attachSwipeToDelete(container, id => deleteRecord(id));
+    if (window.lucide) window.lucide.createIcons();
+
+    // 綁定每月展開/收起
+    container.querySelectorAll('[data-month-toggle]').forEach(btn => {
+        const key = btn.getAttribute('data-month-toggle');
+        btn.addEventListener('click', () => {
+            const safeKey = key;
+            const sectionId = `records-month-${safeKey.replace(/[^0-9A-Za-z]/g, '')}`;
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const now = new Date();
+            const currentMonthLabel = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const currentExpanded = safeKey in recordsExpandedMonths
+                ? recordsExpandedMonths[safeKey]
+                : safeKey.startsWith(currentMonthLabel);
+            const expanded = !currentExpanded;
+            recordsExpandedMonths[safeKey] = expanded;
+
+            if (expanded) {
+                section.classList.remove('max-h-0', 'opacity-0', '-translate-y-1', 'pointer-events-none');
+                section.classList.add('max-h-[2000px]', 'opacity-100', 'translate-y-0', 'pt-1');
+            } else {
+                section.classList.remove('max-h-[2000px]', 'opacity-100', 'translate-y-0', 'pt-1');
+                section.classList.add('max-h-0', 'opacity-0', '-translate-y-1', 'pointer-events-none');
+            }
+
+
+            const iconEl = btn.querySelector('i[data-lucide]');
+            if (iconEl) {
+                if (expanded) iconEl.classList.add('rotate-180');
+                else iconEl.classList.remove('rotate-180');
+            }
+            btn.setAttribute('aria-label', expanded ? '收起月份記錄' : '展開月份記錄');
+
+
+        });
+    });
+
+    // 綁定「全部展開/收起」按鈕（直接喺呢度搞，唔使搵 init）
+    const recordsToggleAllBtn = document.getElementById('records-toggle-all');
+    if (recordsToggleAllBtn) {
+        recordsToggleAllBtn.onclick = () => {
+            recordsExpandAll = !recordsExpandAll;
+            const expanded = recordsExpandAll;
+
+            Object.keys(recordsExpandedMonths).forEach(key => {
+                recordsExpandedMonths[key] = expanded;
+            });
+
+            renderRecords(); // 再 render 一次，用最新狀態
+
+            const iconEl = recordsToggleAllBtn.querySelector('i[data-lucide]');
+            if (iconEl) {
+                if (expanded) iconEl.classList.add('rotate-180');
+                else iconEl.classList.remove('rotate-180');
+            }
+            recordsToggleAllBtn.setAttribute('aria-label', expanded ? '收起所有月份' : '展開所有月份');
+
+
+        };
+    }
 }
 
-            const groups = {};
-            state.records.forEach(record => {
-                const d = new Date(record.date);
-                const monthKey = `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
-                const weekKey = getWeekRange(record.date);
-                if (!groups[monthKey]) groups[monthKey] = {};
-                if (!groups[monthKey][weekKey]) groups[monthKey][weekKey] = [];
-                groups[monthKey][weekKey].push(record);
-            });
 
-            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
-            let html = '';
-            Object.entries(groups).forEach(([month, weeks]) => {
-                html += `<div class="space-y-3 pb-3">
-                    <h3 class="text-base font-extrabold text-text-main dark:text-text-darkMain pl-1">${month}</h3>
-                    <div class="space-y-4">`;
-                
-                Object.entries(weeks).forEach(([week, weekRecords]) => {
-                    let weekTotal = weekRecords.reduce((sum, r) => sum + r.income, 0);
-                    if(state.isTripMode && state.displayCurrency === 'EUR') weekTotal = weekTotal / state.exchangeRate;
-                    
-                    html += `
-                        <div class="neu-inset overflow-hidden">
-                            <div class="bg-black/5 dark:bg-white/5 px-4 py-2 text-[10px] font-bold flex justify-between items-center">
-                                <span class="text-text-muted">${week}</span>
-                                <span class="text-aux-mint bg-aux-mint/10 px-2 py-0.5 rounded-md">週收入: ${symbol}${Math.round(weekTotal)}</span>
-                            </div>
-                            <div class="flex flex-col p-2 pb-3 space-y-1">
-                    `;
-                    weekRecords.forEach((record) => {
-                        let recAmt = record.income;
-                        if(state.isTripMode && state.displayCurrency === 'EUR') recAmt = recAmt / state.exchangeRate;
-                        html += `
-<div class="swipe-wrapper" data-id="${record.id}">
-    <div class="swipe-delete-bg"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></div>
-    <div class="swipe-item flex items-center justify-between p-2 rounded-xl bg-bg-light dark:bg-bg-dark">
-        <div class="flex flex-col">
-            <span class="text-[10px] font-bold text-text-muted">${record.date}</span>
-            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${record.sourceName}</span>
-        </div>
-        <div class="flex items-center gap-3">
-            <span class="text-sm font-extrabold text-aux-mint">${symbol}${Math.round(recAmt)}</span>
-            <button onclick="deleteRecord('${record.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all block" title="刪除">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
-        </div>
-    </div>
-</div>`;
-                    });
-                    html += `</div></div>`;
-                });
-                html += `</div></div>`;
-            });
-            container.innerHTML = html;
-            attachSwipeToDelete(container, id => deleteRecord(id));
-        }
+        function toggleRecordsMonth(monthKey) {
+    const safeKey = monthKey;
+    const now = new Date();
+    const currentMonthLabel = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // monthKey 係完全 label，例如 "2026-04 收入"
+    const sectionId = `records-month-${safeKey.replace(/[^0-9A-Za-z]/g, '')}`;
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const expanded = !(safeKey in recordsExpandedMonths ? recordsExpandedMonths[safeKey] : safeKey.startsWith(currentMonthLabel));
+    recordsExpandedMonths[safeKey] = expanded;
+
+    if (expanded) {
+        section.classList.remove('hidden');
+    } else {
+        section.classList.add('hidden');
+    }
+
+    // 重新 render 以更新 heading 上面個文字 & chevron
+    renderRecords(false);
+}
+
+
 
         function renderExpenses() {
             const list = document.getElementById('expenses-list');
@@ -3247,9 +3406,10 @@ updateCalendarFooter();
                                 <div class="flex items-center gap-2">
                                     <span class="font-bold text-text-main dark:text-text-darkMain">$${item.amount}</span>
                                     <button onclick="startEditTripItem('${item.id}', '${cat.id}', '${item.name.replace(/'/g, "\\'")}')"
-                                            class="text-text-muted hover:text-brand">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                        class="text-text-muted/60 hover:text-brand transition-colors">
+                                        <i data-lucide="edit-2" class="w-3 h-3"></i>
                                     </button>
+
                                     <button onclick="deleteTripItem('${cat.id}', '${item.id}')" class="text-brand hover:opacity-70">
                                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -3292,11 +3452,12 @@ updateCalendarFooter();
                             !isEditingCat
                                 ? `
                                 <span>${cat.name}</span>
-                                <button onclick="event.stopPropagation(); startEditTripCategory('${cat.id}', '${cat.name.replace(/'/g, "\\'")}')" class="text-text-muted hover:text-brand">
-                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                <button onclick="event.stopPropagation(); startEditTripCategory('${cat.id}', '${cat.name.replace(/'/g, "\\'")}')" class="text-text-muted/60 hover:text-brand transition-colors">
+                                    <i data-lucide="edit-2" class="w-3 h-3"></i>
                                 </button>
+
                                 ${cat.type === 'dest'
-                                    ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-brand hover:opacity-70"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>`
+                                    ? `<button onclick="event.stopPropagation(); deleteTripCategory('${cat.id}')" class="text-text-muted/60 hover:opacity-70"><i data-lucide="trash-2" class="w-3 h-3"></i></button>`
                                     : ''
                                 }
                                 `
@@ -3739,117 +3900,6 @@ rawChartData.push({
 
     let selectedBarIndex = null;
 
-function renderChartInfo(idx) {
-    const infoBar = document.getElementById('chart-info-bar');
-    const infoContent = document.getElementById('chart-info-content');
-    if (!infoBar || !infoContent) return;
-
-    if (idx === null || idx === undefined) {
-        infoBar.classList.add('hidden');
-        infoContent.innerHTML = '';
-        return;
-    }
-
-    const week = viewData[idx];
-    if (!week) {
-        infoBar.classList.add('hidden');
-        infoContent.innerHTML = '';
-        return;
-    }
-
-    const isDark = state.isDarkMode;
-    const sym = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
-    const lastDailyAvg = state._lastDailyAvg || 0;
-    const combinedTarget = (lastDailyAvg * 7) + (showTargetLine ? weeklyTarget : 0);
-    const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
-
-    infoBar.classList.remove('hidden');
-    infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
-    infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
-    infoBar.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.05)';
-    infoContent.style.color = isDark ? '#E5E7EB' : '#4A4A4A';
-
-    const scheduledBlock = week.scheduled > 0 ? `
-        <div style="
-            padding:6px 8px;
-            border-radius:12px;
-            background:${isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)'};
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-        ">
-            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">預約</span>
-            <span style="font-weight:700; color:${isDark ? '#86efac' : '#16a34a'};">+${sym}${formatMoney(Math.round(week.scheduled))}</span>
-        </div>
-    ` : '';
-
-    const diffBlock = diff !== null ? `
-        <div style="
-            padding:6px 8px;
-            border-radius:12px;
-            background:${diff >= 0
-                ? (isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)')
-                : (isDark ? 'rgba(248,113,113,0.10)' : 'rgba(239,68,68,0.10)')};
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-        ">
-            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">與目標差</span>
-            <span style="font-weight:700; color:${diff >= 0
-                ? (isDark ? '#86efac' : '#16a34a')
-                : (isDark ? '#fca5a5' : '#dc2626')};">
-                ${diff >= 0 ? '↑' : '↓'} ${diff >= 0 ? '+' : ''}${sym}${formatMoney(Math.round(diff))}
-            </span>
-        </div>
-    ` : '';
-
-    infoContent.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
-                    ${week.name}
-                </span>
-                <button type="button" id="chart-info-close" style="
-                    border:none;
-                    background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};
-                    color:${isDark ? '#9CA3AF' : '#6B7280'};
-                    width:22px;
-                    height:22px;
-                    border-radius:999px;
-                    font-size:12px;
-                    line-height:22px;
-                    text-align:center;
-                    padding:0;
-                    cursor:pointer;
-                ">×</button>
-            </div>
-
-            <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;">
-                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
-                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">確認</div>
-                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.income))}</div>
-                </div>
-
-                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
-                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">累積</div>
-                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.cumulative))}</div>
-                </div>
-            </div>
-
-            ${scheduledBlock}
-            ${diffBlock}
-        </div>
-    `;
-
-    const closeBtn = document.getElementById('chart-info-close');
-    if (closeBtn) {
-        closeBtn.onclick = () => {
-            selectedBarIndex = null;
-            infoBar.classList.add('hidden');
-            infoContent.innerHTML = '';
-        };
-    }
-}
 
     smartChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -4145,7 +4195,8 @@ function renderChartInfo(idx) {
             updateCalendarFooter();
             renderTripBudget();
             renderSmartExpenses();
-            lucide.createIcons();
+            if (window.lucide) window.lucide.createIcons();
+
         }
 
         window.deleteRecord = function(id) {
