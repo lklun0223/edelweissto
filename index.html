@@ -420,19 +420,15 @@ nav.nav-idle .max-w-4xl {
         min-width: 0;
     }
 
-    /* 月曆：跟隨左+中，無右欄 */
-    #view-calendar > div {
-        display: block;
-        grid-template-columns: none;
-        max-width: calc(100% - 20rem - 1.5rem);
-    }
+/* 月曆：啟用雙欄 grid */
+#view-calendar > div {
+    display: grid;
+}
 
-    /* 記錄：跟隨左+中，無右欄 */
-    #view-records > div {
-        display: block;
-        grid-template-columns: none;
-        max-width: calc(100% - 20rem - 1.5rem);
-    }
+/* 記錄：啟用雙欄 grid */
+#view-records > div {
+    display: grid;
+}
 }
 
 /* Sidebar tab active state */
@@ -526,7 +522,7 @@ nav.nav-idle .max-w-4xl {
 <div class="max-w-4xl mx-auto px-4 pt-14" id="views-root">
 <!-- ================= 主頁 (Dashboard) ================= -->
 <div class="view-section card-push-enter" id="view-dashboard">
-  <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
+  <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6 [&>*]:min-w-0">
 
     <!-- 左欄：總目標進度卡 + 新增今日記錄 -->
     <div class="flex flex-col gap-6">
@@ -535,7 +531,7 @@ nav.nav-idle .max-w-4xl {
       <div class="neu-card p-6">
         <div class="flex justify-between items-end mb-8">
           <div>
-            <h2 class="text-s font-bold text-text-title dark:text-text-darkTitle mb-1">總目標進度</h2>
+            <h2 class="text-s font-bold text-text-title dark:text-text-darkTitle mb-2.5">總目標進度</h2>
             <div class="flex items-baseline gap-2">
               <p class="text-4xl font-extrabold tracking-tight text-text-title dark:text-text-darkTitle" id="dash-current-total">$0</p>
             </div>
@@ -618,7 +614,7 @@ nav.nav-idle .max-w-4xl {
     </div>
 
     <!-- 右欄：收入趨勢圖 + 最近記錄 -->
-    <div class="flex flex-col gap-6 lg:sticky lg:top-8">
+    <div class="flex flex-col gap-6 lg:sticky lg:top-8 min-w-0">
 
       <!-- 卡3：收入趨勢圖 -->
       <div class="neu-card p-5">
@@ -631,8 +627,8 @@ nav.nav-idle .max-w-4xl {
                     收入趨勢
                 </h3>
                 <div class="flex neu-inset p-1">
-                    <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="chart-type-weekly">單週</button>
-                    <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="chart-type-cumulative">累積</button>
+                    <button class="px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all" id="chart-view-weekly">單週</button>
+                    <button class="px-3 py-1 text-[10px] font-bold rounded-lg text-text-subtle dark:text-text-darkSubtle transition-all" id="chart-view-cumulative">累積</button>
                 </div>
             </div>
 
@@ -669,7 +665,7 @@ nav.nav-idle .max-w-4xl {
                     style="background: linear-gradient(to right, var(--color-bg-fade, #FDFBF7), transparent); z-index:1; opacity:0; left: var(--y-axis-width, 50px);"></div>
                 </div>
 
-                <div id="chart-info-bar" class="mt-3 rounded-2xl px-3 py-2.5 overflow-hidden pointer-events-none opacity-0 translate-y-2 max-h-0 transition-all duration-300 ease-out"
+                <div id="chart-info-bar" class="rounded-2xl overflow-hidden pointer-events-none opacity-0 translate-y-2 max-h-0 transition-all duration-300 ease-out"
                     style="
                         background: var(--card-bg, rgba(255,255,255,0.78));
                         border: 1px solid rgba(0,0,0,0.06);
@@ -677,7 +673,7 @@ nav.nav-idle .max-w-4xl {
                         backdrop-filter: blur(10px);
                         -webkit-backdrop-filter: blur(10px);
                     ">
-                    <div id="chart-info-content" class="text-[11px] leading-4"
+                    <div id="chart-info-content" class="px-3 py-2.5 text-[11px] leading-4"
                         style="color: var(--text-secondary, #4A4A4A);"></div>
                 </div>
 
@@ -698,7 +694,7 @@ nav.nav-idle .max-w-4xl {
 </div>
 <!-- ================= 月曆 (Calendar) ================= -->
 <div class="view-section hidden pt-4" id="view-calendar">
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-3 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
     <div class="neu-card p-4 pb-1 md:p-6" id="calendar-card"> <!-- ← 加上 id -->
       <div class="flex items-center justify-between mt-3 mb-7">
         <button class="neu-btn p-2" id="cal-prev">
@@ -720,50 +716,64 @@ nav.nav-idle .max-w-4xl {
         <div class="mt-4" id="cal-day-panel"></div>
       </div>
     </div>
-    <!-- 底部資訊欄 -->
-    <div class="flex justify-around items-center px-2 pt-2 pb-1">
-      <div class="text-center">
+    <!-- 右欄：統計資訊 -->
+<div class="lg:sticky lg:top-8 flex flex-col gap-4">
+  <div class="lg:neu-card lg:p-6 flex lg:flex-col lg:block px-2 pt-2 pb-1">
+    <h3 class="hidden lg:block text-sm font-bold mb-5 text-text-title dark:text-text-darkTitle">出發倒數</h3>
+    <div class="flex lg:flex-col justify-around lg:justify-start lg:gap-5 items-center lg:items-start w-full">
+      <div class="text-center lg:text-left">
         <p class="text-[10px] font-bold text-text-muted mb-0.5">還有</p>
-        <p class="text-xl font-extrabold text-brand" id="cal-days-remaining">--</p>
+        <p class="text-2xl font-extrabold text-brand" id="cal-days-remaining">--</p>
         <p class="text-[10px] font-bold text-text-muted">天出發</p>
       </div>
-      <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
-      <div class="text-center">
+      <div class="w-px h-10 bg-black/10 dark:bg-white/10 lg:hidden"></div>
+      <div class="text-center lg:text-left">
         <p class="text-[10px] font-bold text-text-muted mb-0.5">每天需</p>
-        <p class="text-xl font-extrabold text-brand" id="cal-goal-amount">$--</p>
+        <p class="text-2xl font-extrabold text-brand" id="cal-goal-amount">$--</p>
         <p class="text-[10px] font-bold text-text-muted">達標</p>
       </div>
-      <div class="w-px h-10 bg-black/10 dark:bg-white/10"></div>
-      <div class="text-center">
+      <div class="w-px h-10 bg-black/10 dark:bg-white/10 lg:hidden"></div>
+      <div class="text-center lg:text-left">
         <p class="text-[10px] font-bold text-text-muted mb-0.5">已儲</p>
-        <p class="text-xl font-extrabold text-aux-mint" id="cal-saved-amount">$--</p>
+        <p class="text-2xl font-extrabold text-aux-mint" id="cal-saved-amount">$--</p>
         <p class="text-[10px] font-bold text-text-muted">累積收入</p>
       </div>
     </div>
   </div>
 </div>
+  </div>
+</div>
 <!-- ================= 所有記錄頁 (Records) ================= -->
 <div class="view-section hidden" id="view-records">
+  <div class="flex flex-col gap-4 lg:grid lg:grid-cols-[55fr_45fr] lg:items-start lg:gap-6">
 
-  <!-- 頁頭：歷史記錄標題 -->
-  <div class="neu-card !flex items-center gap-3 p-4 mb-4 text-text-title dark:text-text-darkTitle">
-    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-mint">
-      <i class="w-5 h-5" data-lucide="list"></i>
+    <!-- 左欄：記錄列表 -->
+    <div class="flex flex-col gap-4">
+      <!-- 頁頭：歷史記錄標題 -->
+      <div class="neu-card !flex items-center gap-3 p-4 text-text-title dark:text-text-darkTitle">
+        <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-mint">
+          <i class="w-5 h-5" data-lucide="list"></i>
+        </div>
+        <h2 class="text-lg font-bold">歷史記錄</h2>
+        <button
+          id="records-toggle-all"
+          type="button"
+          class="ml-auto p-1.5 rounded-lg text-text-muted/70 hover:text-brand hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center justify-center"
+          aria-label="展開或收起所有月份"
+        >
+          <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-300 ease-out"></i>
+        </button>
+      </div>
+      <!-- 由 JS 動態渲染每週卡片 -->
+      <div class="flex flex-col gap-4" id="all-records-container"></div>
     </div>
-    <h2 class="text-lg font-bold">歷史記錄</h2>
-    <button
-    id="records-toggle-all"
-    type="button"
-    class="ml-auto p-1.5 rounded-lg text-text-muted/70 hover:text-brand hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center justify-center"
-    aria-label="展開或收起所有月份"
-    >
-    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-300 ease-out"></i>
-    </button>
+
+    <!-- 右欄：統計資訊 -->
+    <div class="lg:sticky lg:top-8 flex flex-col gap-4">
+      <!-- 預留位置 -->
+    </div>
 
   </div>
-
-  <!-- 下面由 JS 動態渲染每週卡片 -->
-  <div class="flex flex-col gap-4" id="all-records-container"></div>
 </div>
 <!-- ================= 支出頁面 (Expenses) ================= -->
 <div class="view-section hidden" id="view-expenses">
@@ -985,9 +995,17 @@ nav.nav-idle .max-w-4xl {
     <div class="flex flex-col gap-6 lg:sticky lg:top-8">
       <div class="neu-card p-5">
 
-        <!-- 自訂目標設定 -->
-        <div>
-          <h3 class="text-sm font-bold mb-4 text-text-title dark:text-text-darkTitle">自訂目標設定</h3>
+  <!-- 區塊標題 -->
+  <h2 class="text-lg font-bold flex items-center gap-2 text-text-title dark:text-text-darkTitle mb-5">
+    <div class="p-2 rounded-xl shadow-neu-light dark:shadow-neu-dark text-aux-peach">
+      <i class="w-5 h-5" data-lucide="settings-2"></i>
+    </div>
+    系統設定
+  </h2>
+
+  <!-- 自訂目標設定 -->
+  <div>
+    <h3 class="text-sm font-bold mb-4 text-text-title dark:text-text-darkTitle">自訂目標設定</h3>
           <div class="grid grid-cols-2 gap-3 mb-4">
             <div>
               <label class="block text-[10px] font-bold text-text-label dark:text-text-darkLabel mb-1 ml-1">自訂目標 ($)</label>
@@ -1738,7 +1756,7 @@ function updateSidebarState() {
     setTimeout(() => lucide.createIcons(), 50);
 }
 
-    function switchTab(newTab) {
+function switchTab(newTab) {
     if (!newTab || state.activeTab === newTab) return;
 
     const TABORDER = ['dashboard', 'calendar', 'records', 'expenses', 'settings'];
@@ -1751,25 +1769,54 @@ function updateSidebarState() {
     document.querySelectorAll('.nav-tab, .sidebar-tab').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.tab === state.activeTab));
 
+    // 舊頁淡出
     document.querySelectorAll('.view-section').forEach(sec => {
-        sec.classList.add('hidden');
-        sec.classList.remove('card-push-enter', 'card-push-enter-left');
+        if (!sec.classList.contains('hidden')) {
+            sec.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+            sec.style.opacity = '0';
+            sec.style.transform = goingRight ? 'translateX(-18px) scale(0.99)' : 'translateX(18px) scale(0.99)';
+            setTimeout(() => {
+                sec.classList.add('hidden');
+                sec.style.transition = '';
+                sec.style.opacity = '';
+                sec.style.transform = '';
+                sec.classList.remove('card-push-enter', 'card-push-enter-left');
+            }, 150);
+        } else {
+            sec.classList.add('hidden');
+            sec.classList.remove('card-push-enter', 'card-push-enter-left');
+        }
     });
 
-    const activeSec = document.getElementById(`view-${state.activeTab}`);
-    if (!activeSec) return;
+    setTimeout(() => {
+        const activeSec = document.getElementById(`view-${state.activeTab}`);
+        if (!activeSec) return;
 
-    activeSec.classList.remove('hidden');
-    void activeSec.offsetWidth;
-    activeSec.classList.add(goingRight ? 'card-push-enter' : 'card-push-enter-left');
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'instant' });
 
-    renderAll(false);
-    updateSidebarState();
-    lucide.createIcons();
+        activeSec.classList.remove('hidden');
+        activeSec.style.opacity = '0';
+        activeSec.style.transform = goingRight ? 'translateX(22px) scale(0.99)' : 'translateX(-22px) scale(0.99)';
+        void activeSec.offsetWidth;
 
-    // 移除原本內聯的 cards.forEach(..._scrollObserver.observe(card))
-    // 讓 initScrollReveal 全權負責
-    setTimeout(initScrollReveal, 80);
+        activeSec.style.transition = 'opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        requestAnimationFrame(() => {
+            activeSec.style.opacity = '1';
+            activeSec.style.transform = 'translateX(0) scale(1)';
+        });
+
+        setTimeout(() => {
+            activeSec.style.transition = '';
+            activeSec.style.opacity = '';
+            activeSec.style.transform = '';
+        }, 280);
+
+        renderAll(false);
+        updateSidebarState();
+        lucide.createIcons();
+        setTimeout(initScrollReveal, 80);
+    }, 150);
 }
 
         function renderDashboard() {
@@ -1899,7 +1946,7 @@ if (tbody) {
 }
 
 _initChartPeriodBtns();
-_initChartTypeBtns();
+initChartTypeBtns();
 renderChart();
 renderTodayScheduled();
         }
@@ -1935,20 +1982,21 @@ renderTodayScheduled();
                         <span class="text-[10px] font-bold text-text-muted">${timeStr}${s.duration}小時 · 預計 ${symbol}${displayAmt}</span>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <button onclick="confirmScheduled('${s.id}')"
-                            class="neu-btn-primary px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-1">
-                            <i data-lucide="check" class="w-3 h-3"></i>確認
-                        </button>
+                        
                         <button onclick="deleteScheduled('${s.id}')"
                             class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all neu-btn">
                             <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="confirmScheduled('${s.id}')"
+                            class="neu-btn-primary px-3 py-1.5 text-[11px] font-extrabold flex items-center gap-1">
+                            <i data-lucide="check" class="w-3 h-3"></i>確認
                         </button>
                     </div>
                 </div>`;
             }).join('');
 
             container.innerHTML = `
-                <div class="neu-card p-4 border-2 border-brand/20 dark:border-brand/30">
+                <div class="neu-card p-4 border-2 border-brand/5 dark:border-brand/30">
                     <h3 class="text-xs font-extrabold text-brand flex items-center gap-2 mb-3">
                         <div class="p-1 rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand">
                             <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i>
@@ -2030,8 +2078,8 @@ renderTodayScheduled();
 
             
             // ── 按鈕樣式 (sliding pill) ───────────────────────
-            const btnWeekly = document.getElementById('chart-type-weekly');
-            const btnCumulative = document.getElementById('chart-type-cumulative');
+            const btnWeekly = document.getElementById('chart-view-weekly');
+            const btnCumulative = document.getElementById('chart-view-cumulative');
             const typePill = document.getElementById('chart-type-pill');
             const typeToggle = document.getElementById('chart-type-toggle');
 
@@ -2137,23 +2185,28 @@ function renderChartInfo(idx) {
     const infoContent = document.getElementById('chart-info-content');
     if (!infoBar || !infoContent) return;
 
-    // 收起：冇 index / 取消選中
-    if (idx === null || idx === undefined) {
-        infoBar.classList.remove('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+    const hideInfoBar = () => {
+        infoBar.classList.remove('mt-3', 'opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
         infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
         setTimeout(() => {
             if (selectedBarIndex === null) infoContent.innerHTML = '';
         }, 220);
+    };
+
+    const showInfoBar = () => {
+        infoBar.classList.add('mt-3');
+        infoBar.classList.remove('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+        infoBar.classList.add('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+    };
+
+    if (idx === null || idx === undefined) {
+        hideInfoBar();
         return;
     }
 
     const week = viewData[idx];
     if (!week) {
-        infoBar.classList.remove('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
-        infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
-        setTimeout(() => {
-            if (selectedBarIndex === null) infoContent.innerHTML = '';
-        }, 220);
+        hideInfoBar();
         return;
     }
 
@@ -2164,9 +2217,7 @@ function renderChartInfo(idx) {
     const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
     const dailyAvg = week.income / 7;
 
-    // 展開動畫
-    infoBar.classList.remove('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
-    infoBar.classList.add('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+    showInfoBar();
 
     infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
     infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
@@ -2210,7 +2261,7 @@ function renderChartInfo(idx) {
     infoContent.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <div style="display:flex; flex-direction:column; gap:2px;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
                         ${week.name}
                     </span>
@@ -2254,11 +2305,7 @@ function renderChartInfo(idx) {
     if (closeBtn) {
         closeBtn.onclick = () => {
             selectedBarIndex = null;
-            infoBar.classList.remove('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
-            infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
-            setTimeout(() => {
-                if (selectedBarIndex === null) infoContent.innerHTML = '';
-            }, 220);
+            hideInfoBar();
         };
     }
 }
@@ -2419,11 +2466,25 @@ const updateFade = () => {
             });
         }
 
-        function _initChartTypeBtns() {
-            const btnW = document.getElementById('chart-type-weekly');
-            const btnC = document.getElementById('chart-type-cumulative');
-            if (btnW) btnW.addEventListener('click', () => { state.chartType = 'weekly'; renderChart(); });
-            if (btnC) btnC.addEventListener('click', () => { state.chartType = 'cumulative'; renderChart(); });
+        function initChartTypeBtns() {
+            const btnW = document.getElementById('chart-view-weekly');
+            const btnC = document.getElementById('chart-view-cumulative');
+
+            if (btnW && !btnW.dataset.bound) {
+                btnW.dataset.bound = '1';
+                btnW.addEventListener('click', () => {
+                    state.chartType = 'weekly';
+                    renderChart();
+                });
+            }
+
+            if (btnC && !btnC.dataset.bound) {
+                btnC.dataset.bound = '1';
+                btnC.addEventListener('click', () => {
+                    state.chartType = 'cumulative';
+                    renderChart();
+                });
+            }
         }
 
         
@@ -3052,64 +3113,72 @@ updateCalendarFooter();
             // 還有多少天
             const depDate = state.departureDate;
             const daysEl = document.getElementById('cal-days-remaining');
+            const recDaysEl = document.getElementById('rec-days-remaining');
             if (depDate && daysEl) {
                 const today = new Date();
                 today.setHours(0,0,0,0);
                 const dep = new Date(depDate);
                 const diff = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
-                daysEl.textContent = diff > 0 ? diff : '已出發';
-            } else if (daysEl) {
-                daysEl.textContent = '--';
+                const val = diff > 0 ? diff : '已出發';
+                if (daysEl) daysEl.textContent = val;
+                if (recDaysEl) recDaysEl.textContent = val;
+            } else {
+                if (daysEl) daysEl.textContent = '--';
+                if (recDaysEl) recDaysEl.textContent = '--';
             }
 
             // 每天仍需金額
-        const goalEl = document.getElementById('cal-goal-amount');
-        if (goalEl) {
-            const depDate = state.departureDate;
-            if (depDate) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const dep = new Date(depDate);
-                const daysLeft = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+            const goalEl = document.getElementById('cal-goal-amount');
+            const recGoalEl = document.getElementById('rec-goal-amount');
+            if (goalEl || recGoalEl) {
+                const depDate = state.departureDate;
+                if (depDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const dep = new Date(depDate);
+                    const daysLeft = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
 
-                if (daysLeft <= 0) {
-                    goalEl.textContent = '--';
-                } else {
-                    // 跟隨支出頁「每天需」的公式
-                    let totalBudgetTrip = 0;
-                    (state.tripCategories || []).forEach(cat => {
-                        (cat.items || []).forEach(item => {
-                            totalBudgetTrip += Number(item.amount) || 0;
+                    if (daysLeft <= 0) {
+                        if (goalEl) goalEl.textContent = '--';
+                        if (recGoalEl) recGoalEl.textContent = '--';
+                    } else {
+                        let totalBudgetTrip = 0;
+                        (state.tripCategories || []).forEach(cat => {
+                            (cat.items || []).forEach(item => {
+                                totalBudgetTrip += Number(item.amount) || 0;
+                            });
                         });
-                    });
-                    if (totalBudgetTrip === 0) totalBudgetTrip = Number(state.GOAL) || 0;
+                        if (totalBudgetTrip === 0) totalBudgetTrip = Number(state.GOAL) || 0;
 
-                    const totalEarnedTrip = (state.records || []).reduce(
-                        (sum, r) => sum + (Number(r.income) || 0),
-                        0
-                    );
-                    const specialExpensesTrip = (state.expenses || []).reduce(
-                        (sum, e) => sum + (Number(e.amount) || 0),
-                        0
-                    );
+                        const totalEarnedTrip = (state.records || []).reduce(
+                            (sum, r) => sum + (Number(r.income) || 0),
+                            0
+                        );
+                        const specialExpensesTrip = (state.expenses || []).reduce(
+                            (sum, e) => sum + (Number(e.amount) || 0),
+                            0
+                        );
 
-                    const availableSavingsTrip = getCurrentTotal() - specialExpensesTrip;
-                    const totalRemainingTrip = Math.max(0, totalBudgetTrip - availableSavingsTrip);
-                    const perDayTrip = totalRemainingTrip / daysLeft;
+                        const availableSavingsTrip = getCurrentTotal() - specialExpensesTrip;
+                        const totalRemainingTrip = Math.max(0, totalBudgetTrip - availableSavingsTrip);
+                        const perDayTrip = totalRemainingTrip / daysLeft;
 
-                    goalEl.textContent = perDayTrip.toFixed(1);
+                        if (goalEl) goalEl.textContent = perDayTrip.toFixed(1);
+                        if (recGoalEl) recGoalEl.textContent = perDayTrip.toFixed(1);
+                    }
+                } else {
+                    if (goalEl) goalEl.textContent = '--';
+                    if (recGoalEl) recGoalEl.textContent = '--';
                 }
-            } else {
-                goalEl.textContent = '--';
             }
-        }
 
-        // 已儲金額（總儲蓄減起初金額）
-        const savedEl = document.getElementById('cal-saved-amount');
-        if (savedEl) {
+            // 已儲金額
+            const savedEl = document.getElementById('cal-saved-amount');
+            const recSavedEl = document.getElementById('rec-saved-amount');
             const totalEarned = state.records.reduce((sum, r) => sum + (r.income || 0), 0);
-            savedEl.textContent = '$' + totalEarned.toLocaleString();
-        }
+            const savedVal = '$' + totalEarned.toLocaleString();
+            if (savedEl) savedEl.textContent = savedVal;
+            if (recSavedEl) recSavedEl.textContent = savedVal;
         }
 
         // 月份展開狀態（放喺 renderRecords 外面）
