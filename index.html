@@ -2686,7 +2686,8 @@ updateCalendarFooter();
 
         // 今日：比較當前時間同 4:30pm (16:30 = 990分鐘)
         // 如果而家已過 4:30pm → 顯示記錄；未到 → 顯示預約
-        const showScheduleForm = isFuture || (isToday && currentMinutes < 990);
+        const hasScheduledEntries = state.scheduled && state.scheduled.some(s => s.date === dateStr);
+		const showScheduleForm = isFuture || (isToday && currentMinutes < 990) || (isPast && hasScheduledEntries);
 
         const dayRecords = state.records.filter(r => r.date === dateStr);
         const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
