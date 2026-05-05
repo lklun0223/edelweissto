@@ -1276,7 +1276,7 @@ nav.nav-idle .max-w-4xl {
                 if (manual) showToast('匯率更新失敗，使用緩存/預設值', 'error');
                 if (!state.exchangeRate) state.exchangeRate = 8.35;
             } finally {
-                if (btnIcon && manual) btnIconclassList.remove('animate-spin_slow');
+                if (btnIcon && manual) btnIcon.classList.remove('animate-spin_slow');
                 renderSettings();
                 renderDashboard();
             }
@@ -3028,6 +3028,8 @@ updateCalendarFooter();
         saveState();
         renderCalendar();
         showToast(`✓ 已記錄 ${s.sourceName} $${income}`);
+		const panel = document.getElementById('cal-day-panel');
+		if (panel && panel.dataset.open) _renderScheduleForm(panel, panel.dataset.open);
     };
 
             window.editScheduled = function(id, dateStr) {
@@ -4245,14 +4247,34 @@ rawChartData.push({
                 const elHKD = document.getElementById('curr-hkd');
                 const elEUR = document.getElementById('curr-eur');
                 if (elHKD && elEUR) {
-                    if (state.displayCurrency === 'HKD') {
-                        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-                        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-                    } else {
-                        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-                        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-                    }
-                }
+				    if (state.displayCurrency === 'HKD') {
+				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+				    } else {
+				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+				    }
+				    elHKD.onclick = () => {
+				        state.displayCurrency = 'HKD';
+				        saveState();
+				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+				        const pill = document.getElementById('currency-pill');
+				        if (pill) pill.style.left = '4px';
+				        renderDashboard();
+				        renderCalendar();
+				    };
+				    elEUR.onclick = () => {
+				        state.displayCurrency = 'EUR';
+				        saveState();
+				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
+				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
+				        const pill = document.getElementById('currency-pill');
+				        if (pill) pill.style.left = 'calc(50% - 4px)';
+				        renderDashboard();
+				        renderCalendar();
+				    };
+				}
             } else {
                 tripIcon.classList.remove('text-brand');
                 document.getElementById('trip-budget-module').classList.add('hidden');
