@@ -539,7 +539,7 @@ nav.nav-idle .max-w-4xl {
           <div class="text-right">
             <div class="hidden flex justify-end mb-2" id="currency-toggle-container">
 			  <div class="relative flex neu-inset p-1" id="currency-toggle">
-			    <div id="currency-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:50%; left:4px;"></div>
+			    <div id="currency-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out z-0" style="width:50%; left:4px;"></div>
 			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="curr-hkd">HKD</button>
 				<button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="curr-eur">EUR</button>
 			  </div>
@@ -1262,11 +1262,11 @@ nav.nav-idle .max-w-4xl {
         };
             
             try {
-                const res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=HKDconst url = 'https://api.frankfurter.app/latest?from=EUR&to=HKD';
-				const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);');
+                const url = 'https://api.frankfurter.app/latest?from=EUR&to=HKD';
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
                 if (!res.ok) throw new Error('Network response was not ok');
                 const wrapper = await res.json();
-				const data = JSON.parse(wrapper.contents);
+                const data = JSON.parse(wrapper.contents);
 				if (data && data.rates && data.rates.HKD) {
 				    state.exchangeRate = data.rates.HKD;
                     state.lastRateUpdate = Date.now();
