@@ -540,8 +540,8 @@ nav.nav-idle .max-w-4xl {
             <div class="hidden flex justify-end mb-2" id="currency-toggle-container">
 			  <div class="relative flex neu-inset p-1" id="currency-toggle">
 			    <div id="currency-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:50%; left:4px;"></div>
-			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="btn-currency-hkd" onclick="setCurrency('HKD')">HKD</button>
-			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="btn-currency-eur" onclick="setCurrency('EUR')">EUR</button>
+			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="curr-hkd">HKD</button>
+				<button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="curr-eur">EUR</button>
 			  </div>
 			</div>
             <p class="text-sm font-bold text-aux-mint mb-0.5" id="dash-earned-total">(+$0)</p>
@@ -2748,21 +2748,24 @@ updateCalendarFooter();
         if (existing.length > 0) {
             existingHtml = `<div class="mt-3 space-y-1.5">` +
                 existing.map(s => `
-                    <div class="flex items-center justify-between neu-inset px-3 py-2">
-                        <div class="flex flex-col">
-                            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${s.sourceName}</span>
-                            <span class="text-[10px] font-bold text-text-muted">${_fmt24to12(s.startTime)} · ${s.duration}小時</span>
-                        </div>
-                                                <div class="flex items-center gap-1">
-                            <button onclick="editScheduled('${s.id}', '${dateStr}')" class="p-1.5 text-text-muted hover:text-aux-lavender rounded-lg transition-all" title="編輯">
-                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button onclick="deleteScheduled('${s.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="移除">
-                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>`
-                ).join('') +
+				    <div class="flex items-center justify-between neu-inset px-3 py-2">
+				        <div class="flex flex-col">
+				            <span class="text-xs font-bold text-text-main dark:text-text-darkMain">${s.sourceName}</span>
+				            <span class="text-[10px] font-bold text-text-muted">${_fmt24to12(s.startTime)} · ${s.duration}小時</span>
+				        </div>
+				        <div class="flex items-center gap-1">
+				            <button onclick="confirmScheduled('${s.id}')" class="neu-btn-primary px-2.5 py-1.5 text-[10px] font-extrabold flex items-center gap-1" title="確認收入">
+				                <i data-lucide="check" class="w-3 h-3"></i>確認
+				            </button>
+				            <button onclick="editScheduled('${s.id}', '${dateStr}')" class="p-1.5 text-text-muted hover:text-aux-lavender rounded-lg transition-all" title="編輯">
+				                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+				            </button>
+				            <button onclick="deleteScheduled('${s.id}')" class="p-1.5 text-text-muted hover:text-brand rounded-lg transition-all" title="移除">
+				                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+				            </button>
+				        </div>
+				    </div>`
+				).join('') +
             `</div>`;
         }
 
