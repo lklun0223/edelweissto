@@ -538,12 +538,12 @@ nav.nav-idle .max-w-4xl {
           </div>
           <div class="text-right">
             <div class="hidden flex justify-end mb-2" id="currency-toggle-container">
-              <div class="relative flex neu-inset p-1" id="chart-type-toggle">
-                <div id="chart-type-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:50%; left:4px;"></div>
-                <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="chart-type-weekly">單週</button>
-                <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="chart-type-cumulative">累積</button>
-            </div>
-            </div>
+			  <div class="relative flex neu-inset p-1" id="currency-toggle">
+			    <div id="currency-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:50%; left:4px;"></div>
+			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="btn-currency-hkd" onclick="setCurrency('HKD')">HKD</button>
+			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="btn-currency-eur" onclick="setCurrency('EUR')">EUR</button>
+			  </div>
+			</div>
             <p class="text-sm font-bold text-aux-mint mb-0.5" id="dash-earned-total">(+$0)</p>
             <p class="text-xs font-bold text-brand" id="dash-remaining-text">$0 to go</p>
           </div>
