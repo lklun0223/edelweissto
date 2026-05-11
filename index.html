@@ -539,9 +539,11 @@ nav.nav-idle .max-w-4xl {
           <div class="text-right">
             <div class="hidden flex justify-end mb-2" id="currency-toggle-container">
 			  <div class="relative flex neu-inset p-1" id="currency-toggle">
-			    <div id="currency-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out z-0" style="width:50%; left:4px;"></div>
-			    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="curr-hkd">HKD</button>
-				<button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" id="curr-eur">EUR</button>
+			    <div id="currency-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark transition-all duration-300 ease-in-out flex items-center justify-center" style="width:50%; left:4px; z-index:20; background-color: #FDFBF7;" id="currency-pill">
+                    <span id="currency-pill-label" class="text-[10px] font-extrabold text-brand transition-opacity duration-200">HKD</span>
+                </div>
+                    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 text-text-muted" id="curr-hkd">HKD</button>
+                    <button class="relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 text-text-muted" id="curr-eur">EUR</button>
 			  </div>
 			</div>
             <p class="text-sm font-bold text-aux-mint mb-0.5" id="dash-earned-total">(+$0)</p>
@@ -4249,34 +4251,62 @@ rawChartData.push({
                 const elHKD = document.getElementById('curr-hkd');
                 const elEUR = document.getElementById('curr-eur');
                 if (elHKD && elEUR) {
-				    if (state.displayCurrency === 'HKD') {
-				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-				    } else {
-				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-				    }
-				    elHKD.onclick = () => {
-				        state.displayCurrency = 'HKD';
-				        saveState();
-				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-				        const pill = document.getElementById('currency-pill');
-				        if (pill) pill.style.left = '4px';
-				        renderDashboard();
-				        renderCalendar();
-				    };
-				    elEUR.onclick = () => {
-				        state.displayCurrency = 'EUR';
-				        saveState();
-				        elEUR.className = "px-3 py-1 text-[10px] font-bold rounded-lg shadow-neu-light dark:shadow-neu-dark text-brand bg-bg-light dark:bg-bg-dark transition-all";
-				        elHKD.className = "px-3 py-1 text-[10px] font-bold rounded-lg text-text-muted transition-all";
-				        const pill = document.getElementById('currency-pill');
-				        if (pill) pill.style.left = 'calc(50% - 4px)';
-				        renderDashboard();
-				        renderCalendar();
-				    };
-				}
+                const pillLabel = document.getElementById('currency-pill-label');
+                const pill = document.getElementById('currency-pill');
+
+if (pill) {
+    pill.style.left = state.displayCurrency === 'HKD' ? '4px' : 'calc(50% - 4px)';
+    pill.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#1A1B1E' : '#FDFBF7';
+}
+                if (pillLabel) pillLabel.textContent = state.displayCurrency;
+                // 被選中嗰側變暗淡，未選中嗰側正常灰色
+elHKD.style.color = state.displayCurrency === 'HKD' ? 'transparent' : '';
+elEUR.style.color = state.displayCurrency === 'EUR' ? 'transparent' : '';
+
+               elHKD.onclick = () => {
+                    state.displayCurrency = 'HKD';
+                    saveState();
+                    const pill = document.getElementById('currency-pill');
+                    const pillLabel = document.getElementById('currency-pill-label');
+                    if (pill) {
+                        pill.style.left = '4px';
+                        pill.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#1A1B1E' : '#FDFBF7';
+                    }
+                    if (pillLabel) {
+                        pillLabel.style.opacity = '0';
+                        setTimeout(() => {
+                            pillLabel.textContent = 'HKD';
+                            pillLabel.style.opacity = '1';
+                        }, 150);
+                    }
+                    elHKD.style.color = 'transparent';
+elEUR.style.color = '';
+                    renderDashboard();
+                    renderCalendar();
+                };
+
+                elEUR.onclick = () => {
+                    state.displayCurrency = 'EUR';
+                    saveState();
+                    const pill = document.getElementById('currency-pill');
+                    const pillLabel = document.getElementById('currency-pill-label');
+                    if (pill) {
+                        pill.style.left = 'calc(50% - 4px)';
+                        pill.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#1A1B1E' : '#FDFBF7';
+                    }
+                    if (pillLabel) {
+                        pillLabel.style.opacity = '0';
+                        setTimeout(() => {
+                            pillLabel.textContent = 'EUR';
+                            pillLabel.style.opacity = '1';
+                        }, 150);
+                    }
+                    elEUR.style.color = 'transparent';
+elHKD.style.color = '';
+                    renderDashboard();
+                    renderCalendar();
+                };
+            }
             } else {
                 tripIcon.classList.remove('text-brand');
                 document.getElementById('trip-budget-module').classList.add('hidden');
