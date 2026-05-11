@@ -1264,13 +1264,11 @@ nav.nav-idle .max-w-4xl {
         };
             
             try {
-                const url = 'https://api.frankfurter.app/latest?from=EUR&to=HKD';
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                const res = await fetch('https://corsproxy.io/?https://api.frankfurter.app/latest?from=EUR&to=HKD');
                 if (!res.ok) throw new Error('Network response was not ok');
-                const wrapper = await res.json();
-                const data = JSON.parse(wrapper.contents);
-				if (data && data.rates && data.rates.HKD) {
-				    state.exchangeRate = data.rates.HKD;
+                const data = await res.json();
+                if (data && data.rates && data.rates.HKD) {
+                    state.exchangeRate = data.rates.HKD;
                     state.lastRateUpdate = Date.now();
                     saveState();
                     if (manual) showToast('匯率已更新！');
