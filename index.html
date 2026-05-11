@@ -637,9 +637,15 @@ nav.nav-idle .max-w-4xl {
             <!-- Period buttons -->
             <div class="relative flex neu-inset p-1 mb-3" id="chart-period-container">
                 <div id="chart-period-pill" class="absolute top-1 bottom-1 rounded-lg shadow-neu-light dark:shadow-neu-dark bg-bg-light dark:bg-bg-dark transition-all duration-300 ease-in-out" style="width:33.33%; left:4px;"></div>
-                <button class="chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" data-weeks="4">4週</button>
-                <button class="chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" data-weeks="8">8週</button>
-                <button class="chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300" data-weeks="all">全部</button>
+                <button class="chart-period-btn relative z-10 flex-1 py-1 rounded-lg transition-colors duration-300 flex items-center justify-center" data-action="zoom-in" title="放大">
+  <i data-lucide="zoom-in" style="width:14px;height:14px;"></i>
+</button>
+<button class="chart-period-btn relative z-10 flex-1 py-1 rounded-lg transition-colors duration-300 flex items-center justify-center" data-action="zoom-out" title="縮小">
+  <i data-lucide="zoom-out" style="width:14px;height:14px;"></i>
+</button>
+<button class="chart-period-btn relative z-10 flex-1 py-1 rounded-lg transition-colors duration-300 flex items-center justify-center" data-action="zoom-all" title="顯示全部">
+  <i data-lucide="minimize-2" style="width:14px;height:14px;"></i>
+</button>
             </div>
 
             <!-- Summary chip -->
@@ -653,8 +659,8 @@ nav.nav-idle .max-w-4xl {
                 <!-- Fixed Y axis overlay -->
                 <canvas id="yAxisCanvas" class="absolute top-0 left-0 pointer-events-none" style="z-index:2; height:192px;"></canvas>
                 <!-- Scrollable chart -->
-                <div id="chart-scroll-container" class="w-full overflow-x-auto no-scrollbar" style="-webkit-overflow-scrolling: touch;">
-                    <div id="chart-wrapper" class="h-48 relative" style="min-width: 100%;">
+<div id="chart-scroll-container" class="overflow-x-auto no-scrollbar" style="-webkit-overflow-scrolling: touch; width: 100%; max-width: 100%; display: block;">
+<div id="chart-wrapper" class="h-48 relative" style="min-width: 0;">
     <canvas id="incomeChart"></canvas>
     
 </div>
@@ -2011,423 +2017,404 @@ renderTodayScheduled();
         }
 
         function renderChart() {
-            const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+    const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
 
-            // ── 計算週目標線 ──────────────────────────────────
-            let weeklyTarget = 0;
-            let showTargetLine = false;
-            if (state.isTripMode && state.departureDate) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const dep = new Date(state.departureDate);
-                const daysRemaining = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
-                if (daysRemaining > 0) {
-                    let totalBudget = 0;
-                    state.tripCategories.forEach(cat => {
-                        cat.items.forEach(item => { totalBudget += Number(item.amount) || 0; });
-                    });
-                    if (totalBudget === 0) totalBudget = Number(state.GOAL) || 0;
-                    const specialExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-                    const availableSavings = Math.max(0, getCurrentTotal() - specialExpenses);
-                    const totalRemaining = Math.max(0, totalBudget - availableSavings);
-                    const dailyTarget = totalRemaining / daysRemaining;
-                    if (dailyTarget > 0) {
-                        weeklyTarget = dailyTarget * 7;
-                        if (state.isTripMode && state.displayCurrency === 'EUR') weeklyTarget = weeklyTarget / state.exchangeRate;
-                        showTargetLine = true;
-                    }
-                }
-            }
-
-            // ── 建立週資料 ────────────────────────────────────
-            const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
-            let runningCumulative = 0;
-            const weeklyDataMap = {};
-
-            sortedRecords.forEach(record => {
-                const weekLabel = getWeekRange(record.date);
-                if (!weeklyDataMap[weekLabel]) {
-                    weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: 0, scheduled: 0, _date: record.date };
-                }
-                let amt = record.income;
-                if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
-                weeklyDataMap[weekLabel].income += amt;
-                runningCumulative += amt;
-                weeklyDataMap[weekLabel].cumulative = runningCumulative;
+    // ── 計算週目標線 ──────────────────────────────────
+    let weeklyTarget = 0;
+    let showTargetLine = false;
+    if (state.isTripMode && state.departureDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dep = new Date(state.departureDate);
+        const daysRemaining = Math.ceil((dep - today) / (1000 * 60 * 60 * 24));
+        if (daysRemaining > 0) {
+            let totalBudget = 0;
+            state.tripCategories.forEach(cat => {
+                cat.items.forEach(item => { totalBudget += Number(item.amount) || 0; });
             });
-
-            // ── 預約收入疊加 ──────────────────────────────────
-            (state.scheduled || []).forEach(entry => {
-                const weekLabel = getWeekRange(entry.date);
-                if (!weeklyDataMap[weekLabel]) {
-                    weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative, scheduled: 0, _date: entry.date };
-                }
-                let amt = entry.income || 0;
-                if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
-                weeklyDataMap[weekLabel].scheduled += amt;
-            });
-
-            const allData = Object.values(weeklyDataMap);
-
-            // ── Viewport 計算 ─────────────────────────────────
-            if (!state.chartViewport) state.chartViewport = { weeks: 4 };
-            const vp = state.chartViewport;
-            const totalWeeks = allData.length;
-            const viewData = allData; // 永遠畫晒全部
-            const labels = viewData.map(d => d.name);
-            const confirmedDataset = viewData.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
-            const scheduledDataset = viewData.map(d => state.chartType === 'weekly' ? (d.scheduled || 0) : 0);
-
-            
-            // ── 按鈕樣式 (sliding pill) ───────────────────────
-            const btnWeekly = document.getElementById('chart-view-weekly');
-            const btnCumulative = document.getElementById('chart-view-cumulative');
-            const typePill = document.getElementById('chart-type-pill');
-            const typeToggle = document.getElementById('chart-type-toggle');
-
-            if (btnWeekly && btnCumulative) {
-                const isWeekly = state.chartType === 'weekly';
-                btnWeekly.className = `relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isWeekly ? 'text-brand' : 'text-text-muted'}`;
-                btnCumulative.className = `relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${!isWeekly ? 'text-brand' : 'text-text-muted'}`;
-                if (typePill && typeToggle) {
-                    requestAnimationFrame(() => {
-                        const btnW = typeToggle.offsetWidth / 2;
-                        typePill.style.width = btnW + 'px';
-                        typePill.style.left = (isWeekly ? 0 : btnW) + 'px';
-                    });
-                }
+            if (totalBudget === 0) totalBudget = Number(state.GOAL) || 0;
+            const specialExpenses = (state.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+            const availableSavings = Math.max(0, getCurrentTotal() - specialExpenses);
+            const totalRemaining = Math.max(0, totalBudget - availableSavings);
+            const dailyTarget = totalRemaining / daysRemaining;
+            if (dailyTarget > 0) {
+                weeklyTarget = dailyTarget * 7;
+                if (state.isTripMode && state.displayCurrency === 'EUR') weeklyTarget = weeklyTarget / state.exchangeRate;
+                showTargetLine = true;
             }
-
-            const periodPill = document.getElementById('chart-period-pill');
-            const periodContainer = document.getElementById('chart-period-container');
-            const periodBtns = ['4', '8', 'all'];
-            document.querySelectorAll('.chart-period-btn').forEach((btn, idx) => {
-                const isActive = String(btn.dataset.weeks) === String(vp.weeks);
-                btn.className = `chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isActive ? 'text-brand' : 'text-text-muted'}`;
-                if (isActive && periodPill && periodContainer) {
-                    requestAnimationFrame(() => {
-                        const btnW = periodContainer.offsetWidth / 3;
-                        periodPill.style.width = btnW + 'px';
-                        periodPill.style.left = (idx * btnW) + 'px';
-                    });
-                }
-            });
-
-            // ── Chart 顏色 ────────────────────────────────────
-            const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC';
-            const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-            const textColor = '#9CA3AF';
-
-            const confirmedRadius = confirmedDataset.map((v, i) =>
-                scheduledDataset[i] > 0
-                    ? { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 }
-                    : { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
-            );
-
-
-            if (chartInstance) chartInstance.destroy();
-
-            const chartConfigType = state.chartType === 'weekly' ? 'bar' : 'line';
-
-            // ── Datasets ──────────────────────────────────────
-            const datasets = [{
-                label: state.chartType === 'weekly' ? '確認收入' : '期間累積',
-                data: confirmedDataset.length ? confirmedDataset : [0],
-                backgroundColor: state.chartType === 'weekly' ? mainColor : 'rgba(165,180,252,0.2)',
-                borderColor: mainColor,
-                borderWidth: state.chartType === 'weekly' ? 0 : 3,
-                fill: state.chartType === 'cumulative',
-                tension: 0.4,
-                pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
-                pointBorderColor: mainColor,
-                pointBorderWidth: 2,
-                pointRadius: state.chartType === 'cumulative' ? 4 : 0,
-                borderRadius: state.chartType === 'weekly' ? confirmedRadius : 0,
-                barThickness: 'flex',
-                maxBarThickness: 30,
-                order: 1
-            }];
-
-            if (state.chartType === 'weekly') {
-                datasets.push({
-                    label: '預約收入',
-                    data: scheduledDataset,
-                    backgroundColor: 'rgba(123,198,126,0.28)',
-                    borderColor: 'rgba(123,198,126,0.5)',
-                    borderWidth: 1,
-                    borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
-                    barThickness: 'flex',
-                    maxBarThickness: 30,
-                    order: 2
-                });
-            }
-
-           
-
-            // ── Y 軸上限 ──────────────────────────────────────
-            const allVals = [...confirmedDataset, ...scheduledDataset.map((s, i) => (confirmedDataset[i] || 0) + s)];
-            if (showTargetLine) allVals.push(weeklyTarget);
-            const yMax = allVals.length ? Math.max(...allVals) * 1.2 : undefined;
-            // 根據週數設定 canvas 寬度
-            const chartWrapper = document.getElementById('chart-wrapper');
-            const scrollEl = document.getElementById('chart-scroll-container');
-            const containerW = scrollEl ? scrollEl.offsetWidth : 300;
-            const vwks = vp.weeks === 'all' ? totalWeeks : Number(vp.weeks);
-            const visibleWeeks = vp.weeks === 'all' ? totalWeeks : Math.min(Number(vp.weeks), totalWeeks);
-const mobileBase = Math.min(containerW, 300); // 以手機寬度為基準，最大 390px
-const barW = Math.floor(mobileBase / visibleWeeks);
-const totalW = Math.max(totalWeeks * barW, containerW);
-            if (chartWrapper) chartWrapper.style.width = totalW + 'px';
-            
-
-            let selectedBarIndex = null;
-
-function renderChartInfo(idx) {
-    const infoBar = document.getElementById('chart-info-bar');
-    const infoContent = document.getElementById('chart-info-content');
-    if (!infoBar || !infoContent) return;
-
-    const hideInfoBar = () => {
-        infoBar.classList.remove('mt-3', 'opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
-        infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
-        setTimeout(() => {
-            if (selectedBarIndex === null) infoContent.innerHTML = '';
-        }, 220);
-    };
-
-    const showInfoBar = () => {
-        infoBar.classList.add('mt-3');
-        infoBar.classList.remove('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
-        infoBar.classList.add('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
-    };
-
-    if (idx === null || idx === undefined) {
-        hideInfoBar();
-        return;
+        }
     }
 
-    const week = viewData[idx];
-    if (!week) {
-        hideInfoBar();
-        return;
+    // ── 建立週資料 ────────────────────────────────────
+    const sortedRecords = [...state.records].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let runningCumulative = 0;
+    const weeklyDataMap = {};
+
+    sortedRecords.forEach(record => {
+        const weekLabel = getWeekRange(record.date);
+        if (!weeklyDataMap[weekLabel]) {
+            weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: 0, scheduled: 0, _date: record.date };
+        }
+        let amt = record.income;
+        if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+        weeklyDataMap[weekLabel].income += amt;
+        runningCumulative += amt;
+        weeklyDataMap[weekLabel].cumulative = runningCumulative;
+    });
+
+    // ── 預約收入疊加 ──────────────────────────────────
+    (state.scheduled || []).forEach(entry => {
+        const weekLabel = getWeekRange(entry.date);
+        if (!weeklyDataMap[weekLabel]) {
+            weeklyDataMap[weekLabel] = { name: weekLabel, income: 0, cumulative: runningCumulative, scheduled: 0, _date: entry.date };
+        }
+        let amt = entry.income || 0;
+        if (state.isTripMode && state.displayCurrency === 'EUR') amt = amt / state.exchangeRate;
+        weeklyDataMap[weekLabel].scheduled += amt;
+    });
+
+    const allData = Object.values(weeklyDataMap);
+
+    // ── Viewport 計算 ─────────────────────────────────
+    if (!state.chartViewport) state.chartViewport = { weeks: 4 };
+    const vp = state.chartViewport;
+    const totalWeeks = allData.length;
+    const viewData = allData;
+    const labels = viewData.map(d => d.name);
+    const confirmedDataset = viewData.map(d => state.chartType === 'weekly' ? d.income : d.cumulative);
+    const scheduledDataset = viewData.map(d => state.chartType === 'weekly' ? (d.scheduled || 0) : 0);
+
+    // ── 按鈕樣式 (sliding pill) ───────────────────────
+    const btnWeekly = document.getElementById('chart-view-weekly');
+    const btnCumulative = document.getElementById('chart-view-cumulative');
+    const typePill = document.getElementById('chart-type-pill');
+    const typeToggle = document.getElementById('chart-type-toggle');
+
+    if (btnWeekly && btnCumulative) {
+        const isWeekly = state.chartType === 'weekly';
+        btnWeekly.className = `relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isWeekly ? 'text-brand' : 'text-text-muted'}`;
+        btnCumulative.className = `relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${!isWeekly ? 'text-brand' : 'text-text-muted'}`;
+        if (typePill && typeToggle) {
+            requestAnimationFrame(() => {
+                const btnW = typeToggle.offsetWidth / 2;
+                typePill.style.width = btnW + 'px';
+                typePill.style.left = (isWeekly ? 0 : btnW) + 'px';
+            });
+        }
     }
 
-    const isDark = state.isTripMode ? state.isDarkMode : state.isDarkMode;
-    const sym = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
-    const lastDailyAvg = state._lastDailyAvg || 0;
-    const combinedTarget = (lastDailyAvg * 7) + (showTargetLine ? weeklyTarget : 0);
-    const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
-    const dailyAvg = week.income / 7;
+    // ── Period pill 樣式 ──────────────────────────────
+    const periodPill = document.getElementById('chart-period-pill');
+    const periodContainer = document.getElementById('chart-period-container');
+    document.querySelectorAll('.chart-period-btn').forEach((btn, idx) => {
+        const isActive = String(btn.dataset.weeks) === String(vp.weeks);
+        btn.className = `chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isActive ? 'text-brand' : 'text-text-muted'}`;
+        if (isActive && periodPill && periodContainer) {
+            requestAnimationFrame(() => {
+                const btnW = periodContainer.offsetWidth / 3;
+                periodPill.style.width = btnW + 'px';
+                periodPill.style.left = (idx * btnW) + 'px';
+            });
+        }
+    });
 
-    showInfoBar();
+    // ── Chart 顏色 ────────────────────────────────────
+    const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC';
+    const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    const textColor = '#9CA3AF';
 
-    infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
-    infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
-    infoBar.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.05)';
-    infoContent.style.color = isDark ? '#E5E7EB' : '#4A4A4A';
+    const confirmedRadius = confirmedDataset.map((v, i) =>
+        scheduledDataset[i] > 0
+            ? { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 }
+            : { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
+    );
 
-    const scheduledBlock = week.scheduled > 0 ? `
-        <div style="
-            padding:6px 8px;
-            border-radius:12px;
-            background:${isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)'};
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-        ">
-            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">預約</span>
-            <span style="font-weight:700; color:${isDark ? '#86efac' : '#16a34a'};">+${sym}${formatMoney(Math.round(week.scheduled))}</span>
-        </div>
-    ` : '';
+    // ── wrapper 寬度 ──────────────────────────────────
+    const chartWrapper = document.getElementById('chart-wrapper');
+    const scrollEl = document.getElementById('chart-scroll-container');
+    const containerW = scrollEl ? scrollEl.offsetWidth : 300;
+    // 首次初始化：預設顯示 5 條棒
+    if (!state.chartBarWidth) {
+        state.chartBarWidth = Math.min(80, Math.max(18, Math.floor(containerW / 8.3)));
+    }
+    const barW = state.chartBarWidth;
+    const totalW = Math.max(totalWeeks * barW, containerW);
+    if (chartWrapper) chartWrapper.style.width = totalW + 'px';
 
-    const diffBlock = diff !== null ? `
-        <div style="
-            padding:6px 8px;
-            border-radius:12px;
-            background:${diff >= 0
-                ? (isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)')
-                : (isDark ? 'rgba(248,113,113,0.10)' : 'rgba(239,68,68,0.10)')};
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-        ">
-            <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">與目標差</span>
-            <span style="font-weight:700; color:${diff >= 0
-                ? (isDark ? '#86efac' : '#16a34a')
-                : (isDark ? '#fca5a5' : '#dc2626')};">
-                ${diff >= 0 ? '↑' : '↓'} ${diff >= 0 ? '+' : ''}${sym}${formatMoney(Math.round(diff))}
-            </span>
-        </div>
-    ` : '';
+    // ── Datasets ──────────────────────────────────────
+    const maxBar = vp.weeks === 'all' ? 14 : vp.weeks === 8 ? 24 : 40;
 
-    infoContent.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:10px; font-weight:700; letter-spacing:0.04em; color:${isDark ? '#9CA3AF' : '#6B7280'};">
-                        ${week.name}
-                    </span>
-                    <span style="font-size:10px; font-weight:700; color:${isDark ? '#86efac' : '#16a34a'};">
-                        日均 ${sym}${formatMoney(Math.round(dailyAvg))}
-                    </span>
-                </div>
-                <button type="button" id="chart-info-close" style="
-                    border:none;
-                    background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};
-                    color:${isDark ? '#9CA3AF' : '#6B7280'};
-                    width:22px;
-                    height:22px;
-                    border-radius:999px;
-                    font-size:12px;
-                    line-height:22px;
-                    text-align:center;
-                    padding:0;
-                    cursor:pointer;
-                ">×</button>
-            </div>
+    const datasets = [{
+        label: state.chartType === 'weekly' ? '確認收入' : '期間累積',
+        data: confirmedDataset.length ? confirmedDataset : [0],
+        backgroundColor: state.chartType === 'weekly' ? mainColor : 'rgba(165,180,252,0.2)',
+        borderColor: mainColor,
+        borderWidth: state.chartType === 'weekly' ? 0 : 3,
+        fill: state.chartType === 'cumulative',
+        tension: 0.4,
+        pointBackgroundColor: state.isDarkMode ? '#1A1B1E' : '#FDFBF7',
+        pointBorderColor: mainColor,
+        pointBorderWidth: 2,
+        pointRadius: state.chartType === 'cumulative' ? 4 : 0,
+        borderRadius: state.chartType === 'weekly' ? confirmedRadius : 0,
+        barThickness: 'flex',
+        maxBarThickness: Math.floor((state.chartBarWidth || 52) * 0.7),
+        order: 1
+    }];
 
-            <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;">
-                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
-                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">確認</div>
-                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.income))}</div>
-                </div>
+    if (state.chartType === 'weekly') {
+        datasets.push({
+            label: '預約收入',
+            data: scheduledDataset,
+            backgroundColor: 'rgba(123,198,126,0.28)',
+            borderColor: 'rgba(123,198,126,0.5)',
+            borderWidth: 1,
+            borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+            barThickness: 'flex',
+            maxBarThickness: Math.floor((state.chartBarWidth || 52) * 0.7),
+            order: 2
+        });
+    }
 
-                <div style="padding:6px 8px; border-radius:12px; background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
-                    <div style="font-size:10px; color:${isDark ? '#9CA3AF' : '#6B7280'};">累積</div>
-                    <div style="margin-top:2px; font-size:13px; font-weight:700;">${sym}${formatMoney(Math.round(week.cumulative))}</div>
-                </div>
-            </div>
+    // ── Y 軸上限 ──────────────────────────────────────
+    const allVals = [...confirmedDataset, ...scheduledDataset.map((s, i) => (confirmedDataset[i] || 0) + s)];
+    if (showTargetLine) allVals.push(weeklyTarget);
+    const yMax = allVals.length ? Math.max(...allVals) * 1.2 : undefined;
 
-            ${scheduledBlock}
-            ${diffBlock}
-        </div>
-    `;
+    let selectedBarIndex = null;
 
-    const closeBtn = document.getElementById('chart-info-close');
-    if (closeBtn) {
-        closeBtn.onclick = () => {
-            selectedBarIndex = null;
-            hideInfoBar();
+    function renderChartInfo(idx) {
+        const infoBar = document.getElementById('chart-info-bar');
+        const infoContent = document.getElementById('chart-info-content');
+        if (!infoBar || !infoContent) return;
+
+        const hideInfoBar = () => {
+            infoBar.classList.remove('mt-3', 'opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+            infoBar.classList.add('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+            setTimeout(() => {
+                if (selectedBarIndex === null) infoContent.innerHTML = '';
+            }, 220);
         };
+
+        const showInfoBar = () => {
+            infoBar.classList.add('mt-3');
+            infoBar.classList.remove('opacity-0', 'translate-y-2', 'max-h-0', 'pointer-events-none');
+            infoBar.classList.add('opacity-100', 'translate-y-0', 'max-h-80', 'pointer-events-auto');
+        };
+
+        if (idx === null || idx === undefined) { hideInfoBar(); return; }
+
+        const week = viewData[idx];
+        if (!week) { hideInfoBar(); return; }
+
+        const isDark = state.isDarkMode;
+        const sym = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+        const lastDailyAvg = state._lastDailyAvg || 0;
+        const combinedTarget = (lastDailyAvg * 7) + (showTargetLine ? weeklyTarget : 0);
+        const diff = combinedTarget > 0 ? week.income - combinedTarget : null;
+        const dailyAvg = week.income / 7;
+
+        showInfoBar();
+
+        infoBar.style.background = isDark ? 'rgba(26,27,30,0.88)' : 'rgba(255,255,255,0.78)';
+        infoBar.style.border = `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`;
+        infoBar.style.boxShadow = isDark ? '0 8px 24px rgba(0,0,0,0.25)' : '0 6px 18px rgba(0,0,0,0.05)';
+        infoContent.style.color = isDark ? '#E5E7EB' : '#4A4A4A';
+
+        const scheduledBlock = week.scheduled > 0 ? `
+            <div style="padding:6px 8px;border-radius:12px;background:${isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)'};display:flex;justify-content:space-between;gap:12px;">
+                <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">預約</span>
+                <span style="font-weight:700;color:${isDark ? '#86efac' : '#16a34a'};">+${sym}${formatMoney(Math.round(week.scheduled))}</span>
+            </div>` : '';
+
+        const diffBlock = diff !== null ? `
+            <div style="padding:6px 8px;border-radius:12px;background:${diff >= 0 ? (isDark ? 'rgba(134,239,172,0.10)' : 'rgba(34,197,94,0.10)') : (isDark ? 'rgba(248,113,113,0.10)' : 'rgba(239,68,68,0.10)')};display:flex;justify-content:space-between;gap:12px;">
+                <span style="color:${isDark ? '#9CA3AF' : '#6B7280'};">與目標差</span>
+                <span style="font-weight:700;color:${diff >= 0 ? (isDark ? '#86efac' : '#16a34a') : (isDark ? '#fca5a5' : '#dc2626')};">
+                    ${diff >= 0 ? '↑' : '↓'} ${diff >= 0 ? '+' : ''}${sym}${formatMoney(Math.round(diff))}
+                </span>
+            </div>` : '';
+
+        infoContent.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-size:10px;font-weight:700;letter-spacing:0.04em;color:${isDark ? '#9CA3AF' : '#6B7280'};">${week.name}</span>
+                        <span style="font-size:10px;font-weight:700;color:${isDark ? '#86efac' : '#16a34a'};">日均 ${sym}${formatMoney(Math.round(dailyAvg))}</span>
+                    </div>
+                    <button type="button" id="chart-info-close" style="border:none;background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};color:${isDark ? '#9CA3AF' : '#6B7280'};width:22px;height:22px;border-radius:999px;font-size:12px;line-height:22px;text-align:center;padding:0;cursor:pointer;">×</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+                    <div style="padding:6px 8px;border-radius:12px;background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
+                        <div style="font-size:10px;color:${isDark ? '#9CA3AF' : '#6B7280'};">確認</div>
+                        <div style="margin-top:2px;font-size:13px;font-weight:700;">${sym}${formatMoney(Math.round(week.income))}</div>
+                    </div>
+                    <div style="padding:6px 8px;border-radius:12px;background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};">
+                        <div style="font-size:10px;color:${isDark ? '#9CA3AF' : '#6B7280'};">累積</div>
+                        <div style="margin-top:2px;font-size:13px;font-weight:700;">${sym}${formatMoney(Math.round(week.cumulative))}</div>
+                    </div>
+                </div>
+                ${scheduledBlock}
+                ${diffBlock}
+            </div>`;
+
+        const closeBtn = document.getElementById('chart-info-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => { selectedBarIndex = null; hideInfoBar(); };
+        }
     }
+
+
+
+    // ── Destroy 舊 chart（只在首次/type切換時） ────────
+    if (chartInstance) chartInstance.destroy();
+
+    const chartConfigType = state.chartType === 'weekly' ? 'bar' : 'line';
+
+    chartInstance = new Chart(document.getElementById('incomeChart').getContext('2d'), {
+        type: chartConfigType,
+        data: {
+            labels: labels.length ? labels : ['無資料'],
+            datasets
+        },
+        plugins: [{
+            id: 'yAxisMirror',
+            afterDraw(chart) {
+                const yAxisCanvas = document.getElementById('yAxisCanvas');
+                if (!yAxisCanvas) return;
+                const yScale = chart.scales['y'];
+                const ctx2 = yAxisCanvas.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                const w = yScale.right + 4;
+                const h = chart.height;
+                yAxisCanvas.width = w * dpr;
+                yAxisCanvas.height = h * dpr;
+                yAxisCanvas.style.width = w + 'px';
+                yAxisCanvas.style.height = h + 'px';
+                document.documentElement.style.setProperty('--y-axis-width', w + 'px');
+                ctx2.scale(dpr, dpr);
+                const bgColor = state.isDarkMode ? '#1A1B1E' : '#FDFBF7';
+                ctx2.fillStyle = bgColor;
+                ctx2.fillRect(0, 0, w, h);
+                ctx2.drawImage(chart.canvas, 0, 0, w * dpr, h * dpr, 0, 0, w, h);
+            }
+        }, {
+            id: 'targetLine',
+            afterDraw(chart) {
+                if (state.chartType !== 'weekly') return;
+                const ctx = chart.ctx;
+                const yScale = chart.scales['y'];
+                const xScale = chart.scales['x'];
+                const lastDailyAvg = state._lastDailyAvg || 0;
+                if (lastDailyAvg > 0 || showTargetLine) {
+                    let weeklyNeed = lastDailyAvg * 7;
+                    if (state.isTripMode && state.displayCurrency === 'EUR') weeklyNeed = weeklyNeed / state.exchangeRate;
+                    const combinedTarget = weeklyNeed + (showTargetLine ? weeklyTarget : 0);
+                    const y2 = yScale.getPixelForValue(combinedTarget);
+                    const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.setLineDash([4, 4]);
+                    ctx.strokeStyle = 'rgba(120,120,120,0.4)';
+                    ctx.lineWidth = 1.5;
+                    ctx.moveTo(xScale.left, y2);
+                    ctx.lineTo(xScale.right, y2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = 'rgba(120,120,120,0.7)';
+                    ctx.font = '600 9px Inter';
+                    ctx.fillText(`每週需 ${symbol}${formatMoney(Math.round(combinedTarget))}`, xScale.left + 4, y2 - 4);
+                    ctx.restore();
+                }
+            }
+        }],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeOutQuart' },
+            onClick: (event, elements, chart) => {
+                const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                if (!points.length) return;
+                const idx = points[0].index;
+                if (selectedBarIndex === idx) {
+                    selectedBarIndex = null;
+                    renderChartInfo(null);
+                    return;
+                }
+                selectedBarIndex = idx;
+                renderChartInfo(idx);
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            layout: { padding: { left: 0 } },
+            scales: {
+                x: {
+                    stacked: state.chartType === 'weekly',
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } }
+                },
+                y: {
+                    stacked: state.chartType === 'weekly',
+                    grid: { color: gridColor, drawBorder: false },
+                    ticks: {
+                        color: textColor,
+                        font: { family: 'Inter', size: 10, weight: '600' },
+                        callback: (val) => `${symbol}${val}`
+                    },
+                    beginAtZero: true,
+                    ...(yMax ? { max: yMax } : {})
+                }
+            }
+        }
+    });
+
+    setTimeout(() => { if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth; }, 50);
+
+    // ── Pinch-to-zoom ─────────────────────────────────
+(function initPinchZoom() {
+    const el = document.getElementById('chart-scroll-container');
+    if (!el) return;
+
+    // 移除舊 listener 防止重複綁定
+    if (el._pinchHandler) {
+        el.removeEventListener('touchstart', el._pinchHandler.start);
+        el.removeEventListener('touchmove', el._pinchHandler.move);
+    }
+
+    let startDist = null;
+    let startBarW = null;
+    const MIN_BAR = 18, MAX_BAR = 80;
+
+    function getDist(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function onStart(e) {
+        if (e.touches.length === 2) {
+            startDist = getDist(e.touches);
+            startBarW = state.chartBarWidth || 52;
+        }
+    }
+
+    function onMove(e) {
+        if (e.touches.length !== 2 || startDist === null) return;
+        e.preventDefault(); // 阻止頁面縮放
+        const currentDist = getDist(e.touches);
+        const scale = currentDist / startDist;
+        const newBarW = Math.round(startBarW * scale);
+        state.chartBarWidth = Math.min(MAX_BAR, Math.max(MIN_BAR, newBarW));
+        _applyChartBarWidth();
+    }
+
+    el._pinchHandler = { start: onStart, move: onMove };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+})();
 }
-
-
-            chartInstance = new Chart(document.getElementById('incomeChart').getContext('2d'), {
-                type: chartConfigType,
-                data: {
-                    labels: labels.length ? labels : ['無資料'],
-                    datasets
-                },
-                plugins: [{
-                    id: 'yAxisMirror',
-                    afterDraw(chart) {
-                        const yAxisCanvas = document.getElementById('yAxisCanvas');
-                        if (!yAxisCanvas) return;
-                        const yScale = chart.scales['y'];
-                        const ctx2 = yAxisCanvas.getContext('2d');
-                        const dpr = window.devicePixelRatio || 1;
-                        const w = yScale.right + 4;
-                        const h = chart.height;
-                        yAxisCanvas.width = w * dpr;
-                        yAxisCanvas.height = h * dpr;
-                        yAxisCanvas.style.width = w + 'px';
-                        yAxisCanvas.style.height = h + 'px';
-                        document.documentElement.style.setProperty('--y-axis-width', w + 'px');
-                        ctx2.scale(dpr, dpr);
-                        const bgColor = state.isDarkMode ? '#1A1B1E' : '#FDFBF7';
-                        ctx2.fillStyle = bgColor;
-                        ctx2.fillRect(0, 0, w, h);
-                        ctx2.drawImage(
-                            chart.canvas,
-                            0, 0, w * dpr, h * dpr,
-                            0, 0, w, h
-                        );
-                    }
-                },
-                {
-                id: 'targetLine',
-                afterDraw(chart) {
-                    if (state.chartType !== 'weekly') return;
-                    const ctx = chart.ctx;
-                    const yScale = chart.scales['y'];
-                    const xScale = chart.scales['x'];
-
-                    
-                    // 每日需指導線
-                    const lastDailyAvg = state._lastDailyAvg || 0;
-                    if (lastDailyAvg > 0 || showTargetLine) {
-                        let weeklyNeed = lastDailyAvg * 7;
-                        if (state.isTripMode && state.displayCurrency === 'EUR') weeklyNeed = weeklyNeed / state.exchangeRate;
-                        const combinedTarget = weeklyNeed + (showTargetLine ? weeklyTarget : 0);
-                        const y2 = yScale.getPixelForValue(combinedTarget);
-                        const symbol = (state.isTripMode && state.displayCurrency === 'EUR') ? '€' : '$';
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.setLineDash([4, 4]);
-                        ctx.strokeStyle = 'rgba(120,120,120,0.4)';
-                        ctx.lineWidth = 1.5;
-                        ctx.moveTo(xScale.left, y2);
-                        ctx.lineTo(xScale.right, y2);
-                        ctx.stroke();
-                        // label
-                        ctx.setLineDash([]);
-                        ctx.fillStyle = 'rgba(120,120,120,0.7)';
-                        ctx.font = '600 9px Inter';
-                        ctx.fillText(`每週需 ${symbol}${formatMoney(Math.round(combinedTarget))}`, xScale.left + 4, y2 - 4);
-                        ctx.restore();
-                    }
-                }
-            }],
-                options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 800, easing: 'easeOutQuart' },
-    onClick: (event, elements, chart) => {
-        const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
-        if (!points.length) return;
-
-        const idx = points[0].index;
-
-        if (selectedBarIndex === idx) {
-            selectedBarIndex = null;
-            renderChartInfo(null);
-            return;
-        }
-
-        selectedBarIndex = idx;
-        renderChartInfo(idx);
-    },
-    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                        enabled: false,
-                    },  
-                },
-                layout: { padding: { left: 0 } },
-                scales: {
-                        x: {
-                            stacked: state.chartType === 'weekly',
-                            grid: { display: false },
-                            ticks: { color: textColor, font: { family: 'Inter', size: 10, weight: '600' } }
-                        },
-                        y: {
-                            stacked: state.chartType === 'weekly',
-                            grid: { color: gridColor, drawBorder: false },
-                            ticks: {
-                                color: textColor,
-                                font: { family: 'Inter', size: 10, weight: '600' },
-                                callback: (val) => `${symbol}${val}`
-                            },
-                            beginAtZero: true,
-                            ...(yMax ? { max: yMax } : {})
-                        }
-                    }
-                }
-            });
-
-            setTimeout(() => { if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth; }, 50);
-        }
 
             // ── Scroll fade hint ──────────────────────────────
             const fadEl = document.getElementById('chart-scroll-fade');
@@ -2459,13 +2446,62 @@ const updateFade = () => {
         function _initChartPeriodBtns() {
             document.querySelectorAll('.chart-period-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const w = e.currentTarget.dataset.weeks;
-                    if (!state.chartViewport) state.chartViewport = { weeks: 8, offset: 0 };
-                    state.chartViewport.weeks = w === 'all' ? 'all' : parseInt(w);
-                    state.chartViewport.offset = 0;
-                    renderChart();
+                    const action = e.currentTarget.dataset.action;
+                    _handleChartZoom(action);
                 });
             });
+        }
+
+        function _handleChartZoom(action) {
+            const scrollEl = document.getElementById('chart-scroll-container');
+            const containerW = scrollEl ? scrollEl.offsetWidth : 300;
+            const STEP = 4; // 每次放大/縮小幅度 px
+            const MIN_BAR = 18;
+            const MAX_BAR = 80;
+
+            if (!state.chartBarWidth) {
+                // 預設：顯示 5 條棒
+                state.chartBarWidth = Math.min(MAX_BAR, Math.max(MIN_BAR, Math.floor(containerW / 5)));
+            }
+
+            if (action === 'zoom-in') {
+                state.chartBarWidth = Math.min(MAX_BAR, state.chartBarWidth + STEP);
+            } else if (action === 'zoom-out') {
+                state.chartBarWidth = Math.max(MIN_BAR, state.chartBarWidth - STEP);
+            } else if (action === 'zoom-all') {
+                // 計算 fit-all barWidth
+                const chartWrapper = document.getElementById('chart-wrapper');
+                // totalWeeks 需要從 chart data 取
+                const totalWeeks = chartInstance ? chartInstance.data.labels.length : 1;
+                state.chartBarWidth = Math.max(MIN_BAR, Math.floor(containerW / totalWeeks));
+            }
+
+            _applyChartBarWidth();
+        }
+
+        function _applyChartBarWidth() {
+            if (!chartInstance) return;
+
+            const scrollEl = document.getElementById('chart-scroll-container');
+            const chartWrapper = document.getElementById('chart-wrapper');
+            const containerW = scrollEl ? scrollEl.offsetWidth : 300;
+            const totalWeeks = chartInstance.data.labels.length;
+            const barW = state.chartBarWidth || 52;
+
+            const totalW = Math.max(totalWeeks * barW, containerW);
+            if (chartWrapper) chartWrapper.style.width = totalW + 'px';
+
+            // 動態 maxBarThickness（barW 減去兩邊 padding 約 30%）
+            const maxBar = Math.floor(barW * 0.7);
+
+            chartInstance.data.datasets.forEach(ds => {
+                ds.maxBarThickness = maxBar;
+            });
+
+            chartInstance.update('none');
+
+            // scroll 維持最右（只在 zoom-all 時）
+            // 其他情況保持當前 scroll 位置
         }
 
         function initChartTypeBtns() {
