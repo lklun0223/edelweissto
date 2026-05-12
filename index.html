@@ -2103,21 +2103,6 @@ renderTodayScheduled();
         }
     }
 
-    // ── Period pill 樣式 ──────────────────────────────
-    const periodPill = document.getElementById('chart-period-pill');
-    const periodContainer = document.getElementById('chart-period-container');
-    document.querySelectorAll('.chart-period-btn').forEach((btn, idx) => {
-        const isActive = String(btn.dataset.weeks) === String(vp.weeks);
-        btn.className = `chart-period-btn relative z-10 flex-1 px-3 py-1 text-[10px] font-bold rounded-lg transition-colors duration-300 ${isActive ? 'text-brand' : 'text-text-muted'}`;
-        if (isActive && periodPill && periodContainer) {
-            requestAnimationFrame(() => {
-                const btnW = periodContainer.offsetWidth / 3;
-                periodPill.style.width = btnW + 'px';
-                periodPill.style.left = (idx * btnW) + 'px';
-            });
-        }
-    });
-
     // ── Chart 顏色 ────────────────────────────────────
     const mainColor = state.chartType === 'weekly' ? '#7BC67E' : '#A5B4FC';
     const gridColor = state.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
@@ -2414,6 +2399,87 @@ renderTodayScheduled();
     el.addEventListener('touchstart', onStart, { passive: true });
     el.addEventListener('touchmove', onMove, { passive: false });
 })();
+
+// ── Mouse wheel horizontal scroll ─────────────────
+(function initWheelScroll() {
+    const el = document.getElementById('chart-scroll-container');
+    if (!el) return;
+
+    if (el._wheelHandler) {
+        el.removeEventListener('wheel', el._wheelHandler);
+    }
+
+    function onWheel(e) {
+        // 如果已經係橫向 scroll（trackpad 橫掃），唔截取
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+    }
+
+    el._wheelHandler = onWheel;
+    el.addEventListener('wheel', onWheel, { passive: false });
+})();
+
+// ── Mouse drag to scroll ───────────────────────────
+(function initDragScroll() {
+    const el = document.getElementById('chart-scroll-container');
+    if (!el) return;
+
+    if (el._dragHandler) {
+        el.removeEventListener('mousedown', el._dragHandler.down);
+        window.removeEventListener('mousemove', el._dragHandler.move);
+        window.removeEventListener('mouseup', el._dragHandler.up);
+    }
+
+    let isDragging = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    function onDown(e) {
+        // 只響應左鍵，同埋唔係點擊 bar（唔影響 onClick）
+        if (e.button !== 0) return;
+        isDragging = true;
+        startX = e.clientX;
+        startScrollLeft = el.scrollLeft;
+        el.style.cursor = 'grabbing';
+        el.style.userSelect = 'none';
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        el.scrollLeft = startScrollLeft - dx;
+    }
+
+    function onUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        el.style.cursor = 'grab';
+        el.style.userSelect = '';
+
+        // 如果幾乎冇移動，視為 click（唔阻止 bar onClick）
+        const totalDx = Math.abs(e.clientX - startX);
+        if (totalDx > 5) {
+            // 確實拖動過，阻止下一個 click 事件觸發 bar 選擇
+            el._suppressNextClick = true;
+            setTimeout(() => { el._suppressNextClick = false; }, 100);
+        }
+    }
+
+    // 阻止拖動後誤觸 chart onClick
+    el.addEventListener('click', (e) => {
+        if (el._suppressNextClick) e.stopPropagation();
+    }, true);
+
+    el._dragHandler = { down: onDown, move: onMove, up: onUp };
+    el.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+
+    // 預設 cursor 顯示可拖動
+    el.style.cursor = 'grab';
+})();
+
 }
 
             // ── Scroll fade hint ──────────────────────────────
@@ -2480,29 +2546,34 @@ const updateFade = () => {
         }
 
         function _applyChartBarWidth() {
-            if (!chartInstance) return;
+    if (!chartInstance) return;
 
-            const scrollEl = document.getElementById('chart-scroll-container');
-            const chartWrapper = document.getElementById('chart-wrapper');
-            const containerW = scrollEl ? scrollEl.offsetWidth : 300;
-            const totalWeeks = chartInstance.data.labels.length;
-            const barW = state.chartBarWidth || 52;
+    const scrollEl = document.getElementById('chart-scroll-container');
+    const chartWrapper = document.getElementById('chart-wrapper');
+    const containerW = scrollEl ? scrollEl.offsetWidth : 300;
+    const totalWeeks = chartInstance.data.labels.length;
+    const barW = state.chartBarWidth || 52;
+    const totalW = Math.max(totalWeeks * barW, containerW);
 
-            const totalW = Math.max(totalWeeks * barW, containerW);
-            if (chartWrapper) chartWrapper.style.width = totalW + 'px';
+    // 直接拉寬度，唔經 Chart.js rebuild
+    if (chartWrapper) {
+        chartWrapper.style.transition = 'width 0.2s cubic-bezier(0.25, 1, 0.5, 1)';
+        chartWrapper.style.width = totalW + 'px';
+    }
 
-            // 動態 maxBarThickness（barW 減去兩邊 padding 約 30%）
-            const maxBar = Math.floor(barW * 0.7);
+    // canvas 同步跟住 wrapper 寬度
+    const canvas = document.getElementById('incomeChart');
+    if (canvas) {
+        canvas.style.transition = 'width 0.2s cubic-bezier(0.25, 1, 0.5, 1)';
+        canvas.style.width = totalW + 'px';
+    }
 
-            chartInstance.data.datasets.forEach(ds => {
-                ds.maxBarThickness = maxBar;
-            });
-
-            chartInstance.update('none');
-
-            // scroll 維持最右（只在 zoom-all 時）
-            // 其他情況保持當前 scroll 位置
-        }
+    // 通知 Chart.js resize（唔係 update，係 resize）
+    // 用 requestAnimationFrame 等 CSS transition 先行
+    requestAnimationFrame(() => {
+        if (chartInstance) chartInstance.resize();
+    });
+}
 
         function initChartTypeBtns() {
             const btnW = document.getElementById('chart-view-weekly');
