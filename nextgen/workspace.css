@@ -214,8 +214,23 @@
 .ng-search-dialog h2 { font:600 2rem/1.1 "Cormorant Garamond",serif; margin-bottom:1rem; }
 .ng-search-dialog input { width:100%; min-height:44px; border:1px solid var(--ui-control-edge); border-radius:12px; padding:.75rem; background:var(--ui-recessed); color:var(--ui-ink); }
 .ng-search-results { display:grid; gap:.4rem; max-height:50dvh; overflow:auto; margin-block:1rem; }
-.ng-onboarding { list-style:decimal; padding-inline-start:1.3rem; margin-bottom:1.5rem; }
-.ng-onboarding li { margin-block:.8rem; line-height:1.6; }
+.ng-welcome-intro { font:550 clamp(1.12rem,4vw,1.35rem)/1.35 var(--ng-display); margin-block:.2rem .85rem; }
+.ng-welcome-sheet > header h2[tabindex="-1"]:focus { outline:none; }
+.ng-welcome-sheet:lang(zh-Hant) .ng-welcome-intro { font:520 1rem/1.5 var(--ui-font); }
+.ng-welcome-paths { display:grid; gap:.52rem; margin-block-end:.75rem; }
+.ng-welcome-sheet .ng-welcome-path {
+  display:flex; width:100%; min-height:3.45rem; justify-content:flex-start; text-align:start;
+  padding:.58rem .8rem; border-radius:15px; gap:.7rem;
+}
+.ng-welcome-path svg { flex:none; width:1.15rem; height:1.15rem; }
+.ng-welcome-path small { display:block; font-size:.78rem; font-weight:450; line-height:1.4; opacity:.88; margin-top:.16rem; }
+.ng-welcome-steps h3 { margin-block:.1rem .54rem; }
+.ng-welcome-review { display:grid; gap:.35rem; margin-block:.35rem; }
+.ng-welcome-review>div { display:flex; gap:.65rem; align-items:baseline; justify-content:space-between; }
+.ng-welcome-review dd { margin:0; text-align:end; font-variant-numeric:tabular-nums; }
+.ng-welcome-drop { padding:.8rem; border:1px dashed var(--product-line); border-radius:14px; background:var(--product-well); }
+.ng-welcome-drop input,.ng-welcome-steps input,.ng-welcome-sheet select { min-height:44px; font-size:max(16px,1rem); }
+.ng-home-next { padding:clamp(1rem,3vw,1.5rem); }
 @keyframes ng-dialog-enter {
   from { opacity:.48; transform:translateY(16px) scale(.985); }
   to { opacity:1; transform:none; }
@@ -529,10 +544,6 @@ html:has(#ng-editor[open],.ng-search-dialog[open]) { overflow:hidden; }
 .ng-form-actions { background:var(--ng-sheet); border-top:1px solid var(--ng-rule); margin-top:.75rem; z-index:2; }
 #ng-editor [name] { scroll-margin-block:2rem 7rem; }
 #ng-editor[open] { overscroll-behavior:contain; }
-.ng-onboarding { padding-left:1rem; }
-.ng-onboarding li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; border-top:1px solid var(--ng-rule); padding:.7rem 0; margin:0; gap:.5rem; }
-.ng-onboarding li .ng-button { padding-inline:.6rem; }
-.ng-onboarding-sheet>.ng-actions { position:sticky; bottom:-1.5rem; background:var(--ng-sheet); border-top:1px solid var(--ng-rule); padding-block:.65rem; margin-bottom:0; }
 .ng-transfer-layout { display:grid; gap:1rem; align-items:start; }
 .ng-transfer-review textarea { font-family:ui-monospace,Consolas,monospace !important; resize:vertical; }
 .ng-transfer-diagnostic { color:var(--ui-danger); overflow-wrap:anywhere; }
@@ -568,8 +579,6 @@ html:has(#ng-editor[open],.ng-search-dialog[open]) { overflow:hidden; }
 }
 @media(max-width:599px) {
   .ng-calendar-date-controls { width:100%; }
-  .ng-onboarding li { grid-template-columns:minmax(0,1fr); }
-  .ng-onboarding li .ng-button { justify-self:start; }
   .ng-record-actions { border-top:1px solid color-mix(in srgb,var(--ng-rule) 52%,transparent); width:100%; }
 }
 #ng-mobile-navigation .ng-nav-label { display:block; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }

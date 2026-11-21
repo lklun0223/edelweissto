@@ -224,9 +224,16 @@ export function reconcileBalance(ledger,id) {
 }
 function actuals(ledger,asOf,includeLegacyWeeklyEstimate=true) {
   const week=weekOf(asOf);
+  const details=includedExpenseDetails(ledger,asOf);
   return ledger.records.filter(row=>cashDirection(row)!==0 && (row.data.date<=asOf||
     includeLegacyWeeklyEstimate&&!row.data.entry_week&&row.entity==='cash_event'&&row.data.kind==='INCOME'&&row.data.receipt_week===week&&row.data.date===calendarDay(week,6)) &&
-    !row.data.voided && (!row.representedBy || !ledger.records.some(record=>record.id===row.representedBy && !record.data.voided)));
+    !row.data.voided&&!details.has(row.id) && (!row.representedBy || !ledger.records.some(record=>record.id===row.representedBy && !record.data.voided)));
+}
+export function includedExpenseDetails(ledger,asOf=today()) {
+  const aggregates=new Map(ledger.records.filter(row=>row.entity==='expense'&&row.data.entry_week&&
+    !row.data.voided&&row.data.date<=asOf).map(row=>[row.id,row]));
+  return new Map(ledger.records.filter(row=>row.entity==='expense'&&!row.data.voided&&aggregates.has(row.data.included_in_general_id))
+    .map(row=>[row.id,aggregates.get(row.data.included_in_general_id)]));
 }
 export function recordedMovements(ledger,asOf=today(),{includeLegacyWeeklyEstimate=true}={}) {
   return actuals(ledger,asOf,includeLegacyWeeklyEstimate).map(row=>{
@@ -246,6 +253,9 @@ export function financialModel(ledger,asOf=today(),valuationLedger=ledger) {
   const cashRecords=actuals(ledger,asOf);
   if(base?.requiresReconciliation) issues.push('Confirm the imported balance and its included payments.');
   const included=new Map((base?.reconciliation??[]).map(entry=>[entry.id,entry]));
+  const details=includedExpenseDetails(ledger,asOf);
+  if(base&&ledger.records.some(row=>included.has(row.id)&&details.get(row.id)?.data.date>base.data.as_of))
+    issues.push('A weekly expense spans the confirmed cash balance. Review the included expenses.');
   const unsettledSnapshots=base?ledger.records.filter(row=>isSnapshotSettlement(row)&&row.data.date>base.data.as_of&&row.data.date<=asOf):[];
   for(const row of cashRecords) {
     const acknowledged=included.get(row.id);
@@ -345,16 +355,18 @@ function plannedNative(data) {
   return Number.isSafeInteger(total)&&total>=0?total:null;
 }
 function accountMovements(ledger,id,asOf) {
+  const details=includedExpenseDetails(ledger,asOf);
   return ledger.records.filter(row=>row.data.date<=asOf&&!row.data.voided&&
     (row.entity==='account_transfer'&&(row.data.from_account_id===id||row.data.to_account_id===id) ||
-      cashDirection(row)!==0&&row.data.account_id===id));
+      cashDirection(row)!==0&&row.data.account_id===id&&!details.has(row.id)));
 }
 export function accountBalances(ledger,asOf=today()) {
+  const details=includedExpenseDetails(ledger,asOf);
   return ledger.records.filter(row=>row.entity==='account').map(account=>{
     const base=ledger.records.filter(row=>row.entity==='balance'&&row.data.scope==='ACCOUNT' &&
       row.data.account_id===account.id&&row.data.as_of<=asOf).reverse().sort((a,b)=>b.data.as_of.localeCompare(a.data.as_of))[0];
     const included=new Map((base?.reconciliation??[]).map(row=>[row.id,row.fingerprint]));
-    let known=!!base;
+    let known=!!base&&![...included.keys()].some(id=>details.get(id)?.data.date>base.data.as_of);
     const values=[];
     for(const row of accountMovements(ledger,account.id,asOf)) {
       if(included.has(row.id)) {
@@ -467,6 +479,7 @@ export function validateRelations(ledger, operations=new Map()) {
     catch {throw Error('The saved timer time zone is invalid.');}
   }
   const records=new Map(ledger.records.map(row=>[row.id,row]));
+  const linkedExpenseCents=new Map();
   if(timer && !records.has(timer.student_id)) reject('The active timer still uses this student.','student_id',timer.student_id);
   if(records.size!==ledger.records.length) throw Error('Duplicate record identity.');
   const links={trip_id:['trip'],student_id:['student'],budget_item_id:['budget_item','trip_budget_item'],
@@ -522,6 +535,22 @@ export function validateRelations(ledger, operations=new Map()) {
     if(row.entity==='expense'&&row.data.trip_id&&row.data.budget_item_id) {
       const budgetTrip=records.get(row.data.budget_item_id)?.data.trip_id;
       if(budgetTrip&&budgetTrip!==row.data.trip_id)reject('Choose the same journey for the expense and its linked budget item.','trip_id',row.id,row.data.budget_item_id);
+    }
+    if(row.entity==='expense'&&row.data.included_in_general_id) {
+      const total=records.get(row.data.included_in_general_id);
+      if(row.data.type!=='SPECIAL'||row.data.trip_id||row.data.budget_item_id||row.data.rule_id||
+        total?.entity!=='expense'||total.data.type!=='GENERAL'||total.data.entry_week!==weekOf(row.data.date)||
+        (total.data.account_id||null)!==(row.data.account_id||null)||total.data.currency!==row.data.currency||
+        Boolean(total.data.fixed)!==Boolean(row.data.fixed)) {
+        reject('An included expense needs a General total for the same week, currency, account and fixed-bill type.',
+          'included_in_general_id',row.id,total?.id??row.data.included_in_general_id);
+      }
+      if(!row.data.voided) {
+        const amount=(linkedExpenseCents.get(total.id)??0)+cents(row.data.amount);
+        if(!Number.isSafeInteger(amount)||amount>cents(total.data.amount))
+          reject('Included details exceed the General total. Review the amount or unlink the detail.','included_in_general_id',row.id,total.id);
+        linkedExpenseCents.set(total.id,amount);
+      }
     }
     if(row.data.after_balance===true && !row.data.balance_id) reject('Choose the confirmed balance for an after-balance payment.','balance_id',row.id);
     if(row.entity==='balance' && row.data.scope==='ACCOUNT' && !row.data.account_id)reject('Choose the account covered by this balance.','account_id',row.id);

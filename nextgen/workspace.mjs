@@ -15,7 +15,7 @@ import {budgetTransferContext,prepareScopedBudgetBatch,subsidyScope,subsidyTrans
 import {actionIcons,adaptiveChrome,movementCurve,resizePanel,tweenNumbers} from './interaction.mjs';
 import {displayQuote,fetchReferenceRate,rateIsStale,valuationLedger} from './rates.mjs';
 import {exportWorkData,inspectWorkData,requireWorkScope} from './work-data.mjs';
-import {clone,today,cents,financialModel,prepareBatch,reconcileBalance,quote,convert,billOccurrences,mergeLegacy,workIncome,generateSeries,activeBudget,accountBalances,legacyMigrationVersion,isSnapshotSettlement,emptyLedger} from './ledger.mjs';
+import {clone,today,cents,financialModel,prepareBatch,reconcileBalance,quote,convert,billOccurrences,mergeLegacy,workIncome,generateSeries,activeBudget,accountBalances,legacyMigrationVersion,isSnapshotSettlement,includedExpenseDetails,emptyLedger} from './ledger.mjs';
 import {readLedger,migrationPreview,activateMigration,commitLedger,restorePoints,restoreLedger,exportLedger,inspectBackup,digest} from './repository.mjs';
 
 const names={
@@ -85,6 +85,7 @@ let expenseFiltersOpen=false;
 let financePeriod='week';
 let settlementWeek=weekOf(today()), settlementDetail='';
 let selectedSunday=null;
+let prepTool=null;
 const savingsDrafts=new Map();
 let fxStatus='',fxLoading=false;
 let currentTrip=null;
@@ -317,6 +318,7 @@ const fieldLabel=key=>({
   rate:'Rate / 每單位價格',student_id:'Student',start_time:'Start time',duration:'Duration (hours)',
   lesson_date:'Lesson date (optional)',end_time:'End time',rate_override:'Hourly rate override',
   related_id:'Original record',budget_item_id:'Budget item',rule_id:'Bill rule',trip_id:'Journey',
+  included_in_general_id:'Included in General total',
   account_id:'Account',source_id:'Related source',note:'Notes',income:'Stored lesson income',
     balance_id:'Confirmed balance',after_balance:'This payment occurred after the selected balance was confirmed',
     from_account_id:'From account',to_account_id:'To account',owner_id:'Related record',
@@ -402,41 +404,69 @@ function currencyOption(currency) {
 }
 function recordWeeklyExpense(report) {
   transferDialog(tr('New expense'),(modal,close)=>{
-    const figure=entryAmount('amount','',true);
+    const totals=ledger.records.filter(row=>row.entity==='expense'&&row.data.type==='GENERAL'&&
+      row.data.entry_week===report.week&&!row.data.voided);
+    const original=totals.length===1?totals[0]:null;
+    const figure=entryAmount('amount',original?.data.amount??'',true);
     figure.min='.01';
     const currency=h('select',{name:'currency'},...expenseCurrencies().map(currencyOption));
-    currency.value=ledger.settings.expense_currency??'HKD';
-    const description=h('input',{name:'description',maxlength:240});
+    const defaultCurrency=ledger.settings.expense_currency??'HKD';
+    currency.value=original?.data.currency??defaultCurrency;
+    const description=h('input',{name:'description',maxlength:240,value:original?.data.description??''});
     const date=h('input',{name:'date',type:'date',max:today(),value:today(),required:true});
     const actualDate=entryField('Expense date',date);
-    const fixed=h('input',{type:'checkbox',role:'switch',name:'fixed','aria-describedby':'ng-expense-guidance'});
+    const fixed=h('input',{type:'checkbox',role:'switch',name:'fixed',checked:original?.data.fixed,'aria-describedby':'ng-expense-guidance'});
+    const category=h('select',{name:'category'},h('option',{value:''},tr('No category')),
+      ...CATEGORIES.map(row=>h('option',{value:row.id},row.label+' · '+tr(row.name))));
+    const categoryField=entryField('Category (optional)',category);
+    const included=h('input',{name:'included_in_general',type:'checkbox'});
+    const includedField=h('label',{class:'ng-check'},included,h('span',{},tr('Already included in the General total')));
+    const aggregateForDate=()=>ledger.records.find(row=>row.entity==='expense'&&row.data.type==='GENERAL'&&
+      row.data.entry_week&&row.data.date===calendarDay(weekOf(date.value||today()),6)&&!row.data.voided&&
+      row.data.currency===currency.value&&!row.data.account_id&&Boolean(row.data.fixed)===fixed.checked);
     const hint=h('p',{id:'ng-expense-guidance',class:'ng-caption'},
       tr('Counts toward cash outflow and is excluded from controllable spending.'));
     const period=h('p',{class:'ng-caption'},weekEnding(report.end));
+    const ambiguity=h('p',{class:'ng-entry-error'},tr('Several totals exist. Use History / Manage to review them before adding another.'));
     let mode='GENERAL';
+    const drafts={};
     const choices=segments('type','Expense type',[['GENERAL','General'],['SPECIAL','Special']],mode,key=>{
       const height=fields.getBoundingClientRect().height;
+      drafts[mode]={amount:figure.value,currency:currency.value,description:description.value,fixed:fixed.checked};
       mode=key;present();resizePanel(fields,height);
+      const draft=drafts[key]??{amount:'',currency:defaultCurrency,description:'',fixed:false};
+      figure.value=draft.amount;currency.value=draft.currency;description.value=draft.description;fixed.checked=draft.fixed;
+      present();
     });
     function present() {
       actualDate.hidden=date.disabled=mode==='GENERAL';
       period.hidden=mode==='SPECIAL';hint.hidden=!fixed.checked;
+      categoryField.hidden=mode==='GENERAL';
+      includedField.hidden=mode==='GENERAL'||!aggregateForDate();
+      if(includedField.hidden)included.checked=false;
+      ambiguity.hidden=mode==='SPECIAL'||totals.length<2;
     }
     fixed.addEventListener('change',present);
-    const fields=h('div',{},actualDate,period);
+    date.addEventListener('input',present);currency.addEventListener('change',present);
+    const fields=h('div',{},actualDate,period,ambiguity);
     const panel=h('form',{id:'ng-new-expense',class:'ng-entry-form ng-expense-composer'},choices,
-      h('div',{class:'ng-amount-entry'},entryField('Amount',figure),entryField('Currency',currency)),fields);
+      h('div',{class:'ng-amount-entry'},entryField('Amount',figure),entryField('Currency',currency)),fields,includedField);
     entrySubmit(panel,modal,close,'Save expense',async current=>{
       const aggregate=mode==='GENERAL';
-      const data=cashEntryDefaults({description:description.value.trim()||'日常支出',amount:Number(figure.value),
+      if(aggregate&&totals.length>1)throw Error('Several totals exist. Use History / Manage to review them before adding another.');
+      const data={...(aggregate?original?.data:null),description:description.value.trim()||tr('Expense'),amount:Number(figure.value),
         currency:currency.value,date:aggregate?report.end:date.value,type:mode,fixed:fixed.checked,
-        ...(aggregate?{entry_week:report.week,entry_created_at:new Date().toISOString()}:{})});
-      const {next}=await prepareOperations(current,[{op:'ADD',entity:'expense',data}]);
-      return {next,reason:'Record pre-departure expense',message:'Expense saved.'};
+        ...(aggregate?{entry_week:report.week,entry_created_at:original?.data.entry_created_at??new Date().toISOString()}:
+          {category:category.value||null,included_in_general_id:included.checked?aggregateForDate()?.id??null:null})};
+      const operation=aggregate&&original?{op:'UPDATE',entity:'expense',record_id:original.id,expected_revision:original.revision,changes:data}:
+        {op:'ADD',entity:'expense',data:cashEntryDefaults(data)};
+      const {next}=await prepareOperations(current,[operation]);
+      return {next,reason:'Record pre-departure expense',message:'Expense saved.',id:operation.record_id??next.records.at(-1).id};
     },'expense');
     panel.append(h('details',{class:'ng-entry-options ng-week-bridge'},
       h('summary',{},h('span',{},icon('ChevronDown'),tr('More details'))),
       entryField('Description (optional)',description),
+      categoryField,
       h('label',{class:'ng-expense-fixed ng-switch'},h('span',{},tr('Fixed bill')),fixed,h('i',{'aria-hidden':'true'})),hint,
       manageWeekly('expense',close,report.week)));
     modal.append(panel);present();
@@ -513,28 +543,44 @@ function waterfall(model,{folio=false}={}) {
 }
 function overview() {
   const model=planPosition(renderedModel);
-  const formatted=amount(model.available);
+  const known=model.available!==null;
+  const hasPlan=model.obligations.length>0;
+  const formatted=known?amount(model.available):'';
   const money=formatted.match(/^([-−+]?)([A-Z]{3})\s*(.+)$/);
   const hero=h('section',{class:'v3-balance','aria-labelledby':'folio-balance-label'},
     h('h2',{id:'folio-balance-label'},tr('Cash available now')),
-    h('p',{class:'folio-balance-amount','data-finance-metric':'cash','data-size':figureSize(money?money[3]:formatted)},
-      money?h('span',{class:'folio-currency'},money[2]):null,h('strong',{},money?money[1]+money[3]:formatted)),
+    known?h('p',{class:'folio-balance-amount','data-finance-metric':'cash','data-size':figureSize(money?money[3]:formatted)},
+      money?h('span',{class:'folio-currency'},money[2]):null,h('strong',{},money?money[1]+money[3]:formatted)):null,
     h('p',{class:'folio-balance-date'},model.base?tr('Exchange cash baseline')+' · '+compactDate(model.base.data.as_of,{day:'numeric',month:'short',year:'numeric'}):
-      tr('Confirm how much cash is set aside for Vienna.')),
-    button(tr('Cash sources'),()=>cashReview(model)));
+      tr('Set the amount you have already reserved for Vienna.')),
+    model.base?button(tr(known?'Cash sources':'Review available cash'),()=>cashReview(model)):
+      actionButton('Set your available exchange funds','funds',()=>edit('balance',null,{scope:'EXCHANGE',as_of:today(),
+        currency:'HKD',description:tr('Exchange cash')}),{kind:'primary'}));
   const position=(label,value,key)=>h('div',{},h('dt',{},tr(label)),h('dd',{'data-finance-metric':key,'data-shortfall':String(value!==null&&value<0)},amount(value)));
-  const summary=h('dl',{class:'ng-metrics ng-home-position'},
-    position('Vienna still to pay',model.total,'remaining'),
-    position(model.cashPosition===null?'Cash-only position':model.cashPosition<0?'Cash shortfall':'Cash surplus',model.cashPosition,'cash-position'),
-    position(model.expectedPosition===null?'With approved grants':model.expectedPosition<0?'Shortfall with grants':'Surplus with grants',model.expectedPosition,'expected-position'));
-  const access=h('div',{class:'ng-home-actions'},actionButton('Subsidy','subsidy',()=>showSection('Pre-departure','subsidy')));
-  const instrument=fundingInstrument({h,button,chart:allocationView(model,{classifiedPreview:true}),amount,tr,selected:selectedAllocation,
+  const summary=hasPlan?h('dl',{class:'ng-metrics ng-home-position'},
+    model.total===null?null:position('Vienna still to pay',model.total,'remaining'),
+    model.cashPosition===null?null:position(model.cashPosition<0?'Cash shortfall':'Cash surplus',model.cashPosition,'cash-position'),
+    model.expectedPosition===null?null:position(model.expectedPosition<0?'Shortfall with grants':'Surplus with grants',model.expectedPosition,'expected-position')):null;
+  const access=h('div',{class:'ng-home-actions'},
+    needsSetup()?actionButton('Finish setup','Sparkles',()=>onboarding()):null,
+    sundayHistory(ledger.settings).length?null:actionButton('Add your first Sunday savings','Wallet',()=>{
+      navigate('Pre-departure',{scroll:0});content.querySelector('#ng-sunday-amount')?.focus();
+    }),
+    model.grants.length?actionButton('Subsidy','subsidy',()=>showSection('Pre-departure','subsidy')):
+      actionButton('Add subsidy information','subsidy',()=>edit('grant',null,{status:'可申請',currency:'HKD'})));
+  const instrument=hasPlan&&(known||model.expected!==null)?fundingInstrument({h,button,chart:allocationView(model,{classifiedPreview:true}),amount,tr,selected:selectedAllocation,
     onSelect:id=>{selectedAllocation=id;},
     onOpenCategory:id=>navigate('Budget',{query:'',filterEntity:'',filterCategory:id,scroll:0}),
-    onReviewPlan:()=>navigate('Budget',{query:'',filterEntity:'',filterCategory:'',scroll:0})});
+    onReviewPlan:()=>navigate('Budget',{query:'',filterEntity:'',filterCategory:'',scroll:0})}):
+    h('section',{class:'ng-surface ng-home-next'},h('h2',{},tr('Vienna budget')),
+      h('p',{class:'ng-caption'},tr(hasPlan?'Set exchange funds to see how much of your plan is covered.':'Add your planned costs when you are ready.')),
+      hasPlan?button(tr('Review budget'),()=>navigate('Budget')):
+        h('div',{class:'ng-actions'},actionButton('Add Vienna budget item','budget',()=>edit('budget_item',null,
+          {currency:'HKD',priority:'MEDIUM',scenario:ledger.settings.scenario}),{kind:'primary'}),
+          actionButton('Import Vienna budget','import',()=>importBudgetFromAI(null,'Vienna Budget'))));
   const stage=h('div',{class:'v3-overview'+(firstOverview?' v3-reveal':'')},
     h('div',{class:'v3-overview-summary'},hero,summary,access,
-      model.issues.length?h('div',{class:'ng-funding-review'},actionButton(model.historyReview.length?
+      model.base&&model.historyReview.length?h('div',{class:'ng-funding-review'},actionButton(model.historyReview.length?
         model.historyReview.length+' '+tr(model.historyReview.length===1?'historical payment needs review':'historical payments need review'):
         'Review available cash','CircleAlert',()=>cashReview(model))):null),instrument);
   firstOverview=false;
@@ -599,31 +645,155 @@ function searchRecords() {
   modal.addEventListener('cancel',event=>{event.preventDefault();close();});
   search.oninput=update;document.body.append(modal);openDialog(modal);update();search.focus();
 }
-function onboarding() {
-  const opener=document.activeElement;
-  const modal=h('dialog',{class:'ng-search-dialog ng-onboarding-sheet'});
-  const close=()=>{modal.close();modal.remove();if(opener?.isConnected)opener.focus({preventScroll:true});};
-  const steps=[
-    ['Pre-departure','Reconcile your balance','Confirm the amount held for exchange. Add a savings deposit when you move existing cash into the fund.'],
-    ['Budget','Allocate your resources','Plan costs under 行 Transport, 住 Housing, 食 Food and 樂 Leisure. Link actual payments to their planned costs.'],
-    ['Pre-departure','Record actual spending','Choose General or Special. Fixed bills keep their own payment schedule and stay in actual outflow.'],
-    ['Settings','Review proposed changes','Open Advanced transfer to copy instructions, paste a proposal and review it before applying.'],
-    ['Settings','Keep a recovery copy','Export an offline backup or open the legacy workspace for wallet snapshots, the historic savings estimate, the Work journal and backup reminders.'],
-  ];
-  modal.addEventListener('cancel',event=>{event.preventDefault();close();});
-  modal.append(h('h2',{},tr('Your exchange workspace')),
-    h('ol',{class:'ng-onboarding'},...steps.map(([route,title,description])=>h('li',{},
-      h('div',{},h('strong',{},tr(title)),h('p',{class:'ng-caption'},tr(description))),
-      button(tr(route),()=>{
-        close();
-        if(route==='Settings'&&title==='Review proposed changes')showSection(route,'transfer');
-        else navigate(route);
-        pageHeading().focus({preventScroll:true});
-      })))),
-    h('details',{class:'ng-legacy-directory'},h('summary',{},tr('Find preserved workflows')),
-      legacyEntries(close)),
-    h('div',{class:'ng-actions'},button(tr('Done'),close,'primary'),button(tr('Skip'),close)));
-  document.body.append(modal);openDialog(modal);
+const welcomePreference='workie_welcome_v1';
+let aiSetupSelection='vienna';
+function needsSetup() {
+  if(ledger.settings.setup_complete||migrationRequired)return false;
+  if(localStorage.getItem(welcomePreference))return true;
+  return !ledger.legacy&&!ledger.records.length&&!Object.entries(ledger.settings).some(([key,value])=>
+    value!=null&&!['currency','scenario','theme','language','auto_fx','expense_currency'].includes(key)&&
+    (typeof value!=='object'||Object.keys(value).length>0));
+}
+function onboarding(mode='welcome') {
+  if(typeof mode!=='string')mode='welcome';
+  const choose=async(close,step)=>{
+    await close();onboarding(step);
+  };
+  transferDialog(tr(mode==='welcome'?'Welcome to Workie':mode==='fresh'?'Set up Workie':'Set up with AI'),(modal,close)=>{
+    modal.classList.add('ng-welcome-sheet');
+    if(mode==='fresh') {
+      freshSetup(modal,close);
+      return;
+    }
+    if(mode==='ai') {
+      aiSetup(modal,close);
+      return;
+    }
+    const path=(title,caption,symbol,action,disabled=false,primary=false)=>{
+      const item=actionButton(title,symbol,action,{kind:primary?'primary':'secondary'});
+      item.classList.add('ng-welcome-path');item.disabled=disabled;
+      item.querySelector('span').append(h('small',{},tr(caption)));
+      return item;
+    };
+    modal.append(h('p',{class:'ng-welcome-intro'},tr('Your savings, Vienna plans and tutoring, together in Workie.')),
+      h('div',{class:'ng-welcome-paths'},
+        path('Start fresh','Set the basics at your own pace.','Wallet',()=>choose(close,'fresh'),migrationRequired,!migrationRequired),
+        path('Restore Gen 1 JSON','Preview a backup before restoring.','ArchiveRestore',async()=>{await close();chooseLegacyBackup();},false,migrationRequired),
+        path('Set up with AI','Bring in a plan from your own chat.','Sparkles',()=>{
+          localStorage.setItem(welcomePreference,'in-progress');void choose(close,'ai');
+        },migrationRequired)),
+      button(tr('Explore without setting up'),async()=>{
+        if(needsSetup())localStorage.setItem(welcomePreference,'explore');
+        await close();render();
+      }));
+    if(migrationRequired)modal.append(h('p',{class:'ng-caption'},tr('Earlier Workie records are available to review.')));
+  },{quick:true,onDismiss:mode==='welcome'?()=>{
+    if(needsSetup()&&!localStorage.getItem(welcomePreference))localStorage.setItem(welcomePreference,'explore');
+  }:undefined});
+}
+function freshSetup(modal,close) {
+  const panel=h('div',{class:'ng-welcome-steps'});
+  const currentBalance=ledger.records.some(row=>row.entity==='balance'&&row.data.scope!=='ACCOUNT');
+  const canSetCash=!currentBalance&&!renderedModel.applied.length&&!renderedModel.issues.length;
+  const settings=ledger.settings;
+  const revision=ledger.revision;
+  const draft={currency:settings.currency??'HKD',sunday:latestSunday(),savings:'',departure:settings.departure_date??'',
+    returning:settings.return_date??'',cash:''};
+  let step=0;
+  const bind=(key,attributes)=>h('input',{...attributes,value:draft[key],oninput:event=>{draft[key]=event.target.value;}});
+  const error=h('p',{class:'ng-entry-error',role:'alert'});
+  function draw() {
+    error.textContent='';
+    const currency=h('select',{name:'currency',onchange:event=>{draft.currency=event.target.value;}},
+      ...['HKD','EUR'].map(code=>h('option',{value:code,selected:draft.currency===code},code)));
+    const heading=h('h3',{tabindex:'-1'},tr(['Personal finances','Vienna exchange','Review setup'][step]));
+    const form=h('form',{class:'ng-entry-form',onsubmit:async event=>{
+      event.preventDefault();
+      try {
+        const savings=savingsCents(draft.savings),cash=savingsCents(draft.cash);
+        if(savings===undefined||cash===undefined||cash<0)throw Error('Enter a valid amount.');
+        if(savings!==null&&(!draft.sunday||latestSunday(draft.sunday)!==draft.sunday||draft.sunday>latestSunday()))
+          throw Error('Choose an ending Sunday.');
+        if(draft.departure&&draft.returning&&draft.departure>draft.returning)throw Error('Return must be on or after departure.');
+        if(step<2){step++;draw();return;}
+        submit.disabled=true;
+        if(revision!==ledger.revision)throw Error('Records changed in another tab. Reopen setup to continue.');
+        const next=clone(ledger);
+        next.settings.currency=draft.currency;
+        if(draft.departure)next.settings.departure_date=draft.departure;
+        if(draft.returning)next.settings.return_date=draft.returning;
+        if(savings!==null)saveSundaySavings(next.settings,draft.sunday,savings);
+        if(canSetCash&&cash!==null)next.records.push({id:crypto.randomUUID(),revision:1,entity:'balance',
+          data:{scope:'EXCHANGE',description:tr('Exchange cash'),amount:cash/100,currency:'HKD',as_of:today()},reconciliation:[]});
+        next.settings.setup_complete=true;
+        await save(next,'Complete Workie setup',next.revision);
+        localStorage.removeItem(welcomePreference);await close();navigate('Home');
+      } catch(problem) {
+        error.textContent=tr(problem.message);submit.disabled=false;
+      }
+    }});
+    const review=(title,value)=>h('div',{},h('dt',{},tr(title)),h('dd',{},value??tr('Not provided')));
+    const date=(value)=>value?compactDate(value,{day:'numeric',month:'short',year:'numeric'}):null;
+    if(step===0)form.append(entryField('Preferred currency',currency),
+      entryField('Sunday Savings (optional)',bind('savings',{name:'setup_savings',type:'text',inputmode:'decimal'})),
+      entryField('Sunday ending date',bind('sunday',{name:'setup_sunday',type:'date',max:latestSunday()})));
+    else if(step===1){
+      form.append(entryField('Departure date (optional)',bind('departure',{name:'setup_departure',type:'date'})),
+        entryField('Return date (optional)',bind('returning',{name:'setup_return',type:'date'})));
+      if(canSetCash)form.append(entryField('Cash set aside for Vienna (HKD, optional)',
+        bind('cash',{name:'setup_cash',type:'text',inputmode:'decimal'})));
+    }
+    else form.append(h('dl',{class:'ng-welcome-review'},review('Preferred currency',draft.currency),
+      review('Sunday Savings',draft.savings.trim()?amount(savingsCents(draft.savings),'HKD'):null),
+      review('Departure date',date(draft.departure)),review('Return date',date(draft.returning)),
+      canSetCash?review('Vienna cash',draft.cash.trim()?amount(savingsCents(draft.cash),'HKD'):null):null));
+    const submit=h('button',{type:'submit',class:'ng-button primary'},tr(step===2?'Enter Workie':'Continue'));
+    form.append(error,h('div',{class:'ng-actions'},submit,button(tr('Back'),async()=>{
+      if(step){step--;draw();}else {await close();onboarding();}
+    })));
+    panel.replaceChildren(heading,form);
+    if(panel.isConnected)heading.focus({preventScroll:true});
+  }
+  modal.append(panel);draw();
+}
+function aiSetup(modal,close) {
+  const trips=ledger.records.filter(row=>row.entity==='trip'&&row.data.status!=='CANCELLED');
+  if(!['vienna','subsidy',...trips.map(row=>row.id)].includes(aiSetupSelection))aiSetupSelection='vienna';
+  const options=[['vienna',tr('Vienna Budget')],['subsidy',tr('Subsidy')],...trips.map(row=>[row.id,row.data.description])];
+  const choice=h('select',{name:'setup_context',onchange:event=>{aiSetupSelection=event.target.value;}},
+    ...options.map(([value,label])=>h('option',{value,selected:value===aiSetupSelection},label)));
+  const transferAction=action=>async()=>{
+    const selected=choice.value;
+    const scope=selected==='vienna'?null:selected==='subsidy'?subsidyScope:selected;
+    const label=options.find(([value])=>value===selected)[1];
+    await close();action(scope,label,()=>onboarding('ai'));
+  };
+  const error=h('p',{class:'ng-entry-error',role:'alert'});
+  const tripName=h('input',{name:'setup_trip',maxlength:120,required:true});
+  const create=h('form',{class:'ng-entry-form',onsubmit:async event=>{
+    event.preventDefault();
+    if(!tripName.value.trim())return;
+    create.querySelector('button').disabled=true;
+    try{
+      const {next}=await prepareOperations(ledger,[{op:'ADD',entity:'trip',data:{description:tripName.value.trim(),status:'PLANNED'}}]);
+      aiSetupSelection=next.records.at(-1).id;
+      await save(next,'Create trip for setup');
+      await close();onboarding('ai');
+    }catch(problem){error.textContent=tr(problem.message);create.querySelector('button').disabled=false;}
+  }},entryField('Trip name',tripName),h('button',{class:'ng-button',type:'submit'},tr('Create trip')),error);
+  modal.append(h('p',{class:'ng-caption'},tr('Copy instructions to your AI chat, then bring the final changes back here.')),
+    entryField('Choose setup context',choice),
+    h('div',{class:'ng-actions'},
+      actionButton('Export to AI','export',transferAction(exportBudgetToAI),{kind:'primary'}),
+      actionButton('Import from AI','import',transferAction(importBudgetFromAI))),
+    h('details',{class:'ng-entry-options'},h('summary',{},tr('Add a trip')),create),
+    button(tr('Done'),async()=>{
+      try {
+        const next=clone(ledger);next.settings.setup_complete=true;
+        await save(next,'Finish AI setup');localStorage.removeItem(welcomePreference);
+        await close();navigate('Home');
+      } catch(problem) {error.textContent=tr(problem.message);}
+    }));
 }
 function recordRow(row,folio=false) {
   const data=row.data,flags=[];
@@ -1628,7 +1798,9 @@ function bills(host=content) {
 }
 function spending(host=content) {
   const months=new Map();
-  for(const row of ledger.records.filter(row=>['expense','bill_payment'].includes(row.entity)&&!row.data.voided)) {
+  const included=includedExpenseDetails(ledger);
+  const outflows=ledger.records.filter(row=>['expense','bill_payment'].includes(row.entity)&&!row.data.voided&&!included.has(row.id));
+  for(const row of outflows) {
     const month=row.data.date?.slice(0,7);
     if(!month) continue;
     const total=months.get(month)??{actual:0,flexible:0,unknown:false,direct:0,settlement:null,settlementUnknown:false};
@@ -1656,7 +1828,7 @@ function spending(host=content) {
         h('td',{},amount(total.settlementUnknown?null:total.settlement,'HKD'))))));
   host.append(h('section',{class:'ng-surface ng-monthly-outflow'},table,
     h('p',{class:'ng-caption'},'Missing months have no recorded total. Historical unclassified expenses stay outside the controllable metric.')));
-  const observations=ledger.records.filter(row=>['expense','bill_payment'].includes(row.entity)&&!row.data.voided).map(row=>{
+  const observations=outflows.map(row=>{
     const value=convert(ledger,row.data.amount,row.data.currency,row.data.date);
     return {id:row.id,purpose:row.data.description,date:row.data.date,amount:value===null?null:value/100,
       ...(isSnapshotSettlement(row)?{provenance:'snapshot'}:{}),
@@ -1778,10 +1950,11 @@ function inputFor(key,rule,value) {
   }
   const links={trip_id:['trip'],student_id:['student'],budget_item_id:['budget_item','trip_budget_item'],
     rule_id:['fixed_bill_rule'],account_id:['account'],from_account_id:['account'],to_account_id:['account'],
-    balance_id:['balance'],series_id:['lesson_series'],owner_id:Object.keys(schema),source_id:['student','lesson'],
+    balance_id:['balance'],series_id:['lesson_series'],owner_id:Object.keys(schema),source_id:['student','lesson'],included_in_general_id:['expense'],
     related_id:['grant','loan','expense','cash_event','budget_item','trip_budget_item']};
   if(rule.enum || links[key]) {
-    const choices=rule.enum??ledger.records.filter(row=>links[key].includes(row.entity)&&row.id!==editing?.row?.id).map(row=>row.id);
+    const choices=rule.enum??ledger.records.filter(row=>links[key].includes(row.entity)&&row.id!==editing?.row?.id&&
+      (key!=='included_in_general_id'||row.data.type==='GENERAL'&&row.data.entry_week)).map(row=>row.id);
     control=h('select',{},h('option',{value:''},tr(rule.optional?'Optional':'Choose…')),
       ...choices.map(choice=>h('option',{value:choice},rule.enum?tr(optionLabels[choice]??choice):ledger.records.find(row=>row.id===choice)?.data.description??choice)));
     control.value=value??'';
@@ -2039,13 +2212,14 @@ async function clipboard(text,textarea) {
   try {await navigator.clipboard.writeText(text);say('Copied.');}
   catch {textarea.focus();textarea.select();say('Select and copy the prepared text.');}
 }
-function transferDialog(title,body,{quick=false}={}) {
+function transferDialog(title,body,{quick=false,onDismiss}={}) {
   if(document.querySelector('dialog[open]'))return;
   const opener=document.activeElement;
   const modal=h('dialog',{class:'ng-search-dialog ng-budget-transfer-dialog'+(quick?' ng-quick-sheet':'')});
-  const close=async(focus=opener)=>{
+  const close=async(focus=opener,{returnToSetup=true}={})=>{
     if(modal.dataset.applying==='true')return;
     pending=null;await dismissSheet(modal,focus);pending=null;
+    if(returnToSetup)onDismiss?.();
   };
   modal.append(h('header',{},h('h2',{},title),actionButton('Close','X',()=>void close(),{only:true})));
   modal.addEventListener('cancel',event=>{event.preventDefault();void close();});
@@ -2057,7 +2231,7 @@ function transferDialog(title,body,{quick=false}={}) {
   if(footer)modal.append(footer);
   document.body.append(modal);openDialog(modal);
 }
-function exportBudgetToAI(scope,label) {
+function exportBudgetToAI(scope,label,onDismiss) {
   transferDialog(tr('Export to AI')+' · '+label,modal=>{
     const subsidy=scope===subsidyScope;
     const description=subsidy?'Subsidy context and instructions':'Budget context and instructions';
@@ -2070,10 +2244,10 @@ function exportBudgetToAI(scope,label) {
         try {await navigator.clipboard.writeText(output.value);status.textContent=tr('Instructions copied.');}
         catch {instructions.open=true;output.focus();output.select();status.textContent=tr('Select and copy the prepared text.');}
       },{kind:'primary'}),status,instructions);
-  },{quick:true});
+  },{quick:true,onDismiss});
 }
-function importBudgetFromAI(scope,label) {
-  transferDialog(tr('Import from AI')+' · '+tr(label),(modal,close)=>transfer(modal,{scope,close}),{quick:true});
+function importBudgetFromAI(scope,label,onDismiss) {
+  transferDialog(tr('Import from AI')+' · '+tr(label),(modal,close)=>transfer(modal,{scope,close}),{quick:true,onDismiss});
 }
 function transfer(host=content,{scope,close}={}) {
   const scoped=scope!==undefined;
@@ -2156,7 +2330,7 @@ function transfer(host=content,{scope,close}={}) {
         const destination=error.destination==='vienna'?null:subsidyScope;
         if(!budgetDrafts.get(destination)?.trim())budgetDrafts.set(destination,source.value);
         else await copyForReview(source.value,'Draft copied.');
-        await close();
+        await close(undefined,{returnToSetup:false});
         if(destination===null)navigate('Budget');
         else showSection('Pre-departure','subsidy');
         importBudgetFromAI(destination,destination===null?'Vienna Budget':'Subsidy');
@@ -2374,7 +2548,6 @@ function settings() {
       displayQuote(ledger,'EUR')?null:h('p',{id:'ng-rate-choice-hint',class:'ng-caption'},tr('Add a dated EUR rate to enable euro display.')),
       h('h3',{},tr('Offline storage')),h('p',{class:'ng-caption'},navigator.onLine?'Local records ready.':'Offline · local records ready.'),
       h('p',{class:'ng-caption'},ledger.records.length+' records · revision '+ledger.revision),
-      button(tr('Revisit onboarding'),onboarding),
       h('label',{class:'ng-field'},h('span',{},tr('Default expense currency')),
         h('select',{onchange:event=>run(async()=>{
           const next=clone(ledger);next.settings.expense_currency=event.target.value;
@@ -2443,6 +2616,7 @@ function settings() {
     h('h2',{},tr(label)),h('div',{class:'ng-settings-list'},...rows));
   content.append(h('div',{class:'ng-settings-hub'},
     settingsGroup('Preferences',
+      actionButton('Welcome and setup','Sparkles',()=>onboarding()),
       group('appearance','Appearance',appearance,'appearance',tr(theme==='dark'?'Dark':'Light')+' · '+(language.value==='en'?'English':'繁體中文')),
       group('exchange-dates','Exchange dates',dates,'dates',ledger.settings.departure_date?compactDate(ledger.settings.departure_date):tr('Set dates')),
       group('exchange-rates','Exchange rates',rates,'rates',ledger.settings.currency??'HKD')),
@@ -2565,8 +2739,8 @@ function appUpdatePanel(host) {
 }
 function migrationTotals(old,next) {
   const historical=entity=>next.records.filter(row=>row.entity===entity);
-  const income=historical('income_entry').filter(row=>row.origin.path.startsWith('records/'));
-  const expenses=historical('expense').filter(row=>row.origin.path.startsWith('expenses/'));
+  const income=historical('income_entry').filter(row=>row.origin?.path?.startsWith('records/'));
+  const expenses=historical('expense').filter(row=>row.origin?.path?.startsWith('expenses/'));
   const oldExpenses=old.expenses??[];
   const currencies=new Set([...oldExpenses.map(row=>row.currency??'HKD'),...expenses.map(row=>row.data.currency)]);
   const lines=[[tr('Historical income'), 'HKD', (old.records??[]).map(row=>row.income), income.map(row=>row.data.amount)]];
@@ -2629,32 +2803,61 @@ function reviewBackup(incoming,{mergeOnly=false}={}) {
   document.body.append(modal);openDialog(modal);
 }
 function chooseLegacyBackup() {
-  const source=h('input',{type:'file',accept:'.json,application/json'});
-  source.addEventListener('change',()=>run(async()=>{
-    if(!source.files[0])return;
-    const preview=await migrationPreview(localStorage,await source.files[0].text());
-    renderMigrationPreview(preview);
-  }));
-  source.click();
+  transferDialog(tr('Restore Gen 1 JSON'),(modal,close)=>{
+    const source=h('input',{type:'file',accept:'.json,application/json'});
+    const output=h('p',{role:'alert',class:'ng-entry-error'});
+    const scan=async file=>{
+      if((!file&&!migrationRequired)||source.disabled)return;
+      source.disabled=true;output.textContent='';
+      try{
+        const preview=await migrationPreview(localStorage,file?await file.text():null);
+        if(!modal.isConnected||modal.dataset.closing)return;
+        await close();renderMigrationPreview(preview);
+      }catch(problem){output.textContent=tr(problem.message);source.value='';}
+      finally{source.disabled=false;}
+    };
+    source.addEventListener('change',()=>{if(source.files[0])void scan(source.files[0]);});
+    const drop=entryField('Choose Gen 1 JSON',source);
+    drop.classList.add('ng-welcome-drop');
+    drop.append(h('small',{},tr('Or drop one JSON backup here.')));
+    drop.addEventListener('dragover',event=>event.preventDefault());
+    drop.addEventListener('drop',event=>{
+      event.preventDefault();
+      if(event.dataTransfer.files.length===1)void scan(event.dataTransfer.files[0]);
+      else output.textContent=tr('Choose one JSON backup.');
+    });
+    modal.append(drop,output);
+    if(migrationRequired)modal.append(button(tr('Review existing records'),()=>scan(null)));
+  },{quick:true});
 }
 function renderMigrationPreview(preview) {
   const warning=root.querySelector('#ng-migration-choice');
   warning.hidden=true;
   const old=JSON.parse(preview.next.legacy?.raw??'{}');
   const active=ledger.revision>0;
+  const already=ledger.legacy?.sourceHash===preview.sourceHash||
+    Object.values(ledger.legacy?.derivationSources??{}).some(row=>row.hash===preview.sourceHash);
+  const topFields=['sources','records','scheduled','expenses','tripCategories','budgetPlanning','finance',
+    'displayCurrency','isDarkMode','exchangeRate','lastRateUpdate','departureDate','workTools'];
+  const rawOnly=Object.keys(old).filter(key=>!topFields.includes(key));
+  const counts={student:0,lesson:0,income_entry:0,expense:0,balance:0,...preview.counts};
   content.replaceChildren(h('section',{class:'ng-surface'},
     h('h2',{tabindex:'-1'},tr('Review your migration')),
-    h('p',{},tr('This release uses local storage only. Check your Gen 1 exports for records from other devices before confirming.')),
+    h('p',{},tr('Review what Workie can map. The original JSON is kept for recovery.')),
     preview.fromBackup?h('p',{},tr('Reviewing the selected backup. Existing browser records are preserved.')):null,
-    h('dl',{class:'ng-counts'},...Object.entries(preview.counts).flatMap(([entity,count])=>[h('dt',{},tr(names[entity])),h('dd',{},String(count))])),
+    h('h3',{},tr('Records to map')),
+    h('dl',{class:'ng-counts'},...Object.entries(counts).flatMap(([entity,count])=>[h('dt',{},tr(names[entity]??entity)),h('dd',{},String(count))])),
     migrationTotals(old,preview.next),
+    h('h3',{},tr('Preserved with the original JSON')),
     h('p',{class:'ng-caption'},tr('Historical wallet snapshots')+' '+(old.smartExpenses?.length??0)+' · '+tr('Original source is retained. Fields without a Gen 2 equivalent remain in the backup.')),
+    rawOnly.length?h('ul',{},...rawOnly.map(key=>h('li',{},key))):null,
     old.INITIAL_AMOUNT===undefined?null:h('p',{class:'ng-caption'},tr('Imported historical starting amount')+' · ',moneyText(cents(old.INITIAL_AMOUNT),'HKD')),
     ...(preview.next.legacy?.warnings??[]).map(message=>h('p',{class:'ng-warning'},message)),
-    button(tr(active?'Review merge conflicts':'Confirm migration'),()=>run(async()=>{
+    already?h('p',{role:'status'},tr('This backup has already been imported.')):button(tr(active?'Review merge conflicts':'Confirm migration'),()=>run(async()=>{
       if(active){reviewBackup(preview.next,{mergeOnly:true});return;}
       ledger=await activateMigration(preview,localStorage);migrationRequired=false;markActive();
-      channel?.postMessage(ledger.revision);render();say('Migration saved. Confirm your exchange balance when ready.');onboarding();
+      localStorage.removeItem(welcomePreference);
+      channel?.postMessage(ledger.revision);render();say('Migration saved. Confirm your exchange balance when ready.');
     }),'primary'),
     button(tr('Cancel'),()=>{render();(root.querySelector('#ng-review-migration')?.offsetParent?
       root.querySelector('#ng-review-migration'):pageHeading())?.focus();}),
@@ -2797,8 +3000,8 @@ const observationDay=(end,date=today())=>date<end?date:end;
 function manageWeekly(key,close,week) {
   return actionButton('History / Manage','history',async()=>{
     await close();
-    settlementDetail=key;settlementWeek=week;secondarySections.add('savings-tools');
-    render();
+    settlementDetail=key;settlementWeek=week;
+    openPrepTool(key);
     const panel=content.querySelector('#ng-week-detail');
     panel?.scrollIntoView({block:'nearest',behavior:reduceMotion()?'instant':'smooth'});
     panel?.focus({preventScroll:true});
@@ -2881,6 +3084,10 @@ function openSundayHistory(end,history) {
                 {timeZone:HONG_KONG,dateStyle:'medium',timeStyle:'short'}).format(new Date(version.at)):null),
             weeklyMoney(version.amount)))):null);
     })));
+    modal.append(h('details',{class:'ng-entry-options ng-week-bridge'},
+      h('summary',{},h('span',{},icon('ChevronDown'),tr('More history tools'))),
+      ...[['settlement','Settlement and opening balances'],['cash','Cash activity and forecast'],['transactions','Transactions and bills']]
+        .map(([key,title])=>actionButton(title,'history',async()=>{await close();openPrepTool(key);}))));
   },{quick:true});
 }
 function weeklySettlementPanel() {
@@ -3343,6 +3550,8 @@ function weeklyTransactionList(report,key) {
   const line=(label,meta,total,actions,id)=>h('li',{class:'ng-week-transaction','data-record-id':id},
     h('div',{},h('strong',{},label),h('small',{},meta)),weeklyMoney(total),
     actions.length?commandMenu(tr('Actions for')+' '+label,actions):null);
+  const included=income?new Map():includedExpenseDetails(ledger,report.end);
+  const details=ledger.records.filter(row=>included.has(row.id)&&row.data.date>=report.week&&row.data.date<=report.end);
   const list=h('ul',{class:'ng-week-transactions'},...entries.map(entry=>{
     const row=entry.record;
     const meta=income?(row.data.work_income_id?'Additional lesson receipt':'General Income'):
@@ -3367,13 +3576,15 @@ function weeklyTransactionList(report,key) {
       (linked.length?' · '+linked.length+' '+tr(linked.length===1?'included lesson':'included lessons')+' · '+tr('Explained')+' '+amount(explained,'HKD')+
         ' · '+tr('Unexplained')+' '+amount(difference(entry.cents,explained),'HKD'):''),
       income?entry.cents:entry.cents===null?null:-entry.cents,actions,row.id);
-  }));
+  }),...details.map(row=>line(row.data.description,compactDate(row.data.date)+' · '+tr('Included in General total'),
+    convert(ledger,row.data.amount,row.data.currency,row.data.date),
+    [actionButton('Edit','Pencil',()=>edit('expense',row)),actionButton('Delete','Trash2',()=>remove(row),{kind:'danger'})],row.id)));
   const addIncome=actionButton('New income','income',()=>recordWeeklyIncome(report),{kind:'primary'});
   addIncome.dataset.entryAnchor='income';
   const panel=h('section',{id:'ng-week-detail',class:'ng-week-detail',tabindex:'-1','aria-labelledby':'ng-week-detail-title'},
     h('div',{class:'ng-week-detail-heading'},h('h3',{id:'ng-week-detail-title'},tr(income?'Weekly income':'Weekly expenses')),income?addIncome:null),
     h('p',{class:'ng-week-detail-total'},tr(income?'Recorded income':'Recorded expenses'),' ',weeklyMoney(income?report.income:report.expense)),
-    entries.length?list:h('p',{class:'ng-caption'},tr(income?'No receipts recorded for this week.':'No expenses recorded for this week.')));
+    entries.length||details.length?list:h('p',{class:'ng-caption'},tr(income?'No receipts recorded for this week.':'No expenses recorded for this week.')));
   if(income) {
     const posted=ledger.records.filter(row=>row.entity==='income_entry'&&!row.data.period);
     const lessonIds=new Set(posted.map(row=>row.data.source_id));
@@ -3404,15 +3615,21 @@ function weeklyChart(end,history) {
   const plot=h('div',{class:'ng-week-chart-body'});
   const redraw=animate=>{
     plot.replaceChildren();
-    if(!history.length) {
+    const provisional=Object.entries(ledger.settings.weekly_observations??{}).map(([week,observation])=>({
+      end:calendarDay(week,6),balance:observation.amount,asOf:observation.as_of,change:null,status:'Provisional',
+    })).filter(row=>row.asOf<row.end&&row.asOf<=today()&&!history.some(saved=>saved.end===row.end));
+    const chartHistory=[...history,...provisional].sort((a,b)=>a.end.localeCompare(b.end));
+    if(!chartHistory.length) {
       plot.append(h('p',{class:'ng-caption'},tr('Save a Sunday balance to start your history.')));
       return;
     }
-    const byDate=new Map(history.map(row=>[row.end,row]));
+    const byDate=new Map(chartHistory.map(row=>[row.end,row]));
     const latest=latestSunday();
-    const anchor=weeklyChartRange==='all'?latest:end;
-    const limit=weeklyChartRange==='all'?history[0].end:calendarDay(anchor,-7*(Number(weeklyChartRange)-1));
-    const from=history[0].end>limit&&history[0].end<=anchor?history[0].end:limit;
+    const currentObservation=provisional.find(row=>row.end===calendarDay(weekOf(today()),6));
+    const anchor=(weeklyChartRange==='all'||end===latest)?(currentObservation?.end??latest):end;
+    const limit=weeklyChartRange==='all'?chartHistory[0].end:calendarDay(anchor,-7*(Number(weeklyChartRange)-1));
+    const first=chartHistory[0].end;
+    const from=first>limit&&first<=anchor?first:limit;
     const shown=[];
     for(let date=from;date<=anchor;date=calendarDay(date,7)) {
       shown.push(byDate.get(date)??{end:date,balance:null,change:null,status:'Missing week'});
@@ -3424,9 +3641,10 @@ function weeklyChart(end,history) {
     const detail=h('div',{class:'ng-week-chart-detail'});
     const choices=shown.map(row=>{
       const value=row.change;
-      const sign=value===null?row.status==='Baseline'?'baseline':'unknown':value<0?'negative':value>0?'positive':'zero';
+      const sign=value===null?row.status==='Baseline'?'baseline':row.asOf?'provisional':'unknown':value<0?'negative':value>0?'positive':'zero';
       const caption=compactDate(row.end,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-      const label=caption+' · '+(value===null?tr(row.status):weeklyMoney(value,{signed:true}).textContent);
+      const status=tr(row.status==='Saved'?'Confirmed Sunday':row.status)+(row.asOf?' · '+compactDate(row.asOf):'');
+      const label=caption+' · '+status+(value===null?'':' · '+weeklyMoney(value,{signed:true}).textContent);
       const bar=value===null||value===0?null:h('span',{class:'ng-week-chart-bar'});
       const marker=h('span',{class:'ng-week-chart-plot','aria-hidden':'true','data-sign':sign,
         style:'--measure:'+Math.abs(value??0)/max*100+'%'},bar);
@@ -3440,9 +3658,9 @@ function weeklyChart(end,history) {
       return {key:row.end,label,control,inspect:()=>detail.replaceChildren(
         h('div',{class:'ng-week-chart-selected'},h('strong',{},caption),
           row.balance===null?h('small',{},tr('Missing week')):weeklyMoney(row.balance),
-          value===null&&row.balance!==null?h('small',{},tr(row.status)):null,
+          value===null&&row.balance!==null?h('small',{},status):null,
           value===null?null:h('small',{'data-sign':sign},weeklyMoney(value,{signed:true})),
-          row.end===end?null:actionButton('Open Sunday','CalendarDays',()=>chooseSunday(row.end))))};
+          row.end===end||row.end>latest?null:actionButton('Open Sunday','CalendarDays',()=>chooseSunday(row.end))))};
     });
     if(!choices.some(choice=>choice.key===chartSelections.get('weekly-savings')))chartSelections.set('weekly-savings',end);
     chartControls('weekly-savings',readout,choices);
@@ -3460,7 +3678,11 @@ function weeklyChart(end,history) {
   redraw(true);
   return chart;
 }
-function preDeparture() {
+function openPrepTool(tool) {
+  prepTool=tool;render();window.scrollTo({top:0,behavior:'instant'});resetChrome?.();
+  content.querySelector('[data-prep-back]')?.focus({preventScroll:true});
+}
+function prepTransactions(host) {
   const recent=ledger.records.filter(row=>row.entity==='expense'&&!row.data.voided&&!row.data.budget_item_id&&!row.data.trip_id&&!isSnapshotSettlement(row))
     .reverse().sort((a,b)=>b.data.date.localeCompare(a.data.date)).slice(0,3);
   const activity=h('section',{class:'ng-recent-expenses'},h('h2',{},tr('Recent expenses')),
@@ -3470,6 +3692,21 @@ function preDeparture() {
       moneyText(Math.round(row.data.amount*100),row.data.currency),
       actionButton('Edit expense','Pencil',()=>edit('expense',row),{only:true}))):
       [h('p',{class:'ng-caption'},tr('Saved expenses appear here.'))]));
+  host.append(activity,sectionDisclosure('expenses','Expenses and bills',child=>listView('Expenses',child),'expense'),
+    sectionDisclosure('wallets','Octopus and e-wallet history',walletHistory,'funds'),
+    sectionDisclosure('financial-actions','Savings, loans and balances',financialActions,'funds'));
+}
+function preDeparture() {
+  if(prepTool){
+    const back=actionButton('Back to Pre-departure','ChevronLeft',()=>openPrepTool(null));
+    back.dataset.prepBack='';
+    content.append(back);
+    if(prepTool==='settlement')content.append(weeklySettlementPanel());
+    else if(prepTool==='cash')content.append(financeDashboard());
+    else if(prepTool==='transactions')prepTransactions(content);
+    else content.append(weeklyTransactionList(weeklySettlement(ledger,settlementWeek,{asOf:calendarDay(settlementWeek,6)}),prepTool));
+    return;
+  }
   const end=selectedSunday??latestSunday();
   const history=sundayHistory(ledger.settings);
   const report=weeklySettlement(ledger,weekOf(end),{asOf:end});
@@ -3481,14 +3718,8 @@ function preDeparture() {
       quick('expense','Expense',report.expense,report.rows.expenses.length,recordWeeklyExpense)),
     h('div',{class:'ng-pre-stream'},
       sectionDisclosure('subsidy','Subsidy',subsidies,'subsidy',tr('Grants and receipts')),
-      sectionDisclosure('income','Income',incomePanel,'income',
-        ledger.settings.timer?.running?tr('Timer running'):tr('Earnings and tutoring')),
-      sectionDisclosure('savings-tools','Accounting and cash activity',host=>host.append(weeklySettlementPanel(),
-        sectionDisclosure('cash-statistics','Cash activity and forecast',child=>child.append(financeDashboard()),'ChartNoAxesCombined'),
-        sectionDisclosure('history','Transaction history',child=>child.append(activity,
-        sectionDisclosure('expenses','Expenses and bills',child=>listView('Expenses',child),'expense'),
-        sectionDisclosure('wallets','Octopus and e-wallet history',walletHistory,'funds'),
-        sectionDisclosure('financial-actions','Savings, loans and balances',financialActions,'funds')),'history')),'funds')));
+      sectionDisclosure('income','Income management',incomePanel,'income',
+        ledger.settings.timer?.running?tr('Timer running'):tr('Earnings and tutoring'))));
 }
 function subsidies(host) {
   const grants=ledger.records.filter(row=>row.entity==='grant');
@@ -3571,6 +3802,7 @@ function financeDashboard() {
   return panel;
 }
 function showSection(route,id) {
+  if(route==='Pre-departure')prepTool=null;
   secondarySections.add(id);
   navigate(route);
   requestAnimationFrame(()=>{
@@ -3581,6 +3813,7 @@ function showSection(route,id) {
 function navigate(name,context=viewState.get(name)) {
   if(!tabs.includes(name))return;
   const previous=view;
+  if(name!==previous)prepTool=null;
   viewState.set(view,{query,filterEntity,filterCategory,trip:currentTrip,scroll:window.scrollY});
   view=name;query=context?.query??'';filterEntity=context?.filterEntity??'';filterCategory=context?.filterCategory??'';
   currentTrip=name==='Trips'?context?.trip??null:null;
@@ -3718,6 +3951,7 @@ async function start() {
   document.body.classList.add('ng-active');
   document.documentElement.classList.remove('ng-boot');
   render();
+  if(needsSetup()&&!localStorage.getItem(welcomePreference))onboarding();
 }
 if(typeof document!=='undefined') start().catch(error=>{
   document.documentElement.classList.remove('ng-boot');

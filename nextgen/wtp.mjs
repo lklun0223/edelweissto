@@ -36,6 +36,7 @@ export const schema = {
     category:{...enumerated(['TRANSPORT','HOUSING','FOOD','LEISURE']),optional:true,nullable:true},
     bill:{...enumerated(['rent','water','electricity','internet','phone','other']),nullable:true,optional:true},
     budget_item_id:reference,trip_id:reference,rule_id:reference,note,
+    included_in_general_id:reference,
     ...cashScope,...weeklyEntry,
   },
   savings_deposit:{...payment,direction:{...enumerated(['IN','OUT']),optional:true},account_id:reference,note},

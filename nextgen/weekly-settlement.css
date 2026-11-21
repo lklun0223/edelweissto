@@ -399,6 +399,11 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   content:""; position:absolute; top:50%; translate:0 -50%; z-index:1;
   width:.4rem; aspect-ratio:1; border-radius:50%; background:var(--product-muted);
 }
+.ng-week-chart-plot[data-sign=provisional]::before {
+  content:""; position:absolute; top:50%; translate:0 -50%; z-index:1;
+  width:.55rem; aspect-ratio:1; border:2px solid var(--product-muted); border-radius:50%; background:var(--v3-well);
+}
+.ng-week-chart-plot[data-sign=provisional]::after { border-top-style:dashed; }
 .ng-week-zero { position:absolute; top:3.825rem; translate:0 -50%; inset-inline-start:0; }
 .ng-week-chart-bar { position:absolute; width:min(55%,4rem); height:calc(var(--measure) / 2);
   bottom:50%; transform-origin:bottom; background:#27845d; border-radius:5px 5px 0 0; }
