@@ -1,9 +1,9 @@
-import {schema,parseWtp,schemaForPrompt} from './wtp.mjs';
-import {prompt} from './wtp-prompt.mjs';
+import {schema,parseWtp,schemaForPrompt,TransferSyntaxError} from './wtp.mjs';
+import {prompt,weeklyTransferGuidance} from './wtp-prompt.mjs';
 import {exportRecordsCsv} from './csv.mjs';
 import {CATEGORIES} from './coverage.mjs';
 import {calendarDay,HONG_KONG,lessonInterval,manualTimerStart,possibleLessonTimes,wallTime,weekOf} from './lesson-time.mjs';
-import {dependentSettlements,settlementVersion,settlementView,weeklyHistory,weeklySettlement} from './weekly-settlement.mjs';
+import {dependentSettlements,retainWeeklyObservation,settlementVersion,settlementView,weeklyHistory,weeklySettlement,weeklyTimeline} from './weekly-settlement.mjs';
 import {incomeTrend,weeklyIncome,studentAttendance,lessonOperations,linkConfirmedIncome} from './work-analytics.mjs';
 import {addSpecialIncome,generalReceipt,prepareOperations,setIncludedWork,workReceipt} from './work-receipts.mjs';
 import {translate} from './i18n.mjs';
@@ -11,7 +11,7 @@ import {backupChanges,mergeBackup,withTransferHistory} from './backup-merge.mjs'
 import {allocationView,allocationDeltas} from './allocation-view.mjs';
 import {fundingInstrument} from './presentation.mjs';
 import {budgetScope,difference,periodMoney,planPosition,sumKnown,travelCapacity,tripActual} from './product-finance.mjs';
-import {budgetTransferContext,prepareScopedBudgetBatch,subsidyScope,subsidyTransferContext,prepareScopedSubsidyBatch} from './budget-transfer.mjs';
+import {budgetTransferContext,prepareScopedBudgetBatch,subsidyScope,subsidyTransferContext,prepareScopedSubsidyBatch,TransferContextError,transferExample} from './budget-transfer.mjs';
 import {actionIcons,adaptiveChrome,movementCurve,resizePanel,tweenNumbers} from './interaction.mjs';
 import {displayQuote,fetchReferenceRate,rateIsStale,valuationLedger} from './rates.mjs';
 import {exportWorkData,inspectWorkData,requireWorkScope} from './work-data.mjs';
@@ -242,7 +242,11 @@ function openDialog(modal) {
   }
   modal.lang=ledger?.settings.language??'en';
   modal.showModal();
-  if(modal.matches('.ng-quick-sheet'))adjustEditorViewport();
+  if(modal.matches('.ng-budget-transfer-dialog')) {
+    adjustEditorViewport();
+    title?.setAttribute('tabindex','-1');
+    title?.focus({preventScroll:true});
+  }
   if(modal===dialog) {
     adjustEditorViewport();
     const origin=dialogOpener?.getBoundingClientRect();
@@ -281,13 +285,8 @@ async function dismissSheet(modal,focus) {
 }
 function adjustEditorViewport() {
   const viewport=window.visualViewport;
-  const surface=document.querySelector('.ng-quick-sheet[open]')??dialog;
+  const surface=document.querySelector('.ng-budget-transfer-dialog[open]')??dialog;
   if(!surface?.open||!viewport)return;
-  if(viewport.scale!==1) {
-    surface.style.removeProperty('--ng-viewport-height');
-    surface.style.removeProperty('--ng-viewport-bottom');
-    return;
-  }
   const offset=Math.max(0,window.innerHeight-viewport.height-viewport.offsetTop);
   surface.style.setProperty('--ng-viewport-height',viewport.height+'px');
   surface.style.setProperty('--ng-viewport-bottom',offset+'px');
@@ -515,23 +514,54 @@ function overview() {
     h('h2',{id:'folio-balance-label'},tr('Cash available now')),
     h('p',{class:'folio-balance-amount','data-finance-metric':'cash','data-size':figureSize(money?money[3]:formatted)},
       money?h('span',{class:'folio-currency'},money[2]):null,h('strong',{},money?money[1]+money[3]:formatted)),
-    h('p',{class:'folio-balance-date'},model.base?tr('Opening balance confirmed')+' · '+compactDate(model.base.data.as_of,{day:'numeric',month:'short',year:'numeric'}):
-      tr('Confirm your exchange fund balance in Pre-departure.')));
+    h('p',{class:'folio-balance-date'},model.base?tr('Exchange cash baseline')+' · '+compactDate(model.base.data.as_of,{day:'numeric',month:'short',year:'numeric'}):
+      tr('Confirm how much cash is set aside for Vienna.')),
+    button(tr('Cash sources'),()=>cashReview(model)));
   const position=(label,value,key)=>h('div',{},h('dt',{},tr(label)),h('dd',{'data-finance-metric':key,'data-shortfall':String(value!==null&&value<0)},amount(value)));
   const summary=h('dl',{class:'ng-metrics ng-home-position'},
     position('Vienna still to pay',model.total,'remaining'),
     position(model.cashPosition===null?'Cash-only position':model.cashPosition<0?'Cash shortfall':'Cash surplus',model.cashPosition,'cash-position'),
     position(model.expectedPosition===null?'With approved grants':model.expectedPosition<0?'Shortfall with grants':'Surplus with grants',model.expectedPosition,'expected-position'));
   const access=h('div',{class:'ng-home-actions'},actionButton('Subsidy','subsidy',()=>showSection('Pre-departure','subsidy')));
-  const instrument=fundingInstrument({h,button,chart:allocationView(model),amount,tr,selected:selectedAllocation,
+  const instrument=fundingInstrument({h,button,chart:allocationView(model,{classifiedPreview:true}),amount,tr,selected:selectedAllocation,
     onSelect:id=>{selectedAllocation=id;},
     onOpenCategory:id=>navigate('Budget',{query:'',filterEntity:'',filterCategory:id,scroll:0}),
     onReviewPlan:()=>navigate('Budget',{query:'',filterEntity:'',filterCategory:'',scroll:0})});
   const stage=h('div',{class:'v3-overview'+(firstOverview?' v3-reveal':'')},
     h('div',{class:'v3-overview-summary'},hero,summary,access,
-      model.issues.length?h('p',{class:'ng-warning'},model.issues.join(' · ')):null),instrument);
+      model.issues.length?h('div',{class:'ng-funding-review'},actionButton(model.historyReview.length?
+        model.historyReview.length+' '+tr(model.historyReview.length===1?'historical payment needs review':'historical payments need review'):
+        'Review available cash','CircleAlert',()=>cashReview(model))):null),instrument);
   firstOverview=false;
   content.append(stage);
+}
+function cashReview(model) {
+  const opening=weeklySettlement(ledger,settlementWeek).opening;
+  const references=new Map(ledger.records.map(row=>[row.id,row]));
+  transferDialog(tr('Cash sources'),(modal,close)=>{
+    const difference= model.issues.filter(message=>!message.startsWith('Reconcile historical payment ')&&
+      !message.startsWith('Reconcile edited payment '));
+    modal.append(h('div',{},h('p',{class:'ng-caption'},tr('Weekly savings tracks your starting savings. Home starts from cash you explicitly set aside for Vienna.')),
+      h('dl',{class:'ng-counts'},
+        h('dt',{},tr('Weekly opening savings')),h('dd',{},weeklyMoney(opening)),
+        h('dt',{},tr('Confirmed exchange amount')),h('dd',{},moneyText(model.baseline,'HKD')),
+        h('dt',{},tr('Cash available now')),h('dd',{},moneyText(model.available,'HKD'))),
+      h('p',{class:'ng-caption'},tr('Account balances track individual accounts. Savings deposits move existing money into the exchange fund. Remaining Vienna commitments come from Budget items and their linked payments.')),
+      model.historyReview.length?h('details',{class:'ng-secondary'},h('summary',{},tr('Historical payment review'),icon('ChevronDown')),
+        h('ul',{class:'ng-cash-review-list'},...model.historyReview.map(item=>{
+          const row=references.get(item.id);
+          const source=row?.origin?.path?.startsWith('expenses/')?'Gen 1 expense history':
+            row?.origin?'Preserved legacy source':'Workie ledger';
+          return h('li',{},h('strong',{},row?.data.description??tr('Saved record')),
+            h('small',{},tr(source)+' · '+tr(item.reason)),
+            row?.data.budget_item_id?h('small',{},tr('Linked budget payment')):null);
+        }))):null,
+      difference.length?h('ul',{class:'ng-caption'},...difference.map(message=>h('li',{},tr(message)))):null,
+      actionButton(model.base?'Review exchange cash':'Confirm exchange cash','funds',async()=>{
+        await close();
+        edit('balance',model.base,{scope:'EXCHANGE',as_of:today(),description:tr('Exchange cash')});
+      },{kind:'primary'})));
+  });
 }
 function milestones() {
   const tasks=ledger.records.filter(row=>['task','course','grant'].includes(row.entity)&&row.data.due_date&&!row.data.done&&row.data.status!=='已發放')
@@ -1114,9 +1144,56 @@ function budgetWorkspace(trip=null) {
     chapters.append(section);
   }
   const unassigned=records.filter(row=>!CATEGORIES.some(category=>category.id===row.data.category));
-  if(unassigned.length)chapters.append(h('details',{class:'ng-secondary'},h('summary',{},tr('Items needing a category')),
-    ...unassigned.map(row=>recordRow(row,true))));
+  if(unassigned.length) {
+    const ids=new Set(unassigned.map(row=>row.id));
+    const subtotal=sumKnown(position.obligations.filter(item=>ids.has(item.id)).map(item=>item.cents));
+    chapters.append(h('details',{class:'ng-secondary'},h('summary',{},h('span',{},tr('Items needing a category')),
+        h('small',{class:'ng-section-value'},String(unassigned.length)),icon('ChevronDown')),
+      h('p',{class:'ng-caption'},tr('Included in the plan total, outside the category allocation.')+' ',moneyText(subtotal)),
+      actionButton('Classify items','ListFilter',()=>classifyBudget(unassigned,!trip)),
+      ...unassigned.map(row=>recordRow(row,true))));
+  }
   content.append(summary,chapters);
+}
+function classifyBudget(rows,vienna) {
+  const revision=ledger.revision;
+  transferDialog(tr('Classify items'),(modal,close)=>{
+    const suggestions=new Map(),fields=new Map();
+    const status=h('p',{role:'alert',class:'ng-entry-error'});
+    const controls=rows.map(row=>{
+      const auto=vienna&&/\bvisa\s*d\b|[oö]gk|\binsurance\b|(?:phone|sim)\s*card|保[險险]|電話卡|簽證\s*d/i.test(row.data.description);
+      if(auto)suggestions.set(row.id,'LEISURE');
+      const select=h('select',{},h('option',{value:''},tr('Leave unchanged')),
+        ...CATEGORIES.map(category=>h('option',{value:category.id},category.label+' '+tr(category.name))));
+      fields.set(row.id,select);
+      return h('label',{class:'ng-field'},h('span',{},row.data.description),select,
+        auto?h('small',{class:'ng-caption'},tr('Suggested: Leisure → Other')):null);
+    });
+    const submit=h('button',{type:'submit',class:'ng-button primary',disabled:true},tr('Save categories'));
+    const panel=h('form',{class:'ng-entry-form',onchange:update,onsubmit:async event=>{
+      event.preventDefault();
+      if(submit.disabled)return;
+      submit.disabled=true;status.textContent='';
+      try {
+        if(revision!==ledger.revision)throw Error('Records changed. Open classification again.');
+        const operations=rows.flatMap(row=>{
+          const category=fields.get(row.id).value;
+          if(!category)return [];
+          const changes={category,...(category==='LEISURE'&&suggestions.has(row.id)?{subcategory:'Other'}:{})};
+          return [{op:'UPDATE',entity:row.entity,record_id:row.id,expected_revision:row.revision,changes}];
+        });
+        if(!operations.length)return;
+        const {next}=await prepareOperations(ledger,operations);
+        await save(next,'Classify reviewed budget items',revision);
+        await close();showUndo(revision,'Categories saved.');
+      } catch(error){status.textContent=tr(error.message);}
+      finally {update();}
+    }},h('p',{class:'ng-caption'},tr('Changing categories changes their funding order. The saved amounts stay the same.')),
+      suggestions.size?button(tr('Select suggestions'),()=>{for(const [id,category] of suggestions)fields.get(id).value=category;update();}):null,
+      ...controls,status,submit);
+    function update(){submit.disabled=![...fields.values()].some(control=>control.value);}
+    modal.append(panel);
+  });
 }
 function tripWorkspace() {
   const trips=ledger.records.filter(row=>row.entity==='trip').sort((a,b)=>
@@ -1725,9 +1802,11 @@ function edit(entity,row=null,defaults={}) {
   if(document.querySelector('dialog[open]'))return;
   const quick=entity==='expense'&&!row&&defaults.quick===true;
   const paymentFor=defaults.paymentFor, weeklyIncomeWeek=defaults.weeklyIncomeWeek;
+  const expenseWeek=entity==='expense'&&!row&&!defaults.budget_item_id&&!defaults.trip_id&&!defaults.rule_id?
+    settlementWeek:null;
   if(!row&&(quick||paymentFor))defaults=cashEntryDefaults({date:today(),...defaults});
   const quickBalance=!row&&(quick||paymentFor)?defaults.balance_id??null:null;
-  editing={entity,row,quick,quickBalance,paymentFor,weeklyIncomeWeek,
+  editing={entity,row,quick,quickBalance,paymentFor,weeklyIncomeWeek,expenseWeek,
     originalDate:row?.data.date??defaults.date,originalTime:row?.data.start_time??defaults.start_time};
   dialog.dataset.folio=String(view in folioTitles);
   dialog.dataset.v3='true';
@@ -1809,6 +1888,21 @@ function edit(entity,row=null,defaults={}) {
     form.append(grid);
     if(context.children.length>1)form.append(context);
   }
+  if(expenseWeek) {
+    const dateField=fields.get('date');
+    const period=h('p',{class:'ng-caption'},weekEnding(calendarDay(expenseWeek,6)));
+    const control=key=>form.elements.namedItem(key);
+    const updatePeriod=()=>{
+      const isWeekly=control('type').value==='GENERAL'&&
+        !['budget_item_id','trip_id','rule_id'].some(key=>control(key)?.value);
+      dateField.hidden=isWeekly;
+      control('date').disabled=isWeekly;
+      period.hidden=!isWeekly;
+    };
+    for(const key of ['type','budget_item_id','trip_id','rule_id'])control(key)?.addEventListener('change',updatePeriod);
+    dateField.after(period);
+    updatePeriod();
+  }
   form.append(h('p',{id:'ng-form-error',role:'alert'}));
   form.addEventListener('invalid',showInvalidField,true);
   if(row?.data.participants?.length)form.elements.namedItem('share').closest('label').hidden=true;
@@ -1841,7 +1935,7 @@ async function submitEditor(event) {
   if(submit.disabled)return;
   const label=submit.textContent;
   submit.disabled=true;submit.textContent=tr('Saving on this device…');
-  const {entity,row,quick,quickBalance,paymentFor,weeklyIncomeWeek}=editing,data={};
+  const {entity,row,quick,quickBalance,paymentFor,weeklyIncomeWeek,expenseWeek}=editing,data={};
   try {
     const revision=ledger.revision;
     for(const [key,rule] of Object.entries(schema[entity])) {
@@ -1855,6 +1949,11 @@ async function submitEditor(event) {
         rule.type==='currency'?control.value.toUpperCase():control.value;
     }
     if(quick&&!data.description?.trim())data.description='日常支出';
+    if(expenseWeek&&data.type==='GENERAL'&&!data.budget_item_id&&!data.trip_id&&!data.rule_id) {
+      data.date=calendarDay(expenseWeek,6);
+      data.entry_week=expenseWeek;
+      data.entry_created_at=new Date().toISOString();
+    }
     if(weeklyIncomeWeek) {
       if(!data.description?.trim())data.description=tr(data.student_id||data.work_income_id?'Tutoring income':'Income');
       data.receipt_week=data.date?null:weeklyIncomeWeek;
@@ -1941,11 +2040,16 @@ function transferDialog(title,body,{quick=false}={}) {
   const modal=h('dialog',{class:'ng-search-dialog ng-budget-transfer-dialog'+(quick?' ng-quick-sheet':'')});
   const close=async(focus=opener)=>{
     if(modal.dataset.applying==='true')return;
-    pending=null;await dismissSheet(modal,focus);
+    pending=null;await dismissSheet(modal,focus);pending=null;
   };
   modal.append(h('header',{},h('h2',{},title),actionButton('Close','X',()=>void close(),{only:true})));
   modal.addEventListener('cancel',event=>{event.preventDefault();void close();});
   body(modal,close);
+  const footer=modal.querySelector('.ng-scoped-apply');
+  footer?.remove();
+  const scroller=h('div',{class:'ng-sheet-body'},...[...modal.children].slice(1));
+  modal.append(scroller);
+  if(footer)modal.append(footer);
   document.body.append(modal);openDialog(modal);
 }
 function exportBudgetToAI(scope,label) {
@@ -1959,18 +2063,19 @@ function exportBudgetToAI(scope,label) {
   });
 }
 function importBudgetFromAI(scope,label) {
-  transferDialog(tr('Import from AI')+' · '+label,(modal,close)=>transfer(modal,{scope,close}));
+  transferDialog(tr('Import from AI')+' · '+tr(label),(modal,close)=>transfer(modal,{scope,close}));
 }
 function transfer(host=content,{scope,close}={}) {
   const scoped=scope!==undefined;
   const prepare=(record,text)=>scope===subsidyScope?prepareScopedSubsidyBatch(record,text):
-    scoped?prepareScopedBudgetBatch(record,text,scope):prepareBatch(record,text);
+    scoped?prepareScopedBudgetBatch(record,text,scope):prepareBatch(record,text,{weeklyTransfer:true});
   const setDraft=text=>{if(scoped)budgetDrafts.set(scope,text);else transferDraft=text;};
   const output=h('textarea',{rows:5,readonly:true,hidden:true,'aria-label':'Prepared text'}),
     source=h('textarea',{id:'ng-transfer-input',rows:8,spellcheck:false,'aria-label':'Paste Workie changes'}),
     preview=h('div',{id:'ng-transfer-preview',tabindex:'-1'}),
     choices=h('div',{class:'ng-copy-list'}),
     diagnostic=h('p',{id:'ng-transfer-diagnostic',class:'ng-transfer-diagnostic',role:'alert'}),
+    remedies=h('div',{class:'ng-transfer-remedies ng-actions'}),
     state=h('p',{class:'ng-transfer-state',role:'status'},tr('Paste a proposal to begin.')),
     apply=button(tr('Confirm and apply'),async()=>{
       if(!pending) return;
@@ -1978,7 +2083,7 @@ function transfer(host=content,{scope,close}={}) {
       if(scoped)host.dataset.applying='true';
       apply.disabled=true;
       apply.textContent=tr('Applying changes…');
-      diagnostic.textContent='';
+      diagnostic.textContent='';remedies.replaceChildren();
       try {
         const prepared=await prepare(current,text);
         if(review!==pending||text!==source.value||prepared.hash!==review.hash||ledger.revision!==review.revision)
@@ -2006,18 +2111,54 @@ function transfer(host=content,{scope,close}={}) {
   source.value=scoped?budgetDrafts.get(scope)??'':transferDraft;
   source.setAttribute('aria-describedby','ng-transfer-diagnostic');
   apply.disabled=true;
+  async function copyForReview(text,status) {
+    try {
+      await navigator.clipboard.writeText(text);
+      state.textContent=tr(status);
+    } catch {
+      source.focus();source.select();
+      state.textContent=tr('Draft selected. Use your device’s copy command.');
+    }
+  }
   function showDiagnostic(error) {
+    pending=null;apply.disabled=true;remedies.replaceChildren();
     const match=error.message.match(/^\$\.operations\[(\d+)](?:\.(.*?))?:\s*(.*)$/);
-    const message=match?tr('Change')+' '+(Number(match[1])+1)+(match[2]?' · '+match[2]:'')+' — '+match[3]:error.message;
-    diagnostic.textContent=message;
+    if(error instanceof TransferSyntaxError) {
+      const location=error.line===null?'':tr('Line')+' '+error.line+' · '+tr('Column')+' '+error.column+' — ';
+      diagnostic.textContent=tr('Invalid JSON')+' · '+location+tr(error.escapedArray?
+        'Remove the backslash before the opening square bracket.':
+        'Check the quotes, commas and brackets near this point.');
+      if(error.suggestion)remedies.append(button(tr('Remove the stray backslash'),()=>{
+        source.value=error.suggestion;source.oninput();
+        source.focus();source.setSelectionRange(error.index,error.index);
+      }));
+      else if(error.index!==null)remedies.append(button(tr('Go to the error'),()=>{
+        source.focus();source.setSelectionRange(error.index,Math.min(source.value.length,error.index+1));
+      }));
+    } else if(error instanceof TransferContextError) {
+      diagnostic.textContent=tr(error.message);
+      remedies.append(button(tr('Copy draft'),()=>copyForReview(source.value,'Draft copied.')));
+      if(error.destination&&scoped)remedies.append(button(tr(error.destination==='vienna'?'Open Vienna Budget import':'Open Subsidy import'),async()=>{
+        const destination=error.destination==='vienna'?null:subsidyScope;
+        if(!budgetDrafts.get(destination)?.trim())budgetDrafts.set(destination,source.value);
+        else await copyForReview(source.value,'Draft copied.');
+        await close();
+        if(destination===null)navigate('Budget');
+        else showSection('Pre-departure','subsidy');
+        importBudgetFromAI(destination,destination===null?'Vienna Budget':'Subsidy');
+      }));
+    } else if(error.message.startsWith('$.batch_id:')) {
+      diagnostic.textContent=tr('Invalid batch identifier. Use a UUID like the one in the example.');
+    } else {
+      diagnostic.textContent=match?tr('Change')+' '+(Number(match[1])+1)+(match[2]?' · '+match[2]:'')+' — '+match[3]:
+        tr('Proposal validation')+' · '+tr(error.message);
+    }
     state.textContent=tr('Review the proposal before applying.');
     source.setAttribute('aria-invalid','true');
-    say(error.message,true);
   }
   source.oninput=()=>{
     setDraft(source.value);pending=null;preview.replaceChildren();apply.disabled=true;
-    diagnostic.textContent='';source.removeAttribute('aria-invalid');state.textContent=tr('Preview the current proposal to apply it.');
-    say('');
+    diagnostic.textContent='';remedies.replaceChildren();source.removeAttribute('aria-invalid');state.textContent=tr('Preview the current proposal to apply it.');
     validate.disabled=!source.value.trim()||preview.getAttribute('aria-busy')==='true';
   };
   for(const row of scoped?[]:ledger.records) {
@@ -2039,11 +2180,11 @@ function transfer(host=content,{scope,close}={}) {
     const text=source.value;
     const current=ledger;
     pending=null;apply.disabled=true;preview.replaceChildren();
-    setDraft(text);diagnostic.textContent='';source.removeAttribute('aria-invalid');
+    setDraft(text);diagnostic.textContent='';remedies.replaceChildren();source.removeAttribute('aria-invalid');
     validate.disabled=true;preview.setAttribute('aria-busy','true');state.textContent=tr('Checking proposal…');
     try {
       const prepared=await prepare(current,text);
-      if(text!==source.value||!preview.isConnected)return;
+      if(text!==source.value||!preview.isConnected||host.dataset.closing)return;
       if(current.revision!==ledger.revision)throw Error('Records changed while building the preview. Preview again.');
     pending={hash:prepared.hash,revision:current.revision};
     const impact=[['Available resources','available'],['Expected coverage','expected']];
@@ -2067,18 +2208,28 @@ function transfer(host=content,{scope,close}={}) {
   };
   const validate=button(tr('Preview changes'),refreshPreview);
   validate.disabled=!source.value.trim();
+  const example=h('textarea',{readOnly:true,rows:6,'aria-label':tr('Valid JSON example')});
+  example.value=transferExample(scope);
+  const help=h('details',{class:'ng-transfer-example'},h('summary',{},tr('Valid JSON example')),example,
+    button(tr('Copy example'),async()=>{
+      const text=example.value=transferExample(scope);
+      try {await navigator.clipboard.writeText(text);state.textContent=tr('Example copied. Edit its values before previewing.');}
+      catch {example.focus();example.select();state.textContent=tr('Example selected. Use your device’s copy command.');}
+    }));
   host.append(h('div',{class:scoped?'ng-scoped-transfer':'ng-transfer-layout'},
     !scoped?h('section',{class:'ng-surface ng-transfer ng-transfer-copy'},h('h2',{},tr('Prepare a conversation')),
       h('p',{class:'ng-caption'},tr('Copy the instructions into a chatbot of your choice. Workie processes the reply on this device.')),
-      button(tr('Copy Chatbot Instructions'),()=>clipboard(prompt+'\n\n'+schemaForPrompt(),output),'primary'),selection,output):null,
+      button(tr('Copy Chatbot Instructions'),()=>clipboard(prompt+'\n\n'+weeklyTransferGuidance+'\n\n'+schemaForPrompt(),output),'primary'),selection,output):null,
     h('section',{class:scoped?'ng-transfer-review':'ng-surface ng-transfer ng-transfer-review'},!scoped?h('h2',{},tr('Review a proposal')):null,
-      h('label',{for:'ng-transfer-input'},tr('Paste changes')),source,diagnostic,state,validate,preview,
+      h('label',{for:'ng-transfer-input'},tr('Paste changes')),
+      scoped?null:h('p',{class:'ng-caption'},tr('General totals use the week-ending Sunday. Use Special for individually dated spending.')),
+      source,diagnostic,remedies,state,help,validate,preview,
       scoped?h('footer',{class:'ng-scoped-apply'},apply):apply)));
 }
 function transferDifference(change) {
   const before=change.before??{},after=change.after??{};
   const keys=[...new Set([...Object.keys(before),...Object.keys(after)])]
-    .filter(key=>JSON.stringify(before[key])!==JSON.stringify(after[key]));
+    .filter(key=>key!=='entry_created_at'&&JSON.stringify(before[key])!==JSON.stringify(after[key]));
   const value=(record,key)=>{
     const field=record[key];
     if(field===null||field===undefined)return '—';
@@ -2261,7 +2412,7 @@ function settings() {
       group('exchange-dates','Exchange dates',dates,'dates',ledger.settings.departure_date?compactDate(ledger.settings.departure_date):tr('Set dates')),
       group('exchange-rates','Exchange rates',rates,'rates',ledger.settings.currency??'HKD')),
     settingsGroup('Data and recovery',
-      group('backups','Backups & handoff',backup,'backup'),group('sync','Sync and handoff',sync,'sync'),
+      group('backups','Backups & handoff',backup,'backup'),group('sync','Sync and handoff',sync,'sync',tr('Local only')),
       sectionDisclosure('transfer','Advanced transfer',transfer,'transfer'),
       group('migration','Migration records',migrationRecords,'migration'),group('audit','Change history',audit,'history')),
     settingsGroup('Exchange administration',
@@ -2505,8 +2656,8 @@ function sectionDisclosure(id,label,build,symbol,summaryValue=null) {
         secondarySections.delete(id);
       }
     }},h('summary',{},symbol?icon(actionIcons[symbol]??symbol):null,h('span',{},tr(label)),
-      summaryValue?h('small',{class:'ng-section-value'},summaryValue):null,
-      icon('ChevronRight')),host);
+      summaryValue?h('small',{class:'ng-section-value',title:summaryValue},summaryValue):null,
+      icon('ChevronDown')),host);
   if(panel.open)build(host);
   return panel;
 }
@@ -2550,6 +2701,7 @@ function weekDateRange(week) {
   return compactDate(week)+' – '+compactDate(calendarDay(week,6),{day:'numeric',month:'short',year:'numeric'});
 }
 const weekEnding=end=>tr('Week ending Sunday')+' · '+compactDate(end,{day:'numeric',month:'short',year:'numeric'});
+const observationDay=(end,date=today())=>date<end?date:end;
 function manageWeekly(key,close) {
   return actionButton('History / Manage','history',async()=>{
     await close();
@@ -2592,10 +2744,14 @@ function weeklySettlementPanel() {
       h('span',{class:'ng-week-amount-label'},tr('Weekly difference')),number('differenceForWeek',differenceForWeek)));
   const comparison=h('div',{},settlementComparison(figures,Boolean(confirmed&&!observation)));
   const variance=h('small',{class:'ng-week-variance'});
+  const earlier=ledger.settings.weekly_observation_history?.[week]??[];
   const reconciliation=h('details',{class:'ng-week-bridge'},h('summary',{},
     h('span',{},icon('ChevronDown'),tr('Reconciliation')),variance),comparison,
     report.changed?h('p',{class:'ng-caption'},tr('Current recorded expenses')+' · ',weeklyMoney(report.expense),
       ' · '+tr('Current income')+' · ',weeklyMoney(report.income)):null,
+    earlier.length?h('section',{class:'ng-week-movements'},h('h3',{},tr('Earlier savings observations')),
+      ...earlier.map(row=>h('div',{class:'ng-week-bridge-row'},h('time',{datetime:row.as_of},compactDate(row.as_of)),
+        weeklyMoney(row.amount)))):null,
     report.rows.adjustments.length||report.rows.neutral.length?h('div',{class:'ng-week-movements'},
       h('h3',{},tr(report.changed?'Current cash movements':'Other cash movements')),
       ...[...report.rows.adjustments,...report.rows.neutral].map(entry=>h('div',{class:'ng-week-bridge-row'},
@@ -2610,14 +2766,14 @@ function weeklySettlementPanel() {
     value:savingsDrafts.get(week)??(original===null?'':savingsDigits(original))});
   note.id='ng-observation-note';
   const submit=h('button',{type:'submit',class:'ng-button primary ng-action-control ng-observation-save','aria-label':tr('Save savings observation'),
-    title:tr('Save savings observation'),disabled:true},icon('Check')??tr('Save'));
+    title:tr('Save savings observation'),disabled:true},icon('Check'),h('span',{},tr('Save')));
   let displayed=figures,edited=savingsDrafts.has(week);
   const amountFromInput=()=>savingsCents(input.value);
   const present=(next,observed,isDraft)=>{
     animateSettlement(flow,edited?displayed:null,next);
     displayed=next;
     input.placeholder=next.closing===null?tr('Enter savings'):savingsDigits(next.closing);
-    status.textContent=tr(observed?'Observed':confirmed&&!isDraft?'Confirmed':'Estimate');
+    status.textContent=tr(observed?'Provisional observation':confirmed&&!isDraft?'Confirmed Sunday closing':'Calculated estimate');
     const basis=equation.querySelector('.ng-week-expense-basis');
     basis.hidden=next.observed===null&&!next.discrepancy;
     basis.textContent=tr(next.observed!==null?'Implied total':'Settled total');
@@ -2628,7 +2784,8 @@ function weeklySettlementPanel() {
     note.textContent=tr(invalid?'Enter an amount with up to two decimal places.':
       next.implied<0?'Savings exceed the recorded inflows. Review the unexplained difference.':
       observed?(isDraft?'Save this observation':tr('Observed on')+' '+compactDate(observation.as_of)):!confirmed&&!edited?'Enter actual savings to infer expenses.':'');
-    submit.disabled=invalid||!edited||value===original||value===null&&!observation;
+    const sameObservation=value===original&&(!observation||observation.as_of===observationDay(end));
+    submit.disabled=invalid||!edited||sameObservation||value===null&&!observation;
   };
   const savings=h('form',{class:'ng-week-balance ng-week-closing',onsubmit:async event=>{
     event.preventDefault();
@@ -2639,7 +2796,11 @@ function weeklySettlementPanel() {
     await run(async()=>{
       const next=clone(ledger),observations=next.settings.weekly_observations??={};
       if(value===null)delete observations[week];
-      else observations[week]={amount:value,as_of:today()<end?today():end};
+      else {
+        const date=observationDay(end);
+        if(observation?.as_of!==date)retainWeeklyObservation(next.settings,week,observation);
+        observations[week]={amount:value,as_of:date};
+      }
       const draft=savingsDrafts.get(week);savingsDrafts.delete(week);
       try {await save(next,value===null?'Clear savings observation':'Save savings observation',revision,displayed);}
       catch(error){savingsDrafts.set(week,draft);throw error;}
@@ -2660,7 +2821,7 @@ function weeklySettlementPanel() {
   });
   const flow=h('div',{class:'ng-week-flow'},
     h('div',{class:'ng-week-balance ng-week-opening'},
-      h('div',{},h('span',{},tr(preceding?'Last week’s closing savings':'Opening savings')),
+      h('div',{},h('span',{},tr(preceding?'Last week’s closing savings':'Starting savings')),
         h('small',{},'HKD · '+tr(preceding?'Previous confirmed settlement':report.openingPoint?.source==='IMPORTED'?
           'Imported historical record':'Initial balance'),report.openingPoint&&!preceding?' · '+compactDate(report.from):null)),
       h('strong',{'data-week-value':'opening','data-negative':String(opening<0)},number('opening',opening))),
@@ -2772,6 +2933,7 @@ function openSettlementHistory() {
 }
 function openSettlementEditor(week) {
   const initial=weeklyWithDraft(week),revision=ledger.revision;
+  const midweek=initial.observation&&initial.observation.as_of<initial.end?initial.observation:null;
   const value=cents=>cents===null?'':(cents/100).toFixed(2);
   transferDialog(tr(initial.confirmed?'Review weekly settlement':'Confirm weekly settlement'),(modal,close)=>{
     modal.classList.add('ng-settlement-sheet');
@@ -2779,7 +2941,7 @@ function openSettlementEditor(week) {
       h('input',{type:'number',name,step:'.01',inputmode:'decimal',value:value(initialValue),...attributes}));
     const opening=field('opening','Opening savings (HKD)',initial.opening,{readOnly:Boolean(initial.preceding)});
     const expense=field('entered','Weekly expense (HKD)',initial.entered,{min:0,placeholder:value(initial.expense)});
-    const actual=field('observed','Actual closing savings (HKD)',initial.observed);
+    const actual=field('observed','Actual closing savings (HKD)',midweek&&!initial.preview?null:initial.observed);
     let mode=initial.observed===null?'expense':'balance';
     const options=segments('settlement-mode','Settlement method',[['expense','Weekly expense'],['balance','Closing savings']],mode,key=>{
       mode=key;refresh();
@@ -2800,7 +2962,7 @@ function openSettlementEditor(week) {
       try {
         const next=clone(ledger);
         const openings=next.settings.weekly_openings??={};
-        openings[week]=read().opening;
+        openings[week]=initial.openingPoint?{...initial.openingPoint,amount:read().opening}:read().opening;
         await save(next,'Set opening savings '+week,revision);
         await close();
         showUndo(revision,'Opening savings saved.');
@@ -2838,6 +3000,7 @@ function openSettlementEditor(week) {
         const next=clone(ledger);
         const history=next.settings.weekly_settlements??={};
         (history[week]??=[]).push(version);
+        retainWeeklyObservation(next.settings,week,midweek);
         if(next.settings.weekly_observations)delete next.settings.weekly_observations[week];
         const draft=savingsDrafts.get(week);savingsDrafts.delete(week);
         try {await save(next,(initial.confirmed?'Correct':'Confirm')+' weekly settlement '+week,revision);}
@@ -2847,6 +3010,8 @@ function openSettlementEditor(week) {
       } catch(problem){error.textContent=tr(problem.message);refresh();}
     }},h('p',{class:'ng-caption'},weekDateRange(week)+' · '+tr('Hong Kong time')),
     initial.confirmed?h('p',{class:'ng-caption'},tr('Prior confirmed closing')+' · ',weeklyMoney(initial.confirmed.closing)):null,
+    midweek?h('p',{class:'ng-caption'},tr('Observed on')+' '+compactDate(midweek.as_of)+' · ',weeklyMoney(midweek.amount),
+      h('span',{},' '+tr('Use the Sunday balance to confirm closing savings.'))):null,
     opening,options,expense,actual,hint,entryField('Notes (optional)',note),dependencies,
     summary,initial.end>today()?h('p',{class:'ng-caption'},tr('Confirm the weekly balance on Sunday or later.')):null,
     error,h('div',{class:'ng-actions'},submit,openingOnly));
@@ -3070,7 +3235,8 @@ function weeklyChart() {
   const plot=h('div',{class:'ng-week-chart-body'});
   const redraw=animate=>{
     const weeks=weeklyHistory(ledger);
-    const shown=weeklyChartRange==='all'?weeks:weeks.filter(row=>row.week>=calendarDay(weekOf(today()),-7*(Number(weeklyChartRange)-1)));
+    const visible=weeklyChartRange==='all'?weeks:weeks.filter(row=>row.week>=calendarDay(weekOf(today()),-7*(Number(weeklyChartRange)-1)));
+    const shown=weeklyTimeline(visible);
     plot.replaceChildren();
     if(!shown.length) {
       plot.append(h('p',{class:'ng-caption'},tr('Weekly records appear here as you add them. Missing weeks have no estimated value.')));
@@ -3083,15 +3249,13 @@ function weeklyChart() {
     const detail=h('div',{class:'ng-week-chart-detail'});
     const money=(value,signed=false)=>weeklyMoney(value,{signed});
     const choices=[];
-    shown.forEach((row,index)=>{
-      if(index) {
-        const omitted=(Date.parse(row.week)-Date.parse(shown[index-1].week))/604800000-1;
-        if(omitted)track.append(h('span',{class:'ng-chart-gap',title:omitted+' '+tr('weeks without records')},'…'));
-      }
+    shown.forEach(row=>{
       const value=row[weeklyChartMeasure],sign=value===null?'unknown':value<0?'negative':'positive';
       const signed=weeklyChartMeasure==='change';
       const caption=compactDate(row.end,{day:'numeric',month:'short',year:'numeric'});
-      const label=caption+' · '+tr(row.status)+' · '+amount(value,'HKD');
+      const status=tr(row.status)+(row.asOf&&row.asOf<row.end?' · '+tr('Observed on')+' '+compactDate(row.asOf):
+        row.needsReview?' · '+tr('Review needed'):'');
+      const label=caption+' · '+status+' · '+amount(value,'HKD');
       const bar=value===null?null:h('span',{class:'ng-week-chart-bar'});
       const marker=h('span',{class:'ng-week-chart-plot','data-sign':sign,style:'--measure:'+Math.abs(value??0)/max*100+'%'},bar);
       const control=h('button',{type:'button',class:'ng-week-chart-column','aria-label':label,
@@ -3099,7 +3263,7 @@ function weeklyChart() {
       marker,h('time',{datetime:row.end},compactDate(row.end)));
       track.append(control);
       choices.push({key:row.week,label,control,inspect:()=>detail.replaceChildren(
-        h('div',{class:'ng-week-chart-selected'},h('strong',{},weekEnding(row.end)),h('small',{},tr(row.status)),
+        h('div',{class:'ng-week-chart-selected'},h('strong',{},weekEnding(row.end)),h('small',{},status),
           actionButton('Open week','CalendarDays',()=>chooseSettlementWeek(row.week))),
         h('dl',{},...[['Opening savings','opening'],['Income','income'],['Total expenditure','expense'],
           ['Weekly savings change','change'],['Closing savings','closing']].map(([title,key])=>
@@ -3153,9 +3317,9 @@ function subsidies(host) {
     actionButton('Export to AI','export',()=>exportBudgetToAI(subsidyScope,label),{display:'AI export'}),
     actionButton('Import from AI','import',()=>importBudgetFromAI(subsidyScope,label),{display:'AI import'})),
     h('div',{class:'ng-context-records'},...(grants.length?grants.map(row=>recordRow(row)):
-      [h('p',{class:'ng-empty'},tr('Add a subsidy to track its approval and expected disbursement.'))])),
-    receipts.length?sectionDisclosure('subsidy-receipts','Grant receipt history',
-      child=>child.append(...receipts.map(row=>recordRow(row))),'history'):null);
+      [h('p',{class:'ng-empty'},tr('Add a subsidy to track its approval and expected disbursement.'))])));
+  if(receipts.length)host.append(sectionDisclosure('subsidy-receipts','Grant receipt history',
+    child=>child.append(...receipts.map(row=>recordRow(row))),'history'));
 }
 function financialActions(host) {
   const grants=new Set(ledger.records.filter(row=>row.entity==='grant').map(row=>row.id));

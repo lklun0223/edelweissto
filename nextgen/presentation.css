@@ -99,7 +99,7 @@
   box-shadow:none;
   white-space:nowrap;
 }
-.ng-active #ng-mobile-navigation .ng-button:hover { background:var(--v3-well); }
+@media(hover:hover) { .ng-active #ng-mobile-navigation .ng-button:hover { background:var(--v3-well); } }
 .ng-active #ng-mobile-navigation .ng-button[aria-current="page"] { color:var(--v3-ink); background:transparent; }
 #ng-mobile-navigation .ng-nav-label { width:auto; }
 #ng-mobile-navigation :is(svg,i) { inline-size:18px; block-size:18px; }
@@ -234,27 +234,11 @@
 .ng-period-point small { margin-top:.35rem; font-size:.7rem; white-space:nowrap; }
 .ng-period-summary>.ng-caption { margin-top:.55rem; }
 .ng-budget-transfer-dialog {
-  position:fixed; inset:1rem 1rem 1rem auto; margin:0; width:min(34rem,calc(100vw - 2rem));
-  height:calc(100dvh - 2rem); max-height:none; padding:1.25rem;
-  border:1px solid var(--v3-rim); border-radius:24px;
+  position:fixed; border:1px solid var(--v3-rim);
   background:var(--v3-panel); color:var(--v3-ink); box-shadow:var(--v3-shadow);
 }
-.ng-budget-transfer-dialog[open] { animation:v3-inspector-in 270ms var(--v3-ease) both; }
-.ng-budget-transfer-dialog>header { display:flex; align-items:start; justify-content:space-between; gap:.5rem; margin-bottom:.65rem; }
-.ng-budget-transfer-dialog h2 { overflow-wrap:anywhere; }
 .ng-budget-transfer-dialog textarea { display:block; width:100%; color:var(--v3-ink); background:var(--v3-well); }
-.ng-budget-transfer-dialog>textarea { margin-block:.7rem; }
 .ng-scoped-transfer .ng-transfer-review { display:grid; gap:.55rem; }
-@media(max-width:690px) {
-  .ng-budget-transfer-dialog {
-    inset:auto 0 0; width:100%; max-width:none; height:auto;
-    max-height:calc(100dvh - 1.3rem); border-radius:24px 24px 0 0;
-  }
-  .ng-budget-transfer-dialog[open] { animation-name:v3-sheet-in; }
-}
-@media(prefers-reduced-motion:reduce) {
-  .ng-budget-transfer-dialog[open] { animation:none; }
-}
 .v3-instrument {
   --v3-chart-ink:#f2f8f5;
   --v3-chart-muted:#b8d1d2;
@@ -414,7 +398,6 @@
     inset:auto auto max(.59rem,env(safe-area-inset-bottom)) 50%;
   }
   .ng-active #ng-mobile-navigation .ng-button { padding:.32rem .63rem; }
-  .ng-active #nextgen-workspace { padding-bottom:4.55rem; }
   .v3-destinations {
     inset:auto auto calc(4.5rem + env(safe-area-inset-bottom)) 50%;
   }

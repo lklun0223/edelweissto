@@ -1,4 +1,5 @@
 import {clone,validateRelations} from './ledger.mjs';
+import {retainWeeklyObservation} from './weekly-settlement.mjs';
 
 const financialContext=row=>JSON.stringify([row?.reconciliation??null,row?.requiresReconciliation??false,row?.representedBy??null]);
 
@@ -27,6 +28,9 @@ export function withTransferHistory(current,incoming) {
 
 export function mergeBackup(current,incoming,useBackup) {
   const next=clone(current);
+  for(const [week,rows] of Object.entries(incoming.settings.weekly_observation_history??{})) {
+    for(const row of rows)retainWeeklyObservation(next.settings,week,row);
+  }
   if(incoming.settings.weekly_openings)next.settings.weekly_openings={...incoming.settings.weekly_openings,...next.settings.weekly_openings};
   if(incoming.settings.weekly_observations) {
     const observations=next.settings.weekly_observations??={};

@@ -5,7 +5,7 @@ export function fundingInstrument({h,button,chart,amount,tr,selected,onSelect,on
   const detail=h('div',{class:'v3-insight','aria-live':'polite','aria-atomic':'true'});
   const controls=[];
   let current=null;
-  const known=chart.complete&&chart.total>0;
+  const known=chart.drawable&&chart.total>0;
   const cashCoverage=known&&chart.rows.every(row=>row.covered!==null)?
     Math.floor(chart.rows.reduce((total,row)=>total+row.covered,0)/chart.total*100):null;
   const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -59,11 +59,12 @@ export function fundingInstrument({h,button,chart,amount,tr,selected,onSelect,on
   return h('section',{class:'v3-instrument','aria-labelledby':'v3-instrument-title'},
     h('header',{class:'v3-instrument-head'},h('div',{},
       h('h2',{id:'v3-instrument-title'},tr('Funding waterfall'))),
-      cashCoverage===null?null:h('p',{class:'v3-instrument-target'},h('span',{},tr('Covered by cash')),
+      cashCoverage===null?null:h('p',{class:'v3-instrument-target'},h('span',{},tr(chart.partial?'Classified costs covered by cash':'Covered by cash')),
         h('strong',{},cashCoverage+'%'))),
     h('div',{class:'v3-chart-legend'},...['Cash funded','Approved grants','Unfunded'].map((label,index)=>
       h('span',{},h('i',{'aria-hidden':'true','data-swatch':String(index)}),tr(label)))),
     h('div',{class:'v3-chart-plot','data-chart-known':String(known)},columns,
       !known?h('p',{class:'v3-chart-empty'},tr(chart.complete?'Add planned costs to see the waterfall.':'Review the plan and assign categories to see the waterfall.')):null),
+    chart.partial?h('p',{class:'ng-caption'},tr('Preview for classified items only. Unclassified items remain in the Vienna total.')):null,
     detail,data);
 }

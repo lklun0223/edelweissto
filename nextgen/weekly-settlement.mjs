@@ -6,6 +6,16 @@ export function confirmedWeek(ledger,week) {
   return ledger.settings.weekly_settlements?.[week]?.at(-1)??null;
 }
 
+export function retainWeeklyObservation(settings,week,observation) {
+  if(!observation||observation.as_of>=calendarDay(week,6))return;
+  const history=settings.weekly_observation_history??={};
+  const existing=history[week]??=[];
+  if(!existing.some(row=>row.as_of===observation.as_of&&row.amount===observation.amount)) {
+    existing.push({...observation});
+    existing.sort((a,b)=>a.as_of.localeCompare(b.as_of));
+  }
+}
+
 function settlementFigures({opening,income,expense,adjustments},observed,entered) {
   const cashBeforeExpenses=sumKnown([opening,income,adjustments]);
   const calculated=difference(cashBeforeExpenses,expense);
@@ -71,6 +81,7 @@ export function settlementVersion(report,confirmedAt=new Date().toISOString(),no
   }
   if(report.implied!==null&&report.implied<0)throw Error('This closing balance implies negative expenses. Check receipts and other cash movements first.');
   if(report.end>today())throw Error('Confirm the weekly balance on Sunday or later.');
+  if(report.asOf<report.end)throw Error('A midweek balance cannot confirm a Sunday settlement.');
   return {opening,income,expense,adjustments,observed,closing,confirmed_at:confirmedAt,
     ...(note?{note}:{}),
     ...(entered===null?{}:{entered_expense:entered})};
@@ -83,13 +94,25 @@ export function weeklyHistory(ledger,asOf=today()) {
   for(const row of ledger.records) {
     if(!row.data.voided&&row.data.entry_week&&row.data.entry_week<=weekOf(asOf))weeks.add(row.data.entry_week);
   }
-  return [...weeks].sort().flatMap(week=>{
+  return [...weeks].sort().map(week=>{
     const report=weeklySettlement(ledger,week,{asOf:ledger.settings.weekly_observations?.[week]?.as_of??calendarDay(week,6)});
     const figures=settlementView(report);
-    return [{week,end:report.end,opening:figures.opening,income:figures.income,expense:figures.settledExpense,
+    return {week,end:report.end,asOf:report.observation?.as_of??report.end,needsReview:report.changed,
+      opening:figures.opening,income:figures.income,expense:figures.settledExpense,
       change:difference(figures.closing,figures.opening),closing:figures.closing,
-      status:report.observation?'Observed':report.confirmed?'Confirmed':figures.closing===null?'Missing balance':'Estimate'}];
+      status:report.observation?'Observed':report.confirmed?'Confirmed':figures.closing===null?'Missing balance':'Estimate'};
   });
+}
+
+export function weeklyTimeline(rows) {
+  if(!rows.length)return [];
+  const items=new Map(rows.map(row=>[row.week,row]));
+  const result=[];
+  for(let week=rows[0].week;week<=rows.at(-1).week;week=calendarDay(week,7)) {
+    result.push(items.get(week)??{week,end:calendarDay(week,6),opening:null,income:null,
+      expense:null,change:null,closing:null,status:'Missing week'});
+  }
+  return result;
 }
 
 export function dependentSettlements(ledger,week,newClosing) {
@@ -105,12 +128,18 @@ export function dependentSettlements(ledger,week,newClosing) {
   return results;
 }
 
-export function validateSettlementHistory(history,openings,observations) {
+export function validateSettlementHistory(history,openings,observations,previousObservations) {
+  const validWeek=week=>/^\d{4}-\d{2}-\d{2}$/.test(week)&&weekOf(week)===week;
+  const validObservation=(week,row)=>row&&Number.isSafeInteger(row.amount)&&/^\d{4}-\d{2}-\d{2}$/.test(row.as_of)&&
+    weekOf(row.as_of)===week&&calendarDay(row.as_of)===row.as_of;
+  if(previousObservations!==undefined&&(!previousObservations||typeof previousObservations!=='object'||
+    Array.isArray(previousObservations)||Object.entries(previousObservations).some(([week,rows])=>
+      !validWeek(week)||!Array.isArray(rows)||!rows.length||rows.some(row=>!validObservation(week,row)||row.as_of===calendarDay(week,6))))) {
+    throw Error('Invalid historical savings observations.');
+  }
   if(observations!==undefined) {
     if(!observations||typeof observations!=='object'||Array.isArray(observations)||
-      Object.entries(observations).some(([week,row])=>!/^\d{4}-\d{2}-\d{2}$/.test(week)||weekOf(week)!==week||
-        !row||!Number.isSafeInteger(row.amount)||!/^\d{4}-\d{2}-\d{2}$/.test(row.as_of)||weekOf(row.as_of)!==week||
-        calendarDay(row.as_of)!==row.as_of))throw Error('Invalid observed savings.');
+      Object.entries(observations).some(([week,row])=>!validWeek(week)||!validObservation(week,row)))throw Error('Invalid observed savings.');
   }
   if(openings!==undefined) {
     if(!openings||typeof openings!=='object'||Array.isArray(openings)||

@@ -1,4 +1,4 @@
-const CACHE = 'workie-nextgen-shell-88fc0c6e587eb755';
+const CACHE = 'workie-nextgen-shell-336bf912f1c9cbf6';
 const SHELL_PATHS = [
   "index.html",
   "manifest.json",

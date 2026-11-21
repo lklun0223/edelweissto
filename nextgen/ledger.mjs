@@ -242,7 +242,7 @@ export function recordedMovements(ledger,asOf=today(),{includeLegacyWeeklyEstima
 export function financialModel(ledger,asOf=today(),valuationLedger=ledger) {
   const balances=ledger.records.filter(row=>row.entity==='balance' && row.data.scope!=='ACCOUNT' && row.data.as_of<=asOf).reverse()
     .sort((a,b)=>b.data.as_of.localeCompare(a.data.as_of));
-  const base=balances[0]??null, issues=[], changes=[],applied=[];
+  const base=balances[0]??null, issues=[], historyReview=[],changes=[],applied=[];
   const cashRecords=actuals(ledger,asOf);
   if(base?.requiresReconciliation) issues.push('Confirm the imported balance and its included payments.');
   const included=new Map((base?.reconciliation??[]).map(entry=>[entry.id,entry]));
@@ -250,13 +250,17 @@ export function financialModel(ledger,asOf=today(),valuationLedger=ledger) {
   for(const row of cashRecords) {
     const acknowledged=included.get(row.id);
     if(acknowledged) {
-      if(acknowledged.fingerprint!==fingerprint(row)) issues.push('Reconcile edited payment '+row.data.description);
+      if(acknowledged.fingerprint!==fingerprint(row)) {
+        issues.push('Reconcile edited payment '+row.data.description);
+        historyReview.push({id:row.id,reason:'Payment changed after balance confirmation'});
+      }
       continue;
     }
     const explicitlyAfter=base && row.data.balance_id===base.id && row.data.after_balance===true &&
       row.data.date===base.data.as_of;
     if(!base || row.data.date<=base.data.as_of && !explicitlyAfter) {
       issues.push('Reconcile historical payment '+row.data.description);
+      historyReview.push({id:row.id,reason:base?'Recorded on or before the confirmed balance date':'Exchange opening cash has not been confirmed'});
       continue;
     }
     const native=base?convertUnits(ledger,row.data.amount,row.data.currency,base.data.currency,row.data.date):null;
@@ -330,7 +334,7 @@ export function financialModel(ledger,asOf=today(),valuationLedger=ledger) {
         return value===null?null:value*(row.data.kind==='LOAN_DRAW'?1:-1);}));
     return principal===null?null:convert(ledger,principal/100,loan.data.currency,asOf);
   });
-  return {base,available,...coverage,waterfall,planned,total,issues,applied,baseline,grants,debt:sum(debt),
+  return {base,available,...coverage,waterfall,planned,total,issues,historyReview,applied,baseline,grants,debt:sum(debt),
     gap:total===null || available===null || !Number.isSafeInteger(total-available)?null:Math.max(0,total-available),
     asOf,budgetRows,obligations,unsettledSnapshots};
 }
@@ -653,7 +657,7 @@ export function billOccurrences(ledger,from=today(),days=60) {
   }
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
-export async function prepareBatch(ledger,source) {
+export async function prepareBatch(ledger,source,{weeklyTransfer=false}={}) {
   const batch=parseWtp(source,{asOf:today()}),hash=await batchHash(batch);
   const previous=ledger.batches.find(entry=>entry.id===batch.batch_id);
   if(previous) throw Error(previous.hash===hash?'This batch was already applied.':'This batch ID was used with different content.');
@@ -661,6 +665,22 @@ export async function prepareBatch(ledger,source) {
     const row=ledger.records.find(record=>record.id===id && record.entity===entity);
     return row?{revision:row.revision,data:row.data}:null;
   });
+  if(weeklyTransfer) {
+    for(const [index,change] of diff.entries()) {
+      if(change.op!=='ADD')continue;
+      const data=change.after;
+      const generalExpense=change.entity==='expense'&&data.type==='GENERAL'&&
+        !data.budget_item_id&&!data.trip_id&&!data.rule_id;
+      const generalReceipt=change.entity==='cash_event'&&data.kind==='INCOME'&&
+        Boolean(data.entry_week||data.receipt_week)&&!data.related_id&&!data.work_income_id;
+      if(!generalExpense&&!generalReceipt)continue;
+      const week=weekOf(data.date);
+      if(data.date!==calendarDay(week,6)||(data.entry_week??data.receipt_week??week)!==week) {
+        throw Error('$.operations['+index+'].data.date: Use the Sunday ending the selected week for a General total. Use Special for a recorded expense on its actual date.');
+      }
+      change.after={...data,entry_week:week,entry_created_at:new Date().toISOString()};
+    }
+  }
   const next=clone(ledger);
   const newIds=diff.map(()=>crypto.randomUUID());
   diff.forEach((change,index)=>{

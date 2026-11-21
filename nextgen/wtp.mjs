@@ -183,13 +183,53 @@ function validateFields(fields, entity, path, patch, asOf) {
   }
 }
 
+export class TransferSyntaxError extends Error {
+  constructor(source, problem, start=0, body=source) {
+    super('invalid JSON');
+    this.name='TransferSyntaxError';
+    const position=problem.message.match(/\bposition (\d+)\b/i)?.[1];
+    const location=problem.message.match(/\bline (\d+)\s+column (\d+)\b/i);
+    let index=position===undefined?null:Number(position);
+    if(index===null&&location) {
+      const lines=body.split('\n');
+      index=lines.slice(0,Number(location[1])-1).reduce((n,line)=>n+line.length+1,0)+Number(location[2])-1;
+    }
+    if(index===null&&/end of (json |input|data)|unterminated/i.test(problem.message))index=body.length;
+    const escapes=[];
+    let inString=false;
+    for(let i=0;i<body.length;i++) {
+      if(body[i]==='\\') {
+        if(inString)i++;
+        else if(body[i+1]==='[')escapes.push(i);
+      } else if(body[i]==='"')inString=!inString;
+    }
+    const escaped=escapes.length===1?escapes[0]:null;
+    if(index===null)index=escaped;
+    this.index=index===null?null:Math.max(0,Math.min(source.length,start+index));
+    const before=this.index===null?null:source.slice(0,this.index);
+    this.line=before===null?null:before.split('\n').length;
+    this.column=before===null?null:before.length-before.lastIndexOf('\n');
+    this.escapedArray=escaped!==null&&index===escaped;
+    if(this.escapedArray) {
+      const corrected=body.slice(0,escaped)+body.slice(escaped+1);
+      try {
+        JSON.parse(corrected);
+        this.suggestion=source.slice(0,start)+corrected+source.slice(start+body.length);
+      } catch { /* Multiple syntax errors require manual editing. */ }
+    }
+  }
+}
+
 export function parseWtp(source, {asOf=null}={}) {
   if (typeof source!=='string' || source.length>maxBytes || new TextEncoder().encode(source).length>maxBytes) {
     problem('$',`expected JSON text of no more than ${maxBytes} bytes`);
   }
+  const fence=/^([ \t\r\n]*\x60{3}(?:json)?[ \t]*\r?\n)([\s\S]*?)\r?\n[ \t]*\x60{3}[ \t\r\n]*$/i.exec(source);
+  const body=fence?.[2]??source;
+  const start=fence?.[1].length??0;
   let payload;
-  try {payload=JSON.parse(source);} catch(error) {problem('$',`invalid JSON: ${error.message}`);}
-  rejectDuplicateKeys(source);
+  try {payload=JSON.parse(body);} catch(error) {throw new TransferSyntaxError(source,error,start,body);}
+  rejectDuplicateKeys(body);
   keys(payload,'$',['protocol','version','batch_id','operations']);
   if (payload.protocol!==protocol) problem('$.protocol',`expected ${protocol}`);
   if (payload.version!==version) problem('$.version',`expected ${version}`);

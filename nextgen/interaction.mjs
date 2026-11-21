@@ -48,19 +48,25 @@ export function tweenNumbers(node,from,to,draw) {
 
 export function adaptiveChrome(doc,win) {
   const body=doc.body;
-  let previous=win.scrollY, distance=0, frame=0, compact=false;
+  const html=doc.documentElement;
+  const masthead=doc.querySelector('#nextgen-workspace > .ng-masthead');
+  const title=doc.getElementById('ng-page-title');
+  const dock=doc.getElementById('ng-mobile-navigation');
+  let frame=0;
   const viewport=win.visualViewport;
   function update() {
     frame=0;
-    const position=Math.max(0,win.scrollY), delta=position-previous;
-    const touchesInput=doc.activeElement?.matches('input, select, textarea, [contenteditable=true]');
-    body.toggleAttribute('data-workie-keyboard',Boolean(touchesInput&&viewport&&
-      win.innerHeight-viewport.height-viewport.offsetTop>110));
-    if(delta)distance=(Math.sign(distance)===Math.sign(delta)?distance:0)+delta;
-    previous=position;
-    if(position<66||distance<-22)compact=false;
-    else if(position>160&&distance>28)compact=true;
-    body.toggleAttribute('data-workie-compact',compact);
+    const header=masthead?.getBoundingClientRect();
+    const titleBox=title?.getBoundingClientRect();
+    const dockSize=dock?.getBoundingClientRect().height??0;
+    const focused=doc.activeElement?.matches('input:not([type=checkbox]):not([type=radio]), select, textarea, [contenteditable=true]');
+    const keyboard=focused&&viewport&&viewport.scale<=1.05&&win.innerHeight-viewport.height-viewport.offsetTop>90;
+    const stuck=win.scrollY>8;
+    body.toggleAttribute('data-workie-keyboard',Boolean(keyboard));
+    body.toggleAttribute('data-workie-stuck',stuck);
+    body.toggleAttribute('data-workie-compact',Boolean(stuck&&header&&titleBox&&titleBox.bottom<=header.bottom));
+    html.style.setProperty('--workie-header-height',(header?.height??0)+'px');
+    html.style.setProperty('--workie-dock-height',dockSize+'px');
   }
   function queue() {
     if(!frame)frame=win.requestAnimationFrame(update);
@@ -68,11 +74,17 @@ export function adaptiveChrome(doc,win) {
   win.addEventListener('scroll',queue,{passive:true});
   win.addEventListener('resize',queue,{passive:true});
   viewport?.addEventListener('resize',queue,{passive:true});
+  viewport?.addEventListener('scroll',queue,{passive:true});
   doc.addEventListener('focusin',queue);
   doc.addEventListener('focusout',queue);
+  if(typeof win.ResizeObserver==='function') {
+    const observer=new win.ResizeObserver(queue);
+    for(const node of [masthead,title,dock])if(node)observer.observe(node);
+  }
+  queue();
   return ()=>{
-    previous=win.scrollY;distance=0;compact=false;
     body.removeAttribute('data-workie-compact');
+    body.removeAttribute('data-workie-stuck');
     queue();
   };
 }

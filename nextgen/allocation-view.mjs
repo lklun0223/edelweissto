@@ -1,17 +1,25 @@
+import {allocateWaterfall} from './coverage.mjs';
+
 /**
  * Layout on one cumulative scale. This adapts the verified ledger calculation
  * for display without recomputing which category receives money.
  */
-export function allocationView(model) {
-  const rows=model.waterfall.rows;
+export function allocationView(model,{classifiedPreview=false}={}) {
+  const partial=classifiedPreview&&model.waterfall.unclassified.length>0;
+  const unclassified=new Set(model.waterfall.unclassified);
+  const known=partial?model.obligations.filter(item=>!unclassified.has(item.id)):null;
+  const actual=known?allocateWaterfall(model.available,known):model.waterfall;
+  const projected=known?allocateWaterfall(model.expected,known):model.planned;
+  const rows=actual.rows;
   const total=rows.reduce((sum,row)=>sum+(row.target??0),0);
-  const complete=!model.waterfall.unclassified.length && rows.every(row=>row.target!==null) && Number.isSafeInteger(total);
+  const drawable=!actual.unclassified.length&&rows.every(row=>row.target!==null)&&Number.isSafeInteger(total);
+  const complete=drawable&&!partial;
   let start=0;
-  return {complete,total:complete?total:null,rows:rows.map((row,index)=>{
-    const expected=model.planned.rows[index].covered;
+  return {complete,drawable,partial,unclassifiedCount:unclassified.size,total:drawable?total:null,rows:rows.map((row,index)=>{
+    const expected=projected.rows[index].covered;
     const grant=expected===null||row.covered===null?null:Math.max(0,expected-row.covered);
-    const width=complete&&total>0?row.target/total*100:0;
-    const result={...row,expected,grant,start,width,next:row.gap>0&&model.waterfall.next===row.id};
+    const width=drawable&&total>0?row.target/total*100:0;
+    const result={...row,expected,grant,start,width,next:row.gap>0&&actual.next===row.id};
     start+=width;
     return result;
   })};

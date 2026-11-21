@@ -2,6 +2,11 @@
   --workie-motion: 220ms;
   --workie-ease: cubic-bezier(.22,.75,.24,1);
   --workie-radius: 18px;
+  --workie-dock-edge: max(.59rem,env(safe-area-inset-bottom));
+}
+html:has(body.ng-active) {
+  scroll-padding-block-start:calc(var(--workie-header-height,60px) + env(safe-area-inset-top) + .4rem);
+  scroll-padding-block-end:.75rem;
 }
 #nextgen-workspace > .ng-masthead {
   position: sticky;
@@ -17,31 +22,35 @@
   inset: 0 -.42rem;
   border-radius: 0 0 var(--workie-radius) var(--workie-radius);
   border: 1px solid var(--product-line);
-  background: color-mix(in srgb,var(--product-surface) 98%,transparent);
+  background: var(--product-surface);
   box-shadow: var(--product-shadow);
   opacity: 0;
   pointer-events: none;
   content: '';
-  transition: opacity var(--workie-motion) var(--workie-ease);
 }
-[data-workie-compact] #nextgen-workspace > .ng-masthead::before { opacity: 1; }
+[data-workie-stuck] #nextgen-workspace > .ng-masthead::before { opacity: 1; }
 .ng-chrome-brand { display: grid; min-width: 0; align-items: center; }
 .ng-chrome-brand > * { grid-area: 1/1; }
 .ng-compact-title {
-  max-width: 15ch;
+  min-width: 0;
   color: var(--product-ink);
   font: 660 clamp(1rem,3vw,1.24rem)/1.1 var(--ui-font);
   letter-spacing: -.035em;
-  opacity: 0;
-  translate: 0 5px;
+  visibility: hidden;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
   pointer-events: none;
 }
-#nextgen-workspace .ng-chrome-brand > * {
-  transition: opacity var(--workie-motion),translate var(--workie-motion) var(--workie-ease);
+.ng-active[data-workie-compact] #nextgen-workspace .ng-chrome-brand > a { visibility:hidden; }
+.ng-active[data-workie-compact] #nextgen-workspace .ng-chrome-brand > .ng-compact-title {
+  visibility:visible; animation:workie-title-in var(--workie-motion) var(--workie-ease) both;
 }
-[data-workie-compact] #nextgen-workspace .ng-chrome-brand:not(:focus-within) > a { opacity: 0; translate: 0 -5px; }
-[data-workie-compact] #nextgen-workspace .ng-chrome-brand:not(:focus-within) > .ng-compact-title { opacity: 1; translate: 0; }
+@keyframes workie-title-in { from { opacity:.6; translate:0 3px; } }
 #nextgen-workspace[data-route="Home"] > .ng-page-header { padding-block-start: 0; }
+#nextgen-workspace[data-route]:lang(zh-Hant) #ng-page-title {
+  font:670 clamp(1.8rem,7vw,3.1rem)/1.21 var(--ui-font); letter-spacing:0;
+}
 .ng-nav-short { display: none; }
 .ng-segment-control {
   min-width: 0;
@@ -158,13 +167,19 @@
 .ng-trips-portfolio { min-width: 0; }
 #nextgen-workspace .ng-trips-portfolio h2 { font-size: clamp(1.65rem,2.8vw,2.2rem); margin-top: 0; }
 .ng-recent-expenses { margin-block: 0 .65rem; box-shadow: none; }
-.ng-secondary > summary::after { content: none; }
-.ng-secondary > summary { display: flex; align-items: center; gap: .6rem; }
+.ng-secondary > summary:has(> svg:last-child)::after { content: none; }
+.ng-secondary > summary { display: flex; align-items: center; gap: .6rem; list-style:none; }
+:is(.ng-secondary,.ng-final-category,.ng-linked-history,.v3-chart-data)>summary::-webkit-details-marker { display:none; }
+.ng-final-category>summary { list-style:none; }
+:is(.ng-linked-history,.v3-chart-data)>summary { list-style:none; }
 .ng-secondary > summary > span { flex: 1; min-width: 0; }
 .ng-secondary > summary > svg:first-child { color: var(--product-action); }
 .ng-secondary > summary > svg:last-child { transition: transform var(--workie-motion) var(--workie-ease); }
-.ng-secondary[open] > summary > svg:last-child { transform: rotate(90deg); }
-.ng-section-value { font-size: .74rem; font-weight: 520; color: var(--product-muted); text-align: right; }
+.ng-secondary[open] > summary > svg:last-child { transform: rotate(180deg); }
+.ng-section-value {
+  font-size:.75rem; font-weight:520; color:var(--product-muted); text-align:end;
+  min-inline-size:0; max-inline-size:46%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 .ng-context-actions { margin: .2rem 0 .72rem; }
 .ng-context-records > article + article { margin-top: .35rem; }
 .ng-income-totals { margin-block: .85rem; }
@@ -205,6 +220,10 @@
 }
 .ng-settings-list > .ng-secondary + .ng-secondary { border-block-start: 1px solid var(--product-line); }
 .ng-settings-list > .ng-secondary > summary { border: 0; }
+#nextgen-workspace .ng-settings-group>h2 {
+  font:620 .81rem/1.35 var(--ui-font); letter-spacing:0; margin:0 0 .38rem .72rem;
+}
+.ng-settings-list .ng-secondary-body { padding-block:.3rem .6rem; }
 .ng-settings-list .ng-secondary:first-child { border-radius: var(--workie-radius) var(--workie-radius) 0 0; }
 .ng-settings-list .ng-secondary:last-child { border-radius: 0 0 var(--workie-radius) var(--workie-radius); }
 .ng-settings-list .ng-field { max-width: 30rem; }
@@ -224,54 +243,89 @@
   height: auto;
   max-height: none;
   border-radius: 25px;
+  display:flex; flex-direction:column;
+  overflow:hidden; padding:0;
   animation: workie-inspector-in var(--workie-motion) var(--workie-ease) both;
 }
 .ng-budget-transfer-dialog::backdrop { background: #15132169; }
 .ng-budget-transfer-dialog > header {
-  position: sticky;
-  z-index: 2;
-  top: -.9rem;
-  padding-block: .5rem;
+  display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+  flex:none; padding:.65rem clamp(.9rem,2vw,1.25rem); margin:0;
+  border-bottom:1px solid var(--product-line);
   background: var(--ng-sheet);
+}
+.ng-budget-transfer-dialog > header h2 {
+  min-width:0; margin:0; font-size:clamp(1.42rem,3.8vw,2rem); line-height:1.12; overflow-wrap:anywhere;
+}
+.ng-budget-transfer-dialog:lang(zh-Hant) > header h2 {
+  font:680 clamp(1.12rem,4vw,1.6rem)/1.28 var(--ui-font); letter-spacing:0;
+}
+.ng-budget-transfer-dialog > header button { flex:none; }
+.ng-sheet-body {
+  min-height:0; min-width:0; overflow:auto; overscroll-behavior:contain;
+  scroll-padding-block:.6rem;
+  padding:.72rem clamp(.9rem,2vw,1.25rem) 1rem;
 }
 .ng-scoped-apply {
-  position: sticky;
-  inset-block-end: -1rem;
-  z-index: 1;
-  padding: .7rem 0 .35rem;
+  flex:none; padding:.5rem clamp(.9rem,2vw,1.25rem);
+  border-top:1px solid var(--product-line);
   background: var(--ng-sheet);
 }
-.ng-budget-transfer-dialog #ng-transfer-preview { scroll-margin-block-start: 4.8rem; }
+.ng-budget-transfer-dialog #ng-transfer-preview { scroll-margin-block-start: .6rem; }
 .ng-budget-transfer-dialog .ng-diff th { overflow-wrap: normal; }
+.ng-transfer-remedies:empty { display:none; }
+.ng-transfer-example textarea,.ng-scoped-transfer #ng-transfer-input {
+  max-width:100%; min-width:0; font: max(16px,.88rem)/1.45 ui-monospace,Consolas,monospace;
+}
+.ng-transfer-example textarea { margin-block:.4rem; }
+.ng-cash-review-list { list-style:none; padding:0; }
+.ng-cash-review-list li { display:grid; gap:.15rem; padding:.6rem 0; border-bottom:1px solid var(--product-line); }
+.ng-cash-review-list small { color:var(--product-muted); }
 @keyframes workie-inspector-in { from { opacity: .6; translate: 2rem 0; } }
 @keyframes workie-sheet-in { from { opacity: .65; translate: 0 2rem; } }
 .ng-money { white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
 .ng-money-unit { font-size: .73em; font-weight: 560; letter-spacing: .012em; }
 :is(.ng-trip-row,.folio-budget-money) :is(.ng-money,.ng-money-unit) { display: inline; }
 @media(max-width: 1180px) {
+  .ng-active #nextgen-workspace:is([data-route],[data-folio]) {
+    padding-block-end:calc(var(--workie-dock-height,3.6rem) + var(--workie-dock-edge) + .85rem);
+  }
+  html:has(body.ng-active) { scroll-padding-block-end:calc(var(--workie-dock-height,3.6rem) + max(.59rem,env(safe-area-inset-bottom)) + .65rem); }
   .ng-active #ng-mobile-navigation { transition: opacity var(--workie-motion),scale var(--workie-motion) var(--workie-ease); }
   .ng-active[data-workie-compact] #ng-mobile-navigation:not(:has(:focus-visible)) { scale: .89 1; }
+  .ng-active[data-workie-stuck] #ng-mobile-navigation { background:var(--product-surface); }
   #ng-mobile-navigation .ng-button[data-ng-view="Pre-departure"] .ng-nav-label { display: none; }
   #ng-mobile-navigation .ng-nav-short { display: inline; font-size: .68rem; }
-  .ng-active[data-workie-keyboard] #ng-mobile-navigation:not(:focus-within) { opacity: 0; pointer-events: none; }
+  .ng-active[data-workie-keyboard] #ng-mobile-navigation { visibility:hidden; opacity:0; pointer-events:none; }
 }
 @media(max-width: 690px) {
   .ng-pre-workspace,.ng-trips-layout { grid-template-columns: minmax(0,1fr); }
-  #nextgen-workspace > .ng-masthead { padding-block-start: .23rem; }
+  #nextgen-workspace > .ng-masthead { padding-block-start:.23rem; display:grid; grid-template-columns:minmax(0,1fr) auto; }
   .ng-finance-heading .ng-segment-control { min-width: 10.55rem; }
   .ng-period-summary .ng-plan-summary { grid-template-columns: repeat(3,minmax(0,1fr)); gap: .45rem; padding: .75rem; }
   .ng-period-summary .ng-plan-summary dt { min-height: 2.5em; font-size: .72rem; }
   .ng-period-summary .ng-period-point { min-height: 74px; }
-  .ng-section-value { font-size: .67rem; max-width: 9ch; }
+  .ng-section-value { font-size:.71rem; }
   .ng-budget-transfer-dialog[open] {
-    inset: auto 0 0;
+    inset:auto 0 var(--ng-viewport-bottom,0px);
     width: 100%;
     max-width: none;
-    max-height: min(88dvh,46rem);
-    padding-bottom: max(1rem,env(safe-area-inset-bottom));
+    max-height:min(calc(var(--ng-viewport-height,100dvh) - .35rem),46rem);
+    padding-bottom:env(safe-area-inset-bottom);
     border-radius: 24px 24px 0 0;
     animation-name: workie-sheet-in;
   }
+}
+@media(max-width:690px) and (max-height:480px) {
+  .ng-budget-transfer-dialog > header { padding-block:.32rem; }
+}
+@media (pointer:coarse) and (min-width:691px) and (max-height:650px) {
+  .ng-budget-transfer-dialog[open],.ng-budget-transfer-dialog.ng-quick-sheet[open] {
+    inset:auto 0 var(--ng-viewport-bottom,0px); margin:0 auto;
+    width:min(34rem,100%); max-height:calc(var(--ng-viewport-height,100dvh) - .35rem);
+    padding:0 0 env(safe-area-inset-bottom); border-radius:22px 22px 0 0;
+  }
+  .ng-budget-transfer-dialog > header { padding-block:.32rem; }
 }
 @media(prefers-reduced-motion: reduce) {
   .ng-active { --workie-motion: 0ms; }

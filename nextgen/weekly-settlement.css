@@ -270,11 +270,8 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   width: min(31rem,calc(100vw - 2rem));
   height: max-content;
   max-height: min(88dvh,54rem);
-  padding: clamp(.85rem,2vw,1.4rem);
 }
 .ng-budget-transfer-dialog.ng-quick-sheet.ng-income-detailed[open] { width: min(39rem,calc(100vw - 2rem)); }
-.ng-quick-sheet > header h2 { margin: 0; font-size: clamp(1.84rem,4vw,2.75rem); }
-.ng-quick-sheet > header { margin-bottom: .65rem; }
 .ng-income-modes { min-width: 0; }
 .ng-entry-form { margin-top: .65rem; }
 .ng-entry-form .ng-caption { margin-block: .3rem .4rem; }
@@ -330,10 +327,12 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
     inset: auto 0 var(--ng-viewport-bottom,0px);
     margin: 0;
     width: 100%;
-    max-height: min(88dvh,calc(var(--ng-viewport-height,100dvh) - .6rem));
-    padding-bottom: max(1rem,env(safe-area-inset-bottom));
+    max-height: min(88dvh,calc(var(--ng-viewport-height,100dvh) - .35rem));
   }
   .ng-entry-form > button[type="submit"] { width: 100%; }
+  #nextgen-workspace:lang(zh-Hant) .ng-week-heading h2 {
+    font:680 clamp(1.18rem,5.3vw,1.55rem)/1.24 var(--ui-font); letter-spacing:0;
+  }
 }
 @media(prefers-reduced-motion:reduce) {
   .ng-week-track i { animation: none; }
@@ -364,6 +363,7 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
 .ng-week-chart-amount .ng-money { font-size:inherit; }
 .ng-week-chart-plot { height:100%; position:relative; display:flex; justify-content:center; }
 .ng-week-chart-plot::after { content:""; position:absolute; top:50%; inset-inline:-.32rem; border-top:1px solid var(--ng-rule); }
+.ng-week-chart-plot[data-sign=unknown]::after { border-top-style:dashed; }
 .ng-chart-gap { width:1.65rem; padding-top:4.8rem; text-align:center; }
 .ng-week-zero { position:absolute; top:5.8rem; inset-inline-start:0; }
 .ng-week-chart-bar { position:absolute; width:min(55%,4rem); height:calc(var(--measure) / 2);

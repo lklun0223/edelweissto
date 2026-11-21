@@ -31,7 +31,8 @@ export async function readLedger() {
 }
 export async function commitLedger(expectedRevision,next,reason) {
   validateRelations(next);
-  validateSettlementHistory(next.settings.weekly_settlements,next.settings.weekly_openings,next.settings.weekly_observations);
+  validateSettlementHistory(next.settings.weekly_settlements,next.settings.weekly_openings,next.settings.weekly_observations,
+    next.settings.weekly_observation_history);
   const db=await open();
   try {
     return await new Promise((resolve,reject)=>{
@@ -201,6 +202,7 @@ export async function inspectBackup(source) {
     state.settings.timer.running=false;state.settings.timer.lastStart=null;state.settings.timer.requiresReview=true;
   }
   validateRelations(state);
-  validateSettlementHistory(state.settings.weekly_settlements,state.settings.weekly_openings,state.settings.weekly_observations);
+  validateSettlementHistory(state.settings.weekly_settlements,state.settings.weekly_openings,state.settings.weekly_observations,
+    state.settings.weekly_observation_history);
   return state;
 }

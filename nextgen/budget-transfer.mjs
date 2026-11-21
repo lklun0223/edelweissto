@@ -1,6 +1,12 @@
 import {activeBudget,financialModel,prepareBatch,today} from './ledger.mjs';
 import {budgetScope,planPosition} from './product-finance.mjs';
 import {parseWtp,schemaForPrompt} from './wtp.mjs';
+
+export class TransferContextError extends Error {
+  constructor(message,destination=null) {
+    super(message);this.name='TransferContextError';this.destination=destination;
+  }
+}
 import {prompt} from './wtp-prompt.mjs';
 
 export function budgetScopeRecords(ledger,scope) {
@@ -30,6 +36,10 @@ export function budgetTransferContext(ledger,scope,label) {
 export async function prepareScopedBudgetBatch(ledger,source,scope) {
   if(scope!==null&&!ledger.records.some(row=>row.entity==='trip'&&row.id===scope&&row.data.status!=='CANCELLED')) {
     throw Error('This trip is no longer an active transfer target.');
+  }
+  const proposal=parseWtp(source);
+  if(proposal.operations.every(operation=>operation.entity==='grant')) {
+    throw new TransferContextError('This proposal contains grants. Open Subsidy import to review it.','subsidy');
   }
   const prepared=await prepareBatch(ledger,source);
   const allowed=new Set(budgetScopeRecords(ledger,scope).map(row=>row.id));
@@ -64,8 +74,28 @@ export function subsidyTransferContext(ledger) {
 
 export async function prepareScopedSubsidyBatch(ledger,source) {
   const batch=parseWtp(source);
+  const destinations=batch.operations.map(operation=>{
+    if(operation.entity!=='budget_item')return null;
+    const row=operation.data??ledger.records.find(record=>record.id===operation.record_id)?.data;
+    return row&&!row.trip_id&&!operation.changes?.trip_id?'vienna':null;
+  });
   for(const [index,operation] of batch.operations.entries()) {
-    if(operation.entity!=='grant')throw Error('$.operations['+index+']: change falls outside Subsidy.');
+    if(operation.entity==='grant')continue;
+    const onlyVienna=destinations.every(value=>value==='vienna');
+    throw new TransferContextError(onlyVienna?
+      'This proposal contains Vienna Budget items. Subsidy import accepts grants only.':
+      '$.operations['+index+']: Subsidy import accepts grants only. Review the record type before importing.',
+    onlyVienna?'vienna':null);
   }
   return prepareBatch(ledger,source);
+}
+
+export function transferExample(scope) {
+  const operation=scope===subsidyScope?
+    {entity:'grant',data:{description:'Example grant',amount:100,currency:'HKD',status:'可申請'}}:
+    {entity:scope==null?'budget_item':'trip_budget_item',
+      data:{description:'Example transit ticket',amount:10,currency:'EUR',category:'TRANSPORT',priority:'MEDIUM',due_date:null,
+        ...(scope==null?{}:{trip_id:scope})}};
+  return JSON.stringify({protocol:'workie-transfer',version:1,batch_id:crypto.randomUUID(),
+    operations:[{op:'ADD',...operation}]},null,2);
 }
