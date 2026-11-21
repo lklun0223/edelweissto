@@ -1,0 +1,467 @@
+/* Content surfaces and floating controls use separate palettes and elevation. */
+:root {
+  --v3-paper:#f3f3ef;
+  --v3-ink:#172b32;
+  --v3-muted:#50636a;
+  --v3-accent:#23564a;
+  --v3-on-accent:#fff;
+  --v3-panel:#fffefa;
+  --v3-well:#e9eeea;
+  --v3-rim:#c4d0cb;
+  --v3-control:#fcfdf8eb;
+  --v3-selected:#dcebe1;
+  --v3-edge:#fff;
+  --v3-shadow:0 1px 0 var(--v3-edge) inset,0 1px 3px #122c301f,0 12px 30px #122c3026;
+  --v3-ease:cubic-bezier(.2,.82,.24,1);
+  --v3-gap:clamp(1.15rem,4vw,4.3rem);
+}
+:root.dark {
+  --v3-paper:#121d23;
+  --v3-ink:#f0f3ee;
+  --v3-muted:#b4c5c7;
+  --v3-accent:#aeedd2;
+  --v3-on-accent:#13362d;
+  --v3-panel:#1f3038;
+  --v3-well:#263941;
+  --v3-rim:#527079;
+  --v3-control:#263b43ed;
+  --v3-selected:#3b5858;
+  --v3-edge:#badbda36;
+  --v3-shadow:0 1px 0 var(--v3-edge) inset,0 1px 3px #07161dc0,0 12px 30px #07161da3;
+}
+.ng-active:has(#nextgen-workspace[data-route="Home"]) {
+  background:radial-gradient(ellipse at 82% 6%,color-mix(in srgb,var(--v3-selected) 64%,transparent),transparent 56%),var(--v3-paper);
+  color:var(--v3-ink);
+}
+.ng-active:has(#nextgen-workspace) .app-shell {
+  display:block;
+  max-width:1440px;
+  padding:1.05rem var(--v3-gap) 0;
+}
+#nextgen-workspace[data-route="Home"], #ng-editor[data-v3="true"] {
+  --folio-ink:var(--v3-ink);
+  --folio-muted:var(--v3-muted);
+  --folio-accent:var(--v3-accent);
+  --folio-surface:var(--v3-panel);
+  --folio-rule:var(--v3-rim);
+  --folio-hover:var(--v3-selected);
+  --folio-accent-fill:var(--v3-accent);
+  --folio-action-ink:var(--v3-on-accent);
+}
+
+/* A single destination dock stays in place while content changes underneath. */
+.ng-active #ng-mobile-navigation {
+  --v3-dock-padding:.25rem;
+  --v3-tab-width:6.8rem;
+  position:fixed;
+  z-index:50;
+  inset:1.55rem auto auto 50%;
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,var(--v3-tab-width)));
+  align-items:center;
+  gap:0;
+  width:max-content;
+  max-width:calc(100% - 1rem);
+  padding:var(--v3-dock-padding);
+  border:1px solid var(--v3-rim);
+  border-radius:999px;
+  background:var(--v3-control);
+  color:var(--v3-ink);
+  box-shadow:var(--v3-shadow);
+  isolation:isolate;
+}
+.ng-active #ng-mobile-navigation::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:var(--v3-dock-padding) auto var(--v3-dock-padding) var(--v3-dock-padding);
+  width:calc((100% - var(--v3-dock-padding) * 2) / 5);
+  border-radius:999px;
+  background:var(--v3-selected);
+  box-shadow:0 1px 0 var(--v3-edge) inset;
+  transform:translateX(calc(var(--v3-tab-index,0) * 100%));
+  transition:transform 270ms var(--v3-ease);
+}
+.ng-active #ng-mobile-navigation .ng-button {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.4rem;
+  min-width:44px;
+  min-height:43px;
+  padding:.42rem .45rem;
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:var(--v3-muted);
+  font:650 .74rem/1.2 var(--ui-font);
+  box-shadow:none;
+  white-space:nowrap;
+}
+.ng-active #ng-mobile-navigation .ng-button:hover { background:var(--v3-well); }
+.ng-active #ng-mobile-navigation .ng-button[aria-current="page"] { color:var(--v3-ink); background:transparent; }
+#ng-mobile-navigation .ng-nav-label { width:auto; }
+#ng-mobile-navigation :is(svg,i) { inline-size:18px; block-size:18px; }
+#ng-mobile-navigation .ng-button:active, .v3-tool:active { transform:scale(.95); }
+.ng-active #nextgen-workspace .ng-masthead .folio-wordmark { visibility:visible; }
+#nextgen-workspace .ng-masthead { min-height:55px; }
+#nextgen-workspace[data-route="Home"] .ng-masthead {
+  border:0; padding:0; margin:0 0 clamp(1.8rem,4vw,3.7rem);
+}
+#nextgen-workspace[data-route="Home"] .ng-masthead .folio-wordmark { color:var(--v3-ink); }
+#nextgen-workspace .ng-header-tools {
+  display:flex;
+  flex-wrap:nowrap;
+  gap:.02rem;
+  padding:.2rem;
+  border:1px solid var(--v3-rim);
+  border-radius:999px;
+  background:var(--v3-control);
+  box-shadow:var(--v3-shadow);
+}
+#nextgen-workspace .ng-header-tools .ng-button {
+  display:inline-flex; gap:.36rem; align-items:center; justify-content:center;
+  color:var(--v3-ink); background:transparent; border:0; border-radius:999px;
+  min-width:44px; min-height:43px; padding:.42rem .55rem;
+  font-size:.76rem;
+}
+#nextgen-workspace .ng-header-tools .ng-button:hover { background:var(--v3-selected); }
+#nextgen-workspace .ng-header-tools svg { width:17px;height:17px; }
+.v3-tool[data-ng-label="Search"] .ng-nav-label { display:none; }
+#nextgen-workspace[data-route="Home"] .ng-page-header { padding-bottom:.35rem; }
+#nextgen-workspace[data-route="Home"] .folio-section-label {
+  font-size:.68rem; letter-spacing:.135em; color:var(--v3-accent);
+}
+#nextgen-workspace[data-route="Home"] #ng-page-title {
+  font-size:clamp(3.1rem,6vw,6.35rem); letter-spacing:-.056em; line-height:.9;
+  text-wrap:initial;
+}
+#nextgen-workspace[data-route="Home"] .ng-status {
+  margin:.17rem 0;
+  color:var(--v3-muted);
+}
+#nextgen-workspace[data-route="Home"] .ng-status[role="alert"] { color:var(--ui-danger); }
+
+/* Each column rises from the prior threshold, using a common vertical scale. */
+.v3-overview {
+  display:grid;
+  grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);
+  gap:var(--v3-gap);
+  align-items:start;
+  padding:.55rem 0 0;
+}
+.v3-overview-summary { min-width:0; }
+.v3-balance { padding:clamp(1.6rem,4.4vw,4.5rem) 0 .6rem; }
+#nextgen-workspace .v3-balance h2 { margin:0; font:630 .86rem/1.25 var(--ui-font); color:var(--v3-muted); }
+.v3-balance .folio-balance-amount {
+  margin:.48rem 0 .53rem; gap:.8rem; color:var(--v3-ink);
+  align-items:baseline; font:650 clamp(2.55rem,4.65vw,5.15rem)/1 var(--ui-font);
+  letter-spacing:-.066em; font-variant-numeric:tabular-nums lining-nums;
+}
+.v3-balance .folio-currency {
+  order:2; color:var(--v3-muted); font:650 .23em/1 var(--ui-font); letter-spacing:.045em;
+}
+.v3-balance .folio-balance-date { color:var(--v3-muted); font-size:.77rem; }
+.v3-fund-actions { margin-top:1.13rem; gap:.5rem; }
+#nextgen-workspace .v3-fund-actions .ng-button.primary {
+  border-radius:999px; min-height:46px; padding:.63rem 1rem;
+}
+.v3-fund-actions .primary[data-editor-anchor="deposit"]::before { content:"+"; font-size:1.16rem; line-height:.8; margin-inline-end:.44rem; }
+.v3-fund-actions .folio-context>summary {
+  min-width:46px; min-height:46px; justify-content:center; padding:0; font-size:1.29rem; line-height:1;
+  border:1px solid var(--v3-rim); border-radius:50%; background:var(--v3-panel); color:var(--v3-ink);
+}
+.v3-fund-actions .folio-context>summary::after { content:none; }
+.v3-fund-actions .folio-context-panel { background:var(--v3-panel); box-shadow:var(--v3-shadow); border-radius:16px; }
+.v3-overview .ng-metrics {
+  margin:1.25rem 0 0; padding:1rem 0 0;
+  grid-template-columns:repeat(3,minmax(0,1fr)); gap:.56rem;
+  border-top:1px solid var(--v3-rim);
+}
+.v3-overview .ng-metrics>div { display:grid; grid-template-rows:1fr auto; gap:.16rem; min-width:0; }
+.v3-overview .ng-metrics dt { color:var(--v3-muted); font-size:.74rem; margin:0; }
+.v3-overview .ng-metrics dd { color:var(--v3-ink); font-size:clamp(.75rem,1.1vw,1.07rem); font-weight:650; }
+.v3-overview .ng-metrics dd[data-shortfall="true"] { color:var(--ui-danger); }
+.ng-home-actions,.ng-finance-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin:1rem 0; }
+#nextgen-workspace :is(.ng-home-actions,.ng-finance-actions) .ng-button { border-radius:999px; min-height:44px; }
+.ng-secondary>summary {
+  cursor:pointer; min-height:48px; display:flex; align-items:center; justify-content:space-between;
+  padding:.7rem .25rem; color:var(--ui-ink); border-bottom:1px solid var(--folio-rule); font-weight:650;
+}
+.ng-secondary>summary::after { content:"⌄"; font-size:1.15rem; }
+.ng-secondary[open]>summary::after { rotate:180deg; }
+.ng-secondary-body { padding:.75rem 0 1rem; }
+.ng-plan-summary {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9.4rem),1fr)); gap:1rem;
+  padding:1.05rem 1.1rem; background:var(--folio-surface); border-radius:16px;
+}
+.ng-plan-summary dt { color:var(--ui-muted); font-size:.77rem; }
+.ng-plan-summary dd { font-size:1.15rem; font-weight:650; font-variant-numeric:tabular-nums; }
+.ng-plan-summary dd[data-shortfall="true"] { color:var(--ui-danger); }
+.ng-final-category { margin:0 0 .65rem; padding:0 .8rem .42rem; border-bottom:1px solid var(--folio-rule); }
+.ng-final-category>summary {
+  display:flex; justify-content:space-between; align-items:center; min-height:49px; gap:.5rem; cursor:pointer; font-weight:650;
+}
+.ng-final-category>summary b { margin-inline-end:.65rem; color:var(--ui-accent); }
+.ng-final-category>summary::after { content:"⌄"; }
+.ng-final-category[open]>summary::after { rotate:180deg; }
+.ng-final-category>summary strong { margin-inline-start:auto; font-size:.87rem; }
+.ng-final-category>.ng-button { margin-block:.4rem; }
+.ng-trip-tools { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+.ng-trip-list { display:grid; gap:.4rem; }
+.ng-trip-row {
+  display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:.75rem;
+  min-height:62px; padding:.65rem .9rem; text-align:start; border:1px solid var(--folio-rule);
+  border-radius:12px; background:var(--folio-surface); color:var(--ui-ink); cursor:pointer;
+}
+.ng-trip-row span { display:grid; gap:.13rem; }
+.ng-trip-row span:nth-child(2) { text-align:end; }
+.ng-trip-row small { color:var(--ui-muted); }
+.ng-period-dashboard { padding:1rem 0; }
+.ng-period-dashboard .ng-segmented { margin:.35rem 0 .7rem; }
+.ng-period-chart { display:grid; grid-auto-columns:minmax(0,1fr); grid-auto-flow:column; gap:.3rem; margin:.75rem 0; }
+.ng-period-point {
+  display:grid; grid-template-rows:5rem auto; place-items:center;
+  padding:.42rem .1rem; border:0; border-radius:9px; background:transparent;
+  color:var(--ui-muted); cursor:pointer;
+}
+.ng-period-point[aria-pressed="true"] { background:var(--folio-hover); color:var(--ui-ink); }
+.ng-period-point>span { display:flex; justify-content:center; align-items:end; height:100%; width:100%; gap:.2rem; }
+.ng-period-point i { display:block; min-width:5px; width:19%; height:var(--bar); background:var(--folio-moss); border-radius:3px 3px 0 0; }
+.ng-period-point i[data-kind="spending"] { background:var(--folio-accent); }
+.ng-period-point i[data-known="false"] { background:transparent; border-bottom:1px dashed var(--folio-rule); }
+.ng-period-point small { margin-top:.35rem; font-size:.7rem; white-space:nowrap; }
+.ng-period-summary>.ng-caption { margin-top:.55rem; }
+.ng-budget-transfer-dialog {
+  position:fixed; inset:1rem 1rem 1rem auto; margin:0; width:min(34rem,calc(100vw - 2rem));
+  height:calc(100dvh - 2rem); max-height:none; padding:1.25rem;
+  border:1px solid var(--v3-rim); border-radius:24px;
+  background:var(--v3-panel); color:var(--v3-ink); box-shadow:var(--v3-shadow);
+}
+.ng-budget-transfer-dialog[open] { animation:v3-inspector-in 270ms var(--v3-ease) both; }
+.ng-budget-transfer-dialog>header { display:flex; align-items:start; justify-content:space-between; gap:.5rem; margin-bottom:.65rem; }
+.ng-budget-transfer-dialog h2 { overflow-wrap:anywhere; }
+.ng-budget-transfer-dialog textarea { display:block; width:100%; color:var(--v3-ink); background:var(--v3-well); }
+.ng-budget-transfer-dialog>textarea { margin-block:.7rem; }
+.ng-scoped-transfer .ng-transfer-review { display:grid; gap:.55rem; }
+@media(max-width:690px) {
+  .ng-budget-transfer-dialog {
+    inset:auto 0 0; width:100%; max-width:none; height:auto;
+    max-height:calc(100dvh - 1.3rem); border-radius:24px 24px 0 0;
+  }
+  .ng-budget-transfer-dialog[open] { animation-name:v3-sheet-in; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .ng-budget-transfer-dialog[open] { animation:none; }
+}
+.v3-instrument {
+  --v3-chart-ink:#f2f8f5;
+  --v3-chart-muted:#b8d1d2;
+  --v3-plot-height:clamp(11.5rem,17vw,16rem);
+  padding:clamp(.9rem,2.25vw,1.9rem);
+  border-radius:clamp(1.45rem,2.35vw,2.35rem);
+  color:var(--v3-chart-ink);
+  border:1px solid #96c2c647;
+  background:radial-gradient(ellipse at 10% 0%,#376272 0%,transparent 58%),
+    linear-gradient(142deg,#284d5c 0%,#1d3d4b 48%,#122e3b 99%);
+  box-shadow:0 1px 0 #b7e1df3d inset,0 15px 38px #122f3b2e,0 3px 9px #112f3b22;
+  min-width:0;
+}
+:root.dark .v3-instrument {
+  background:radial-gradient(ellipse at 10% 0%,#2a5261 0%,transparent 64%),linear-gradient(135deg,#24434f,#102d3b);
+  box-shadow:0 1px 0 #b7e1df3d inset,0 17px 42px #091318a0;
+}
+.v3-instrument-head { display:flex; justify-content:space-between; gap:.65rem; align-items:flex-start; }
+#nextgen-workspace .v3-instrument-head h2 {
+  margin:0; color:var(--v3-chart-ink); font:600 clamp(2rem,3.35vw,3.45rem)/.94 var(--ng-display); letter-spacing:-.037em;
+}
+.v3-instrument-target { display:grid; gap:.2rem; text-align:end; }
+.v3-instrument-target span { color:var(--v3-chart-muted); font-size:.68rem; }
+.v3-instrument-target strong { font:650 clamp(.81rem,1.55vw,1.22rem)/1.12 var(--ui-font); font-variant-numeric:tabular-nums; }
+.v3-chart-legend { display:flex; flex-wrap:wrap; gap:.28rem .85rem; color:var(--v3-chart-muted); font-size:.7rem; margin:.8rem 0 .6rem; }
+.v3-chart-legend>span { display:inline-flex; gap:.32rem; align-items:center; }
+.v3-chart-legend i { width:.69rem; height:.6rem; border-radius:.15rem; background:#a1e5c2; }
+.v3-chart-legend i[data-swatch="1"] { background:repeating-linear-gradient(125deg,#f9cf90 0 1px,#8e6739 1px 4px); }
+.v3-chart-legend i[data-swatch="2"] { background:#9fbdc555; border:1px solid #b9d9d982; }
+.v3-chart-plot { position:relative; }
+.v3-chart-plot[data-chart-known="true"]::before {
+  content:""; position:absolute; inset:.25rem 0 auto; height:var(--v3-plot-height); pointer-events:none;
+  background:repeating-linear-gradient(to top,#b5d6db27 0 1px,transparent 1px 25%);
+  border-top:1px solid #b5d6db27;
+}
+.v3-chart-columns { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.v3-chart-category {
+  --v3-block-width:62%;
+  display:grid; grid-template-rows:var(--v3-plot-height) auto;
+  gap:.27rem; border:0; min-width:0; background:transparent; color:var(--v3-chart-ink);
+  padding:.25rem 0; border-radius:14px; cursor:pointer;
+  transition:background-color 200ms ease;
+}
+.v3-chart-category:hover { background:#c6f0ed10; }
+.v3-chart-category[aria-pressed="true"] { background:linear-gradient(180deg,#a8dad409,#bce4e427); }
+#nextgen-workspace .v3-chart-category:focus-visible { outline:2px solid #ffe1ae; outline-offset:0; }
+.v3-chart-slot { position:relative; }
+.v3-chart-block {
+  display:block; position:absolute; bottom:var(--floor);
+  inset-inline:calc((100% - var(--v3-block-width)) / 2); height:var(--height);
+  overflow:hidden; border-radius:5px; background:#b6d6de3f; box-shadow:inset 0 0 0 1px #b3d8e06e;
+}
+.v3-chart-block[data-known="false"] { background:repeating-linear-gradient(135deg,#abcdd03d 0 2px,transparent 2px 5px); }
+.v3-chart-link {
+  position:absolute; bottom:var(--rim); width:calc(100% - var(--v3-block-width));
+  inset-inline-start:calc(50% + var(--v3-block-width) / 2);
+  border-block-end:1px dashed #b7d7dd79; pointer-events:none;
+}
+.v3-chart-fill { display:block; position:absolute; inset:0; transform-origin:center bottom; }
+.v3-chart-expected {
+  background:repeating-linear-gradient(130deg,#f3c891 0 1px,transparent 1px 4px),linear-gradient(0deg,#b98f58,#91693e);
+}
+.v3-chart-covered {
+  background:linear-gradient(145deg,#bbebd1,#71c8a7 66%,#57ad99);
+  box-shadow:inset 0 1px 0 #edfff0b9,inset 1px 0 0 #e1ffe166;
+  border-radius:4px 4px 0 0;
+}
+.v3-chart-category[aria-pressed="true"] .v3-chart-block { box-shadow:0 0 18px #94e7c530,inset 0 0 0 1px #d1ebeec0; }
+.v3-chart-caption { display:grid; justify-items:center; gap:.09rem; color:var(--v3-chart-muted); padding:.14rem .04rem; font-size:.72rem; }
+.v3-chart-caption b { font:650 .84rem/1.38 var(--ui-font); color:#b4e8d4; }
+.v3-chart-category[aria-pressed="true"] .v3-chart-caption { color:var(--v3-chart-ink); font-weight:650; }
+.v3-chart-plot[data-chart-known="false"] .v3-chart-category { grid-template-rows:0 auto; padding-top:0; gap:0; }
+.v3-chart-empty { color:var(--v3-chart-muted); padding:.7rem 0 0; font-size:.83rem; }
+.v3-insight {
+  display:flex; gap:.75rem; flex-wrap:wrap; justify-content:space-between; align-items:end;
+  min-width:0; margin-top:.55rem; padding:.7rem .75rem .61rem;
+  border-radius:14px; background:#142a369e; box-shadow:0 1px 0 #a8d4d322 inset;
+}
+.v3-insight-values { flex:1 1 auto; min-width:0; }
+.v3-insight-name { display:flex; gap:.42rem; align-items:center; font-weight:650; font-size:.84rem; }
+.v3-insight-name>span { color:#ade9cc; }
+.v3-insight-name small { font:600 .65rem/1 var(--ui-font); color:#f9d297; }
+.v3-insight-name .v3-insight-target {
+  margin-inline-start:auto; text-align:end; color:var(--v3-chart-muted);
+  font:550 .68rem/1.25 var(--ui-font); font-variant-numeric:tabular-nums;
+}
+.v3-insight dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.2rem .7rem; margin:.43rem 0 0; }
+.v3-insight dt { color:var(--v3-chart-muted); font-size:.65rem; }
+.v3-insight dd { font:650 .76rem/1.3 var(--ui-font); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+#nextgen-workspace .v3-instrument .ng-button {
+  background:#dbf5eb19; color:var(--v3-chart-ink); border:1px solid #d5efe958; border-radius:999px;
+  min-height:44px; font-size:.73rem;
+}
+#nextgen-workspace .v3-instrument .ng-button:hover { background:#dbf5eb2b; }
+.v3-chart-data>summary { display:flex; align-items:center; min-height:44px; padding-inline:.2rem; cursor:pointer; font-size:.73rem; color:var(--v3-chart-muted); }
+.v3-chart-data>summary::after { content:"⌄"; margin-inline-start:.44rem; font-size:.94rem; }
+.v3-chart-data[open]>summary::after { rotate:180deg; }
+.v3-chart-table { max-width:100%; overflow:auto; }
+.v3-chart-table .ng-table { width:100%; color:var(--v3-chart-ink); font-size:.76rem; }
+.v3-chart-table .ng-table :is(caption,th,td) { color:inherit; border-color:#b4d4d44f; }
+.v3-overview+.folio-appendix { padding-top:1.55rem; }
+.v3-reveal .v3-balance, .v3-reveal .v3-instrument { animation:folio-enter 500ms var(--v3-ease) backwards; }
+.v3-reveal .v3-instrument { animation-delay:65ms; }
+
+/* Editors use the existing dialog lifecycle and keyboard focus. On desktop
+   they dock beside the originating workspace. Mobile gets a bottom sheet. */
+#ng-editor[data-v3="true"], .v3-destinations {
+  position:fixed;
+  inset:1rem 1rem 1rem auto;
+  margin:0 0 0 auto;
+  width:min(31rem,calc(100vw - 2rem));
+  max-height:none;
+  border-radius:27px;
+  padding:1.3rem 1.35rem 1.1rem;
+  color:var(--v3-ink); background:var(--v3-panel);
+  border:1px solid var(--v3-rim); box-shadow:var(--v3-shadow),0 22px 64px #071a205c;
+}
+#ng-editor[data-v3="true"]::backdrop, .v3-destinations::backdrop { background:#0b1c285c; }
+#ng-editor[data-v3="true"] { height:calc(100dvh - 2rem); }
+#ng-editor[data-v3="true"][open], .v3-destinations[open] { animation:v3-inspector-in 290ms var(--v3-ease) both; }
+#ng-editor[data-v3="true"][data-closing] { animation:v3-inspector-out 160ms ease-in both; }
+@keyframes v3-inspector-in { from { opacity:.45; transform:translateX(min(6rem,20vw)); } }
+@keyframes v3-inspector-out { to { opacity:0; transform:translateX(2.5rem); } }
+#ng-editor[data-v3="true"] form { min-height:100%; display:flex; flex-direction:column; }
+#ng-editor[data-v3="true"] .ng-dialog-title {
+  position:sticky; top:-1.3rem; z-index:3; padding:.28rem 0 .65rem; border:0;
+  background:var(--v3-panel);
+}
+#ng-editor[data-v3="true"] h2 { font-size:clamp(2.1rem,3.8vw,3.45rem); }
+#ng-editor[data-v3="true"] .v3-inspector-close {
+  align-self:start; min-width:44px; min-height:44px; border-radius:50%;
+  padding:0; background:var(--v3-well); border-color:transparent; font-size:1.5rem;
+}
+#ng-editor[data-v3="true"] :is(input:not([type="checkbox"]),select,textarea) {
+  color:var(--v3-ink); background:var(--v3-well); border:1px solid transparent;
+  border-radius:11px; box-shadow:none;
+}
+#ng-editor[data-v3="true"] :is(input,select,textarea):focus-visible { border-color:var(--v3-accent); }
+#ng-editor[data-v3="true"] [aria-invalid="true"] { border-color:var(--ui-danger); }
+#ng-editor[data-v3="true"] .ng-form-actions {
+  margin-top:auto; bottom:-1.15rem; padding:.84rem 0 .35rem; background:var(--v3-panel);
+}
+#ng-editor[data-v3="true"] .ng-form-actions .ng-button { border-radius:999px; }
+.v3-destinations {
+  inset:5.25rem auto auto 50%;
+  translate:-50% 0;
+  margin:0; width:min(27rem,calc(100vw - 1.4rem));
+}
+.v3-destinations .ng-more-destinations .ng-button, .v3-destinations>.ng-button {
+  color:var(--v3-ink); background:var(--v3-well); border:0; border-radius:12px;
+}
+@supports(backdrop-filter:blur(12px)) {
+  .ng-active #ng-mobile-navigation { backdrop-filter:blur(14px) saturate(118%); }
+}
+@media(max-width:1180px) {
+  .ng-active #ng-mobile-navigation {
+    inset:auto auto max(.59rem,env(safe-area-inset-bottom)) 50%;
+  }
+  .ng-active #ng-mobile-navigation .ng-button { padding:.32rem .63rem; }
+  .ng-active #nextgen-workspace { padding-bottom:4.55rem; }
+  .v3-destinations {
+    inset:auto auto calc(4.5rem + env(safe-area-inset-bottom)) 50%;
+  }
+}
+@media(max-width:690px) {
+  .ng-active:has(#nextgen-workspace) .app-shell { padding:.43rem .87rem 0; }
+  #nextgen-workspace .ng-masthead { min-height:51px; }
+  #nextgen-workspace[data-route="Home"] .ng-masthead { margin-bottom:.95rem; }
+  #nextgen-workspace .ng-header-tools .v3-tool .ng-nav-label { display:none; }
+  #nextgen-workspace .ng-header-tools { gap:0; padding:.09rem; }
+  #nextgen-workspace .ng-masthead .folio-wordmark { font-size:2.37rem; }
+  #nextgen-workspace[data-route="Home"] #ng-page-title { font-size:clamp(2.47rem,10.8vw,4.15rem); }
+  .ng-active #ng-mobile-navigation { --v3-dock-padding:.2rem; --v3-tab-width:clamp(3.4rem,16.1vw,4.6rem); }
+  .ng-active #ng-mobile-navigation .ng-button {
+    flex-direction:column; gap:.2rem; min-height:50px; min-width:0; padding:.29rem .25rem;
+    font-size:.67rem;
+  }
+  .v3-overview { grid-template-columns:minmax(0,1fr); gap:.86rem; padding-top:.25rem; }
+  .v3-balance { padding:.29rem 0 .03rem; }
+  .v3-balance .folio-balance-amount { margin:.29rem 0 .31rem; font-size:clamp(2.82rem,11vw,4.5rem); }
+  .v3-fund-actions { margin-top:.57rem; }
+  .v3-overview .ng-metrics { margin:.69rem 0 0; padding:.63rem 0 0; }
+  .v3-overview .ng-metrics dt { font-size:.67rem; line-height:1.2; }
+  .v3-instrument { --v3-plot-height:8.45rem; }
+  .v3-chart-legend { margin:.54rem 0 .44rem; font-size:.63rem; }
+  .v3-chart-caption { font-size:.67rem; }
+  .v3-insight { gap:.44rem; }
+  .v3-insight dd { font-size:.69rem; }
+  .v3-insight .ng-button { width:100%; }
+  #ng-editor[data-v3="true"] {
+    inset:auto 0 var(--ng-viewport-bottom,0px); margin:0 auto; width:100%; max-width:none;
+    height:auto; max-height:calc(var(--ng-viewport-height,100dvh) - 2rem); min-height:0;
+    border-radius:26px 26px 0 0; padding:1rem 1rem calc(.8rem + env(safe-area-inset-bottom));
+  }
+  #ng-editor[data-v3="true"][open], .v3-destinations[open] { animation-name:v3-sheet-in; }
+  #ng-editor[data-v3="true"][data-closing] { animation-name:v3-sheet-out; }
+  #ng-editor[data-v3="true"] .ng-dialog-title { top:-1rem; }
+  #ng-editor[data-v3="true"] .ng-form-actions { bottom:-.8rem; padding-bottom:.45rem; }
+  #ng-editor[data-v3="true"] .ng-form-actions [type="submit"] { flex:1; }
+}
+@keyframes v3-sheet-in { from { opacity:.45; transform:translateY(3.5rem); } }
+@keyframes v3-sheet-out { to { opacity:0; transform:translateY(2.5rem); } }
+@media(prefers-reduced-motion:reduce) {
+  #ng-editor[data-v3="true"][open], .v3-destinations[open], .v3-reveal :is(.v3-balance,.v3-instrument) { animation:none; }
+  #ng-mobile-navigation .ng-button, .ng-active #ng-mobile-navigation::before, .v3-chart-category { transition:none; }
+}
+@media(prefers-reduced-transparency:reduce) {
+  .ng-active #ng-mobile-navigation { backdrop-filter:none; background:var(--v3-panel); }
+  #nextgen-workspace .ng-header-tools { background:var(--v3-panel); }
+}

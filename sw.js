@@ -1,89 +1,78 @@
-// ✅ 建議：改一改 version 名，之後每次大更新先手動 bump（例如 v3、v4）
-const CACHE_NAME = 'workie-v2';
-
-// 仍然預先 cache 圖標等 static asset（唔再硬性 cache index.html）
-const ASSETS = [
-  './',
-  './icon-192.png',
-  './icon-512.png'
+const CACHE = 'workie-nextgen-shell-88fc0c6e587eb755';
+const SHELL_PATHS = [
+  "index.html",
+  "manifest.json",
+  "icon-192.png",
+  "icon-512.png",
+  "nextgen/allocation-view.mjs",
+  "nextgen/backup-merge.mjs",
+  "nextgen/budget-plans.mjs",
+  "nextgen/budget-transfer.mjs",
+  "nextgen/calendar-export.js",
+  "nextgen/chart-4.4.9.js",
+  "nextgen/cormorant-garamond.ttf",
+  "nextgen/coverage.mjs",
+  "nextgen/csv.mjs",
+  "nextgen/editorial.css",
+  "nextgen/expense-analytics.js",
+  "nextgen/folio.css",
+  "nextgen/i18n.mjs",
+  "nextgen/inter-variable.woff2",
+  "nextgen/interaction.css",
+  "nextgen/interaction.mjs",
+  "nextgen/journey-options.mjs",
+  "nextgen/ledger.mjs",
+  "nextgen/legacy-vault.mjs",
+  "nextgen/legacy-work.mjs",
+  "nextgen/lesson-time.mjs",
+  "nextgen/lucide-1.8.0.js",
+  "nextgen/presentation.css",
+  "nextgen/presentation.mjs",
+  "nextgen/product-finance.mjs",
+  "nextgen/product.css",
+  "nextgen/rates.mjs",
+  "nextgen/refinement.css",
+  "nextgen/repository.mjs",
+  "nextgen/tailwind-3.4.17.js",
+  "nextgen/weekly-settlement.css",
+  "nextgen/weekly-settlement.mjs",
+  "nextgen/work-analytics.mjs",
+  "nextgen/work-data.mjs",
+  "nextgen/work-receipts.mjs",
+  "nextgen/workspace.css",
+  "nextgen/workspace.mjs",
+  "nextgen/wtp-expenses.mjs",
+  "nextgen/wtp-prompt.mjs",
+  "nextgen/wtp.mjs"
 ];
+const url = path => new URL(path, self.registration.scope).href;
+const shell = new Set(SHELL_PATHS.map(url));
+const cachePrefix = 'workie-nextgen-shell:' + encodeURIComponent(new URL(self.registration.scope).pathname) + ':';
+const cacheName = cachePrefix + CACHE;
 
-// 安裝：cache static 資源
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
+  event.waitUntil(caches.open(cacheName).then(cache =>
+    cache.addAll(SHELL_PATHS.map(path => new Request(url(path), {cache: 'reload'})))));
+  // An update waits for old tabs to close so they cannot mix versions.
 });
-
-// 啟用：清舊版本 cache
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_NAME)
-          .map(k => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key !== cacheName && key.startsWith(cachePrefix))
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
-
-// 取用策略：
-// - HTML（頁面）→ network-first（確保有新版本）
-// - 其他靜態資源（icon / css / js 等）→ cache-first
 self.addEventListener('fetch', event => {
-  const request = event.request;
-  const url = new URL(request.url);
-
-  // 1. Frankfurter API：完全唔攔，交返俾瀏覽器處理
-  if (url.origin === 'https://api.frankfurter.app' ||
-      url.origin === 'https://api.frankfurter.dev') {
-    return;
-  }
-
-  // 2. 只處理同源請求（你自己 site 的資源）
-  if (url.origin !== self.location.origin) {
-    return;
-  }
-
-  // 2a. 如果係 HTML 頁面（尤其 index.html / navigation）
-  if (request.mode === 'navigate' ||
-      (request.destination === 'document')) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          // 成功從網絡攞到，就順便更新 cache
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => {
-          // 如果 offline / 網絡失敗，就退而求其次用 cache 版本
-          return caches.match(request).then(cached => {
-            // 未必一定有 cache，如果冇就簡單回傳預設 offline 回應
-            if (cached) return cached;
-            // 可以揀：拋錯 / 回傳簡單 fallback
-            return new Response(
-              '<h1>Offline</h1><p>請重新連線再試一次。</p>',
-              { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-            );
-          });
-        })
-    );
-    return;
-  }
-
-  // 2b. 其他靜態資源：cache-first（例如 icon、css、js 等）
-  event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        return response;
-      });
-    })
-  );
+  if (event.request.method !== 'GET') return;
+  const href = event.request.url;
+  const address = new URL(href);
+  const root = new URL(self.registration.scope);
+  const appEntry = event.request.mode === 'navigate' && address.origin === root.origin &&
+    [root.pathname, new URL('index.html', root).pathname].includes(address.pathname);
+  if (!appEntry && !shell.has(href)) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(cacheName);
+    return await cache.match(appEntry ? url('index.html') : href) ?? fetch(event.request);
+  })());
 });

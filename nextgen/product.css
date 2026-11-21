@@ -1,0 +1,164 @@
+/* The five destinations share one functional control layer and a quiet,
+   responsive reading surface. Accent color identifies actions and data. */
+:root {
+  --product-paper:#f4f3f7;
+  --product-surface:#fff;
+  --product-ink:#242432;
+  --product-muted:#5a5a70;
+  --product-action:#42467c;
+  --product-on-action:#fff;
+  --product-line:#d3d1df;
+  --product-well:#ecebf4;
+  --product-glow:#e6e6f5;
+  --product-danger:#9b3544;
+  --product-shadow:0 1px 0 #fff inset,0 1px 2px #2a255313,0 14px 36px #32274712;
+  --product-max:1210px;
+}
+:root.dark {
+  --product-paper:#1a1a24;
+  --product-surface:#242434;
+  --product-ink:#f6f2f9;
+  --product-muted:#c5c2d5;
+  --product-action:#c1c2f8;
+  --product-on-action:#2c305a;
+  --product-line:#54536d;
+  --product-well:#33334a;
+  --product-glow:#343452;
+  --product-danger:#ffabb7;
+  --product-shadow:0 1px 0 #e3d8ff18 inset,0 2px 4px #08081164,0 16px 36px #08081142;
+}
+body.ng-active:has(#nextgen-workspace[data-route]) {
+  --v3-rim:var(--product-line);
+  --v3-control:var(--product-surface);
+  --v3-selected:var(--product-well);
+  --v3-shadow:var(--product-shadow);
+  --v3-ink:var(--product-ink);
+  --v3-muted:var(--product-muted);
+  background:var(--product-paper);
+  color:var(--product-ink);
+}
+.ng-active:has(#nextgen-workspace) .app-shell { max-width:var(--product-max); padding-inline:clamp(1rem,4vw,2.8rem); }
+#nextgen-workspace[data-folio="true"], #ng-editor[data-folio="true"], .ng-budget-transfer-dialog {
+  --folio-ink:var(--product-ink);
+  --folio-muted:var(--product-muted);
+  --folio-accent:var(--product-action);
+  --folio-surface:var(--product-surface);
+  --folio-rule:var(--product-line);
+  --folio-hover:var(--product-well);
+  --folio-accent-fill:var(--product-action);
+  --folio-action-ink:var(--product-on-action);
+  --ng-paper:var(--product-surface);
+  --ng-instrument:var(--product-well);
+  --ui-danger:var(--product-danger);
+  --ui-recessed:var(--product-well);
+  --v3-ink:var(--product-ink);
+  --v3-rim:var(--product-line);
+  --v3-panel:var(--product-surface);
+  --v3-well:var(--product-well);
+  --v3-shadow:var(--product-shadow);
+}
+.ng-active #ng-mobile-navigation {
+  --v3-dock-padding:.2rem;
+  --v3-tab-width:7.9rem;
+  backdrop-filter:none;
+  box-shadow:0 1px 0 #ffffff35 inset,0 8px 26px #15172a20;
+}
+.ng-active #ng-mobile-navigation .ng-button { color:var(--product-muted); }
+.ng-active #ng-mobile-navigation .ng-button[aria-current="page"] { color:var(--product-action); }
+#nextgen-workspace[data-folio="true"] .ng-masthead {
+  margin-bottom:clamp(1.2rem,3.4vw,2.7rem); border:0; padding-bottom:.2rem;
+}
+#nextgen-workspace .ng-header-tools { box-shadow:none; }
+.ng-active #nextgen-workspace .ng-masthead .folio-wordmark {
+  font-size:2.28rem; color:var(--product-ink); letter-spacing:-.058em;
+}
+#nextgen-workspace[data-folio="true"] .folio-section-label { color:var(--product-action); letter-spacing:.09em; }
+#nextgen-workspace[data-folio="true"] #ng-page-title { font-size:clamp(2.7rem,4.55vw,4.55rem); letter-spacing:-.046em; }
+#nextgen-workspace[data-folio="true"] .ng-button { border-radius:11px; }
+#nextgen-workspace[data-folio="true"] .ng-button.primary { font-weight:700; }
+#nextgen-workspace[data-folio="true"] .ng-button:focus-visible,
+#nextgen-workspace :is(.ng-trip-row,.ng-period-point,.v3-chart-category):focus-visible {
+  outline:2px solid var(--product-action); outline-offset:2px;
+}
+.v3-overview { grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr); gap:clamp(1.1rem,3vw,2.4rem); padding-block:.6rem; }
+.v3-balance {
+  padding:clamp(.95rem,2.3vw,1.65rem); border-radius:19px;
+  background:linear-gradient(141deg,var(--product-glow),var(--product-surface) 83%);
+  border:1px solid var(--product-line); box-shadow:var(--product-shadow);
+}
+#nextgen-workspace .v3-balance h2 { color:var(--product-muted); font-size:.79rem; }
+.v3-balance .folio-balance-amount {
+  font-size:clamp(2.65rem,4.15vw,4.28rem); color:var(--product-ink); margin:.45rem 0 .5rem;
+}
+.v3-balance .folio-currency,.v3-balance .folio-balance-date { color:var(--product-muted); }
+.v3-overview .ng-metrics { border:0; padding:.5rem 0 0; gap:.65rem; margin:.68rem 0 0; }
+.v3-overview .ng-metrics dt,.ng-plan-summary dt { color:var(--product-muted); }
+.v3-overview .ng-metrics dd { color:var(--product-ink); }
+.ng-home-actions { gap:.48rem; margin:.95rem 0 .4rem; }
+.v3-instrument,:root.dark .v3-instrument {
+  --v3-chart-ink:var(--product-ink);
+  --v3-chart-muted:var(--product-muted);
+  --v3-plot-height:clamp(10.5rem,17vw,14rem);
+  border:1px solid var(--product-line); border-radius:22px;
+  background:var(--product-surface); box-shadow:var(--product-shadow);
+}
+#nextgen-workspace .v3-instrument-head h2 { font-size:clamp(1.9rem,3vw,2.8rem); }
+.v3-instrument-target strong { color:var(--product-action); font-size:clamp(1.1rem,2vw,1.58rem); }
+.v3-chart-plot[data-chart-known="true"]::before {
+  background:repeating-linear-gradient(to top,var(--product-line) 0 1px,transparent 1px 25%);
+  border-top-color:var(--product-line);
+}
+.v3-chart-category:hover { background:color-mix(in srgb,var(--product-well) 60%,transparent); }
+.v3-chart-category[aria-pressed="true"] { background:var(--product-well); }
+.v3-chart-block { border-radius:6px; background:var(--product-glow); box-shadow:inset 0 0 0 1px var(--product-line); }
+.v3-chart-category[aria-pressed="true"] .v3-chart-block { box-shadow:0 2px 7px #27266024,inset 0 0 0 1px var(--product-line); }
+.v3-chart-link { border-color:var(--product-muted); opacity:.65; }
+.v3-chart-covered { background:linear-gradient(148deg,#9697da,#6268b8 70%,#535aa5); box-shadow:0 1px 0 #f6f5ff55 inset; }
+.v3-chart-expected { background:repeating-linear-gradient(135deg,#78502c 0 1px,transparent 1px 5px),#edc99d; }
+.v3-chart-legend i { background:#676cb8; }
+.v3-chart-legend i[data-swatch="1"] { background:repeating-linear-gradient(135deg,#78502c 0 1px,#edc99d 1px 5px); }
+.v3-chart-legend i[data-swatch="2"] { background:var(--product-glow); border-color:var(--product-line); }
+.v3-chart-caption b,.v3-insight-name>span { color:var(--product-action); }
+.v3-insight { background:var(--product-well); box-shadow:none; }
+.v3-insight-name small { color:var(--product-muted); }
+#nextgen-workspace .v3-instrument .ng-button {
+  color:var(--product-action); background:var(--product-surface); border-color:var(--product-line);
+}
+.ng-plan-summary { background:var(--product-surface); box-shadow:var(--product-shadow); padding:.95rem 1.05rem; }
+.ng-final-category { background:var(--product-surface); border:0; border-radius:13px; padding-inline:.85rem; }
+.ng-final-category>summary { padding:.15rem .2rem; }
+.ng-final-category>summary b {
+  display:inline-grid; place-items:center; margin-inline-end:.55rem; width:1.86rem; height:1.86rem;
+  border-radius:8px; background:var(--product-well); color:var(--product-action); font-size:.78rem;
+}
+.ng-final-category[open]>.ng-button { margin:.4rem 0 .2rem; }
+.ng-trip-row { border:0; min-height:68px; box-shadow:0 1px 0 var(--product-line); }
+.ng-trip-row:hover { background:var(--product-well); }
+.ng-period-dashboard { padding:.5rem 0 1.1rem; }
+.ng-period-chart { background:var(--product-surface); border-radius:15px; padding:.28rem; }
+.ng-period-point i { background:#676cb8; }
+.ng-period-point i[data-kind="spending"] { background:#a85c72; }
+.ng-settings-grid>.ng-surface { background:var(--product-surface); border:0; border-radius:17px; box-shadow:var(--product-shadow); }
+.ng-budget-transfer-dialog .ng-button.primary {
+  background:var(--product-action); color:var(--product-on-action); box-shadow:none;
+}
+.ng-rate-settings { display:grid; gap:.38rem; margin:.5rem 0 1rem; }
+.ng-rate-settings>.ng-button { justify-self:start; }
+@media(max-width:690px) {
+  .ng-active #ng-mobile-navigation { --v3-tab-width:clamp(3.35rem,17.7vw,5.5rem); }
+  #ng-mobile-navigation .ng-nav-label { overflow:visible; white-space:normal; font-size:.63rem; line-height:1.02; }
+  .ng-active #nextgen-workspace .ng-masthead .folio-wordmark { font-size:2.08rem; }
+  #nextgen-workspace[data-folio="true"] .ng-masthead { margin-bottom:.9rem; }
+  .v3-overview { grid-template-columns:1fr; gap:.77rem; padding-top:.25rem; }
+  .v3-balance { padding:.75rem .86rem; }
+  .v3-overview .ng-metrics { margin-top:.38rem; padding:0 .16rem; }
+  .ng-home-actions { margin:.68rem 0 .17rem; }
+  .v3-instrument,:root.dark .v3-instrument { --v3-plot-height:7.7rem; padding:.8rem; }
+  .ng-plan-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ng-plan-summary dd { font-size:.98rem; }
+  .ng-final-budget-summary .ng-actions { display:grid; grid-template-columns:1.2fr 1fr 1fr; }
+  #nextgen-workspace .ng-final-budget-summary .ng-actions>.ng-button { min-width:0; padding-inline:.35rem; font-size:.76rem; }
+}
+@media(min-width:691px) {
+  .ng-final-budget-summary,.ng-budget-chapters,.ng-trip-list,.ng-period-dashboard { max-width:60rem; }
+}

@@ -1,0 +1,498 @@
+/* Workie editorial presentation. The three review routes share paper, ink,
+   typography and controls. Each has its own composition and reading order. */
+:root {
+  --folio-paper: #f6f3eb;
+  --folio-surface: #fffcf5;
+  --folio-ink: #252b27;
+  --folio-muted: #565e54;
+  --folio-rule: #cbc8ba;
+  --folio-accent: #8e362c;
+  --folio-accent-fill: #8e362c;
+  --folio-action-ink: #fffaf2;
+  --folio-hover: #ebe6da;
+  --folio-moss: #36574b;
+  --folio-grant: #8b5e36;
+  --folio-track: #e7e1d4;
+  --folio-shadow: 0 1px 0 #fffdf8 inset, 0 10px 30px #332d2420, 0 2px 6px #332d2410;
+  --folio-ease: cubic-bezier(.2,.8,.24,1);
+  --folio-calendar-head: 66px;
+  --folio-calendar-height: 560px;
+}
+:root.dark {
+  --folio-paper: #1d231f;
+  --folio-surface: #272e28;
+  --folio-ink: #f4ede0;
+  --folio-muted: #bec3b5;
+  --folio-rule: #525c50;
+  --folio-accent: #f7ad95;
+  --folio-accent-fill: #eb9b82;
+  --folio-action-ink: #292019;
+  --folio-hover: #343d34;
+  --folio-moss: #a7c4ad;
+  --folio-grant: #e0b281;
+  --folio-track: #3a4439;
+  --folio-shadow: 0 1px 0 #f4ede016 inset, 0 12px 32px #0c110e70, 0 2px 6px #0c110e60;
+}
+body.ng-active:has(#nextgen-workspace[data-folio="true"]) {
+  background:var(--folio-paper);
+  color:var(--folio-ink);
+}
+#nextgen-workspace[data-folio="true"], #ng-editor[data-folio="true"] {
+  --ui-ink:var(--folio-ink);
+  --ui-muted:var(--folio-muted);
+  --ui-accent:var(--folio-accent);
+  --ui-focus:var(--folio-accent);
+  --ui-selected:var(--folio-hover);
+  --ui-surface:var(--folio-surface);
+  --ng-sheet:var(--folio-surface);
+  --ng-rule:var(--folio-rule);
+  --ng-panel:var(--folio-surface);
+  --ng-border:var(--folio-rule);
+  color:var(--folio-ink);
+}
+.folio-wordmark {
+  display:inline-flex;
+  align-items:baseline;
+  gap:.045em;
+  width:max-content;
+  color:var(--folio-ink);
+  text-decoration:none;
+  font:700 2.55rem/.87 var(--ng-display);
+  letter-spacing:-.07em;
+  cursor:pointer;
+}
+.folio-wordmark span { color:var(--folio-accent); }
+.folio-label {
+  font:650 .66rem/1.4 var(--ui-font);
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--folio-muted);
+}
+.folio-section-label:empty { display:none; }
+[data-folio="true"] .folio-page-heading { display:grid; gap:.34rem; }
+[data-folio="true"] .folio-section-label { color:var(--folio-accent); }
+#nextgen-workspace[data-folio="true"] .ng-page-header { padding:0 0 1.22rem; }
+#nextgen-workspace[data-folio="true"] .ng-masthead { border-color:var(--folio-rule); margin:0 0 1.42rem; padding:0 0 .68rem; }
+[data-folio="true"] #ng-page-title {
+  font:600 clamp(3.1rem,5.4vw,5.55rem)/.88 var(--ng-display);
+  letter-spacing:-.057em;
+  max-width:none;
+  text-wrap:balance;
+}
+#nextgen-workspace[data-folio="true"] .ng-button, #ng-editor[data-folio="true"] .ng-button {
+  border-radius:7px;
+  box-shadow:none;
+  color:var(--folio-ink);
+}
+#nextgen-workspace[data-folio="true"] .ng-button.primary, #ng-editor[data-folio="true"] .ng-button.primary {
+  background:var(--folio-accent-fill);
+  color:var(--folio-action-ink);
+  border-color:transparent;
+  box-shadow:0 1px 0 #ffffff34 inset,0 2px 4px #1a171218;
+}
+[data-folio="true"] .ng-button.primary:hover { filter:brightness(1.09); }
+#nextgen-workspace[data-folio="true"] .ng-button.danger { color:var(--folio-accent); }
+[data-folio="true"] .ng-header-tools .ng-button, [data-folio="true"] .ng-header-tools .ng-icon-button { border:0; }
+.ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar {
+  padding:1.7rem 1rem 1rem 0;
+  border:0;
+  border-inline-end:1px solid var(--folio-rule);
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  color:var(--folio-ink);
+}
+.ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar .folio-wordmark { border:0; padding:0 .68rem .6rem; }
+.ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar nav { gap:.2rem; }
+.ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar nav button {
+  border:0;
+  border-radius:6px;
+  color:var(--folio-muted);
+  padding-inline:.68rem;
+  font-size:.84rem;
+}
+.ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar nav button:hover { background:var(--folio-hover); }
+.ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar [aria-current="page"] {
+  background:var(--folio-hover);
+  color:var(--folio-accent);
+  box-shadow:inset 2px 0 var(--folio-accent);
+}
+
+/* The statement leads with one reconciled number and gives the waterfall its
+   own reading surface with a cumulative track and a category inspector. */
+.folio-statement {
+  display:grid;
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);
+  gap:clamp(1.3rem,3.5vw,3.6rem);
+  align-items:start;
+  border-block:1px solid var(--folio-rule);
+  padding-block:1.25rem;
+}
+.folio-statement-left { min-width:0; }
+.folio-balance { display:grid; gap:.64rem; padding:clamp(.5rem,2.5vw,1.4rem) 0 1.3rem; }
+#nextgen-workspace .folio-balance .folio-label { font-family:var(--ui-font); font-size:.72rem; margin:0; }
+.folio-balance-amount {
+  display:flex;
+  align-items:baseline;
+  gap:.3em;
+  min-width:0;
+  color:var(--folio-ink);
+  font:600 clamp(3.25rem,5.75vw,6.45rem)/.9 var(--ng-display);
+  letter-spacing:-.062em;
+  font-variant-numeric:lining-nums tabular-nums;
+  overflow-wrap:anywhere;
+}
+.folio-balance-amount strong { font:inherit; }
+.folio-currency { color:var(--folio-accent); font:700 .19em/1 var(--ui-font); letter-spacing:.06em; }
+.folio-balance-date { color:var(--folio-muted); font-size:.8rem; }
+.folio-balance-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.65rem; margin-top:.55rem; }
+.folio-context { position:relative; min-width:0; }
+.folio-context summary, .folio-budget-breakdown summary, .folio-work-records>summary {
+  list-style:none;
+  cursor:pointer;
+  color:var(--folio-ink);
+  font-weight:650;
+}
+.folio-context summary::-webkit-details-marker, .folio-work-records>summary::-webkit-details-marker { display:none; }
+.folio-context>summary { display:flex; align-items:center; gap:.55rem; min-height:44px; padding-inline:.45rem; font-size:.8rem; }
+.folio-context>summary::after, .folio-work-records>summary::after {
+  content:""; width:.42rem; height:.42rem; border:solid currentColor; border-width:0 1px 1px 0; rotate:45deg; translate:0 -.12rem;
+}
+.folio-context[open]>summary::after, .folio-work-records[open]>summary::after { rotate:225deg; translate:0 .12rem; }
+.folio-context-panel {
+  position:absolute;
+  z-index:5;
+  inset-block-start:calc(100% + 4px);
+  inset-inline-start:0;
+  display:grid;
+  gap:.36rem;
+  min-width:max-content;
+  padding:.56rem;
+  background:var(--folio-surface);
+  border:1px solid var(--folio-rule);
+  border-radius:9px;
+  box-shadow:var(--folio-shadow);
+  animation:folio-context-in 170ms var(--folio-ease) both;
+}
+@keyframes folio-context-in { from { opacity:0; transform:translateY(-5px) scale(.99); } }
+.folio-statement .ng-metrics {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:0;
+  margin:0;
+  padding:0;
+}
+.folio-statement .ng-metrics>div {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:.5rem;
+  padding:.7rem 0;
+  border-top:1px solid var(--folio-rule);
+}
+.folio-statement .ng-metrics dt { color:var(--folio-muted); font-size:.79rem; }
+.folio-statement .ng-metrics dd { font-size:.91rem; font-weight:650; font-variant-numeric:tabular-nums; }
+.folio-allocation.ng-waterfall {
+  background:none;
+  box-shadow:none;
+  border:0;
+  border-inline-start:1px solid var(--folio-rule);
+  border-radius:0;
+  padding:0 0 0 clamp(1.25rem,3.1vw,3.25rem);
+  min-width:0;
+}
+#nextgen-workspace .folio-allocation h2 { color:var(--folio-ink); font:600 clamp(2rem,3vw,3rem)/1 var(--ng-display); }
+.folio-allocation .ng-section-title { align-items:baseline; }
+.folio-allocation .ng-funding-ruler {
+  height:1.32rem;
+  border-radius:3px;
+  background:var(--folio-track);
+  box-shadow:inset 0 1px 2px #20252022;
+}
+.folio-allocation .ng-ruler-segment::after {
+  content:""; position:absolute; z-index:1; inset:0 0 0 auto; border-inline-end:2px solid var(--folio-paper);
+}
+.folio-allocation .ng-ruler-segment:last-child::after { display:none; }
+.folio-allocation .ng-track { background:var(--folio-track); height:.32rem; box-shadow:none; margin:0; }
+.folio-allocation .ng-track[style] {
+  margin-inline-start:var(--folio-segment-start);
+  inline-size:var(--folio-segment-width);
+}
+.folio-allocation .ng-track[data-known="false"] { background:repeating-linear-gradient(135deg,var(--folio-track) 0 3px,var(--folio-paper) 3px 6px); }
+.folio-allocation :is(.ng-track-cash,.ng-legend-swatch.cash) { background:var(--folio-moss); }
+.folio-allocation :is(.ng-track-expected,.ng-legend-swatch.expected) {
+  background:repeating-linear-gradient(135deg,var(--folio-grant) 0 1px,transparent 1px 4px);
+}
+.folio-allocation .ng-chart-legend { gap:.45rem 1rem; font-size:.69rem; }
+.folio-allocation .ng-allocation {
+  border-color:var(--folio-rule);
+  padding:.47rem .32rem .43rem;
+  column-gap:.4rem;
+  transition:background-color 160ms ease,box-shadow 160ms ease;
+}
+.folio-allocation .ng-allocation[aria-pressed="true"] { background:var(--folio-hover); box-shadow:inset 2px 0 var(--folio-accent); }
+.folio-allocation .ng-allocation-list .ng-category b {
+  width:auto; min-width:1.5rem; height:auto; border:0; border-radius:0; color:var(--folio-accent); font-size:.87rem;
+}
+.folio-allocation .ng-next-threshold { color:var(--folio-accent); font-size:.65rem; }
+.folio-allocation .ng-allocation-detail {
+  background:color-mix(in srgb,var(--folio-hover) 52%,transparent);
+  border-radius:4px;
+  border-inline-start:2px solid var(--folio-accent);
+  padding:.67rem .7rem;
+  margin-top:.67rem;
+}
+.folio-allocation .ng-allocation-detail>strong { color:var(--folio-accent); font-size:.78rem; }
+.folio-allocation .ng-allocation-detail dl { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.folio-allocation .ng-allocation-detail dt { font-size:.66rem; }
+.folio-allocation .ng-allocation-detail dd { font-size:.76rem; }
+.folio-appendix { display:grid; grid-template-columns:1.2fr 1fr .82fr; gap:clamp(1rem,3vw,3rem); padding-block:1.3rem; }
+.folio-appendix>.ng-surface { background:none; box-shadow:none; border:0; border-radius:0; padding:0; margin:0; }
+.folio-appendix>.ng-surface h2 { font-size:1.82rem; }
+.folio-appendix .ng-record { background:none; }
+.folio-reveal .folio-balance, .folio-reveal .folio-allocation { animation:folio-enter 490ms var(--folio-ease) backwards; }
+.folio-reveal .folio-allocation { animation-delay:65ms; }
+@keyframes folio-enter { from { opacity:.2; transform:translateY(11px); } }
+
+/* Budget reads as an ordered ledger. Categories act directly on its rows.
+   The secondary column reconciles the plan without burying the main list. */
+#ng-content[data-route="Budget"] { display:block; }
+.folio-budget-command {
+  display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.35rem 1rem;
+  border-block:1px solid var(--folio-rule);
+}
+.folio-chapters { display:flex; flex-wrap:wrap; gap:.2rem .4rem; }
+.folio-chapters .ng-button {
+  display:flex; align-items:center; gap:.35rem; background:none; border:0; padding:.45rem .58rem;
+  font-size:.82rem;
+}
+.folio-chapters .ng-button[aria-pressed="true"] { color:var(--folio-accent); background:var(--folio-hover); }
+.folio-category-mark { color:var(--folio-accent); font-size:.78rem; }
+.folio-budget-actions { display:flex; align-items:center; gap:.65rem; }
+.folio-budget-context .folio-context-panel { width:min(29rem,calc(100vw - 2.4rem)); min-width:0; inset-inline:auto 0; }
+.folio-budget-context .ng-record-controls { margin:0; border:0; background:none; box-shadow:none; padding:.4rem; }
+.folio-budget-layout { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,.75fr); gap:clamp(1.2rem,3.6vw,3.6rem); }
+#ng-content[data-route="Budget"] .folio-budget-layout #ng-records {
+  grid-area:auto; box-shadow:none; background:none; border:0; border-radius:0; padding:0;
+}
+.folio-budget-layout .ng-budget-chapter { border:0; padding:1rem 0 .22rem; }
+.ng-budget-chapter>header {
+  display:flex; align-items:baseline; justify-content:space-between; gap:.75rem;
+  border-bottom:1px solid var(--folio-rule); padding-bottom:.3rem;
+}
+#nextgen-workspace .ng-budget-chapter h2 {
+  margin:0; font:600 clamp(1.84rem,3vw,2.85rem)/.98 var(--ng-display);
+  letter-spacing:-.035em; color:var(--folio-ink);
+}
+.folio-budget-layout .ng-budget-chapter h2>span {
+  margin-inline-end:.46rem; color:var(--folio-accent); font:650 .48em/1 var(--ui-font);
+}
+.folio-budget-item { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; border-bottom:1px solid var(--folio-rule); }
+.folio-budget-open {
+  display:flex; gap:.7rem; justify-content:space-between; align-items:baseline; min-width:0; min-height:58px;
+  background:none; border:0; text-align:start; padding:.6rem .43rem .58rem 0; color:var(--folio-ink); cursor:pointer;
+  transition:background-color 160ms ease;
+}
+.folio-budget-open:hover { background:var(--folio-hover); }
+.folio-budget-open span { display:grid; min-width:0; gap:.1rem; overflow-wrap:anywhere; }
+.folio-budget-open small { color:var(--folio-muted); font-size:.73rem; }
+.folio-budget-open .folio-record-flag { color:var(--folio-accent); }
+.folio-budget-money { text-align:end; font-variant-numeric:tabular-nums; }
+.folio-budget-money strong { font-size:.84rem; }
+.folio-row-context { align-self:start; }
+.folio-row-context>summary { min-width:44px; justify-content:center; padding:0; font-size:1.18rem; }
+.folio-row-context>summary::after { display:none; }
+.folio-row-context .folio-context-panel { inset-inline:auto 0; }
+.folio-row-context .ng-record-actions { border:0; margin:0; }
+.folio-budget-outline {
+  align-self:start; border-inline-start:1px solid var(--folio-rule); margin-top:1.2rem;
+  padding:.26rem 0 .5rem clamp(1rem,2.25vw,2.65rem); min-width:0;
+}
+.folio-budget-outline h2 { font:600 2.02rem/1 var(--ng-display); color:var(--folio-ink); }
+.folio-budget-total { font:600 clamp(1.7rem,3vw,3.2rem)/1.04 var(--ng-display); color:var(--folio-accent); margin:.48rem 0 .23rem; overflow-wrap:anywhere; }
+.folio-budget-outline dl { display:grid; margin:.92rem 0 .2rem; }
+.folio-budget-outline dl>div { display:flex; gap:.4rem; justify-content:space-between; border-top:1px solid var(--folio-rule); padding:.53rem 0; font-size:.79rem; }
+.folio-budget-outline dd { font-weight:650; font-variant-numeric:tabular-nums; }
+.folio-budget-breakdown>summary { min-height:44px; padding:.65rem 0; font-size:.79rem; }
+.folio-budget-breakdown .ng-waterfall { padding:.55rem; box-shadow:none; background:var(--folio-surface); }
+
+/* Calendar desktop has a shared clock rail and spatial events. The mobile
+   agenda places the date strip and touch actions before the optional grid. */
+.folio-calendar { min-width:0; }
+.folio-calendar-toolbar {
+  display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center;
+  gap:.35rem 1rem; padding:.44rem 0 .58rem; border-block:1px solid var(--folio-rule);
+}
+.folio-calendar-range { min-width:0; }
+.folio-range-title { font:600 clamp(1.9rem,3.2vw,3.05rem)/.98 var(--ng-display); letter-spacing:-.035em; color:var(--folio-ink); }
+.folio-calendar-controls { display:flex; flex-wrap:wrap; align-items:center; gap:.18rem .3rem; }
+.folio-calendar-controls>.ng-button:not(.primary) { background:transparent; border-color:transparent; min-width:44px; padding-inline:.35rem; }
+.folio-calendar-controls>.ng-button:not(.primary):hover { background:var(--folio-hover); }
+.folio-calendar-controls>button:is([aria-label="Previous"],[aria-label="Next"]) { font-size:1.38rem; }
+.folio-calendar-controls .ng-calendar-tools { position:relative; }
+.folio-calendar-controls .ng-calendar-tools[open] { flex-basis:auto; }
+.folio-calendar-controls .ng-calendar-tools>summary { font-size:.8rem; }
+.folio-calendar-controls .ng-calendar-tools[open]>.ng-actions {
+  position:absolute; inset-inline:auto 0; inset-block-start:100%; z-index:7;
+  display:grid; min-width:15rem; padding:.6rem; background:var(--folio-surface); border:1px solid var(--folio-rule);
+  border-radius:8px; box-shadow:var(--folio-shadow); animation:folio-context-in 170ms var(--folio-ease) both;
+}
+.folio-calendar-canvas { display:grid; grid-template-columns:3.15rem minmax(0,1fr); margin-top:.45rem; }
+.folio-calendar-canvas .ng-calendar {
+  grid-template-columns:repeat(var(--days),minmax(0,1fr));
+  gap:0; margin:0; overflow:visible;
+}
+.folio-calendar-canvas .ng-day {
+  min-width:0; min-height:0; padding:0; background:none; border:0; border-inline-start:1px solid var(--folio-rule); border-radius:0;
+}
+.folio-calendar-canvas .ng-day:last-child { border-inline-end:1px solid var(--folio-rule); }
+.folio-calendar-canvas .ng-day h3 {
+  display:flex; justify-content:center; align-items:center; gap:.35rem; height:var(--folio-calendar-head);
+  margin:0 !important; color:var(--folio-muted); padding:.2rem;
+}
+.folio-calendar-canvas .ng-day h3 b { font:600 2rem/1 var(--ng-display); color:var(--folio-ink); }
+.folio-calendar-canvas .ng-day[data-today="true"] h3 { background:var(--folio-hover); color:var(--folio-accent); }
+.folio-calendar-canvas .ng-day[data-today="true"] h3 b { color:var(--folio-accent); }
+.folio-calendar-canvas .ng-day-events, .folio-hour-rail { position:relative; height:var(--folio-calendar-height); }
+.folio-calendar-canvas .ng-day-events { margin:0; border:0; }
+.folio-hour-rail { margin-top:var(--folio-calendar-head); color:var(--folio-muted); }
+.folio-calendar-canvas .ng-hour { border:0; border-top:1px solid var(--folio-rule); font-size:0; }
+.folio-hour-rail .ng-hour { border:0; font-size:.7rem; line-height:1; transform:translateY(-50%); }
+.folio-calendar-canvas .ng-day>.ng-button { display:block; width:100%; margin-top:.08rem; border:0; background:none; font-size:.75rem; }
+.folio-calendar-canvas .ng-day>.ng-button:hover { background:var(--folio-hover); }
+.folio-calendar-canvas .ng-lesson {
+  position:absolute; display:flex; align-items:stretch; inset-inline:2px; min-height:27px; height:var(--folio-duration);
+  padding:0; border:0; border-inline-start:2px solid var(--folio-accent);
+  border-radius:3px; color:var(--folio-ink);
+  background:color-mix(in srgb,var(--folio-accent) 13%,var(--folio-surface));
+}
+.folio-calendar-canvas .ng-lesson[data-lesson-state="CONFIRMED"] {
+  background:color-mix(in srgb,var(--folio-moss) 18%,var(--folio-surface)); border-color:var(--folio-moss);
+}
+.folio-calendar-canvas .ng-lesson .ng-record-open { overflow:hidden; display:block; padding:.18rem .24rem; min-height:0; min-width:0; flex:1; }
+.folio-calendar-canvas .ng-lesson .ng-record-open :is(strong,small) { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:.68rem; line-height:1.28; }
+.folio-calendar-canvas .ng-lesson .ng-record-open small { color:var(--folio-muted); }
+.folio-calendar-canvas .ng-lesson .folio-lesson-confirm,
+.folio-calendar-canvas .ng-lesson .ng-drag-handle { position:static; min-height:0; min-width:0; flex:0 0 1.12rem; border:0; border-radius:0; background:none; padding:0; }
+.folio-calendar-canvas .ng-lesson:hover, .folio-calendar-canvas .ng-lesson:focus-within { height:var(--folio-duration) !important; min-height:32px; }
+.folio-calendar-canvas .ng-lesson :is(.ng-drag-handle,.folio-lesson-confirm):hover { background:var(--folio-hover); }
+.folio-calendar-canvas .ng-lesson:focus-within { z-index:4; }
+.folio-agenda, .folio-calendar .folio-work-display { display:none; }
+.folio-work-records { border-top:1px solid var(--folio-rule); margin-top:.7rem; }
+.folio-work-records>summary { display:flex; justify-content:space-between; align-items:center; gap:.6rem; min-height:47px; font-size:.84rem; }
+.folio-work-records>#ng-records { background:none; box-shadow:none; border:0; }
+
+/* Editors retain the same validated form and focus lifecycle. Their surface
+   becomes a contextual bottom sheet on touch-sized screens. */
+#ng-editor[data-folio="true"] {
+  border-color:var(--folio-rule);
+  border-radius:13px;
+  background:var(--folio-surface);
+  box-shadow:var(--folio-shadow),0 24px 96px #11171169;
+}
+#ng-editor[data-folio="true"]::backdrop { background:#1018138c; }
+#ng-editor[data-folio="true"] h2 { font:600 clamp(2.05rem,4.4vw,3.14rem)/.98 var(--ng-display); letter-spacing:-.04em; }
+#ng-editor[data-folio="true"] .ng-dialog-title { border-color:var(--folio-rule); padding-bottom:.45rem; }
+#ng-editor[data-folio="true"] .ng-dialog-title .folio-label { color:var(--folio-accent); margin-bottom:.24rem; }
+#ng-editor[data-folio="true"] :is(.ng-form-context,.ng-form-actions) { border-color:var(--folio-rule); }
+#ng-editor[data-folio="true"] .folio-editor-fields { margin-top:.92rem; }
+#ng-editor[data-folio="true"] .folio-editor-fields>.ng-field:first-child { grid-column:1/-1; }
+#ng-editor[data-folio="true"] .folio-editor-fields [name="amount"] { font-weight:700; font-variant-numeric:tabular-nums; }
+
+@media(min-width:1024px) {
+  .ng-active:has(#nextgen-workspace[data-folio="true"]) .app-shell {
+    grid-template-columns:minmax(10rem,12.6rem) minmax(0,1fr);
+    gap:clamp(1.3rem,3.2vw,3.8rem);
+  }
+  [data-folio="true"] .ng-masthead .folio-wordmark { visibility:hidden; }
+}
+@media(max-width:1023px) {
+  .ng-active:has(#nextgen-workspace[data-folio="true"]) #ng-sidebar { display:none; }
+}
+@media(max-width:700px) {
+  #nextgen-workspace[data-folio="true"] { padding-bottom:4.65rem; }
+  #nextgen-workspace[data-folio="true"] .ng-masthead { margin-bottom:1.05rem; padding-bottom:.25rem; }
+  #nextgen-workspace[data-folio="true"] .ng-page-header { padding-bottom:.92rem; }
+  [data-folio="true"] .ng-masthead .folio-wordmark { font-size:2.35rem; }
+  [data-folio="true"] #ng-page-title { font-size:clamp(2.65rem,11vw,4.4rem); text-wrap:initial; }
+  [data-folio="true"] .ng-header-tools { gap:.02rem; }
+  [data-folio="true"] .ng-header-tools .ng-button { padding-inline:.36rem; font-size:.74rem; }
+  [data-folio="true"] .ng-header-tools .ng-icon-button { min-width:44px; }
+  .folio-statement { display:block; padding-top:.35rem; }
+  .folio-balance { gap:.5rem; padding-bottom:.7rem; }
+  .folio-balance-amount { font-size:clamp(3.15rem,13.8vw,5.85rem); }
+  .folio-balance-actions { margin-top:.18rem; }
+  .folio-statement .ng-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; }
+  .folio-statement .ng-metrics>div { display:grid; align-items:start; grid-template-rows:1fr auto; padding:.38rem 0 .53rem; gap:.25rem; }
+  .folio-statement .ng-metrics dt { font-size:.66rem; line-height:1.23; }
+  .folio-statement .ng-metrics dd { font-size:.75rem; }
+  .folio-allocation.ng-waterfall { border-inline:0; border-top:1px solid var(--folio-rule); padding:.62rem 0 0; }
+  .folio-allocation .ng-funding-ruler { margin-top:.45rem; height:.72rem; }
+  .folio-allocation .ng-allocation { padding-block:.33rem; min-height:49px; }
+  .folio-allocation .ng-chart-legend { margin:.32rem 0; }
+  .folio-allocation .ng-allocation-values strong { font-size:.78rem; }
+  .folio-allocation .ng-allocation-values small { font-size:.67rem; }
+  .folio-appendix { grid-template-columns:1fr; }
+  .folio-budget-command { display:grid; gap:0; padding-bottom:.25rem; }
+  .folio-chapters { flex-wrap:nowrap; overflow:auto; gap:0; scrollbar-width:thin; padding:.12rem 0; }
+  .folio-chapters .ng-button { flex:0 0 auto; font-size:.76rem; gap:.22rem; padding-inline:.37rem; }
+  .folio-budget-actions { justify-content:space-between; flex-direction:row-reverse; }
+  .folio-budget-context .folio-context-panel { inset-inline:auto 0; }
+  .folio-budget-layout { display:block; }
+  .folio-budget-outline { border-inline:0; border-top:1px solid var(--folio-rule); padding:.85rem 0 0; }
+  .folio-budget-open { gap:.36rem; padding-inline-end:0; }
+  .folio-budget-open span { font-size:.89rem; }
+  .folio-budget-open small { font-size:.68rem; }
+  .folio-calendar-toolbar { grid-template-columns:minmax(0,1fr) auto; padding:.55rem 0 .34rem; }
+  .folio-calendar-toolbar>.primary { grid-column:2; grid-row:1; }
+  .folio-calendar-controls { grid-column:1/-1; }
+  .folio-calendar-controls .ng-calendar-tools[open]>.ng-actions { inset-inline:0 auto; }
+  .folio-calendar-canvas { display:none; overflow:auto; grid-template-columns:2.85rem minmax(0,1fr); }
+  .folio-calendar-canvas .ng-calendar { grid-template-columns:repeat(var(--days),minmax(6rem,1fr)); }
+  .folio-calendar[data-mobile-grid="true"] .folio-calendar-canvas { display:grid; margin-bottom:.4rem; }
+  .folio-calendar[data-mobile-grid="true"] .folio-agenda { display:none; }
+  .folio-agenda { display:block; }
+  .folio-calendar .folio-work-display { display:inline-flex; align-items:center; margin:.42rem 0 0; }
+  .folio-day-strip { display:flex; gap:.17rem; justify-content:space-between; overflow:auto; padding:.45rem 0; }
+  .folio-day-strip .ng-button {
+    display:grid; justify-items:center; position:relative; gap:.04rem; min-width:44px;
+    padding:.28rem .32rem .53rem; border:0; background:none; font-size:.68rem; color:var(--folio-muted);
+  }
+  .folio-day-strip .ng-button strong { font:650 1.48rem/.95 var(--ng-display); }
+  .folio-day-strip .ng-button[aria-pressed="true"] { color:var(--folio-accent); background:var(--folio-hover); }
+  .folio-day-strip [data-has-events="true"]::after {
+    content:""; position:absolute; width:4px; height:4px; inset:auto auto 3px; border-radius:50%; background:var(--folio-accent);
+  }
+  .folio-agenda-heading { display:flex; justify-content:space-between; gap:.55rem; align-items:baseline; border-block:1px solid var(--folio-rule); padding:.48rem 0; }
+  .folio-agenda-heading h2 { font:600 1.75rem/1 var(--ng-display); }
+  .folio-agenda-entry {
+    display:grid; grid-template-columns:3rem minmax(0,1fr) auto; align-items:center; gap:.52rem;
+    border-bottom:1px solid var(--folio-rule);
+  }
+  .folio-agenda-entry time { color:var(--folio-accent); font-weight:650; font-size:.75rem; font-variant-numeric:tabular-nums; }
+  .folio-agenda-open {
+    display:grid; text-align:start; align-content:center; min-height:55px; gap:.18rem; padding:.3rem .5rem;
+    color:var(--folio-ink); background:none; border:0; border-inline-start:2px solid var(--folio-moss); cursor:pointer;
+  }
+  .folio-agenda-open:hover { background:var(--folio-hover); }
+  .folio-agenda-open small, .folio-agenda-empty { color:var(--folio-muted); font-size:.77rem; }
+  .folio-agenda-empty { padding:.75rem 0; }
+  .folio-agenda-confirm { min-width:44px; }
+  #nextgen-workspace .folio-agenda-next h2 { margin:.74rem 0 .18rem; font-size:1.53rem; }
+  .folio-agenda-preview {
+    display:grid; grid-template-columns:3.2rem minmax(0,1fr) auto; align-items:center;
+    gap:.45rem; min-height:44px; width:100%; text-align:start; background:none;
+    color:var(--folio-ink); border:0; border-bottom:1px solid var(--folio-rule); padding:0 .18rem; cursor:pointer;
+  }
+  .folio-agenda-preview:hover { background:var(--folio-hover); }
+  .folio-agenda-preview :is(time,span) { color:var(--folio-muted); font-size:.7rem; font-variant-numeric:tabular-nums; }
+  .folio-agenda-preview strong { min-width:0; font-size:.79rem; }
+}
+@media(max-width:540px) {
+  #ng-editor[data-folio="true"] { border-radius:15px 15px 0 0; }
+  #ng-editor[data-folio="true"] .ng-dialog-title { background:var(--folio-surface); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .folio-reveal :is(.folio-balance,.folio-allocation), .folio-context-panel,
+  .folio-calendar-controls .ng-calendar-tools[open]>.ng-actions { animation:none; }
+}
