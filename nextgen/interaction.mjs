@@ -54,17 +54,24 @@ export function adaptiveChrome(doc,win) {
   const dock=doc.getElementById('ng-mobile-navigation');
   let frame=0;
   const viewport=win.visualViewport;
+  let restingWidth=0,restingHeight=0;
   function update() {
     frame=0;
     const header=masthead?.getBoundingClientRect();
     const titleBox=title?.getBoundingClientRect();
-    const dockSize=dock?.getBoundingClientRect().height??0;
+    const dockBox=dock?.getBoundingClientRect();
+    const dockSize=dockBox?.height??0;
     const focused=doc.activeElement?.matches('input:not([type=checkbox]):not([type=radio]), select, textarea, [contenteditable=true]');
-    const keyboard=focused&&viewport&&viewport.scale<=1.05&&win.innerHeight-viewport.height-viewport.offsetTop>90;
+    if(!focused||win.innerWidth!==restingWidth) {
+      restingWidth=win.innerWidth;restingHeight=win.innerHeight;
+    }
+    const keyboard=focused&&viewport&&viewport.scale<=1.05&&
+      Math.max(restingHeight-win.innerHeight,win.innerHeight-viewport.height-viewport.offsetTop)>90;
     const stuck=win.scrollY>8;
     body.toggleAttribute('data-workie-keyboard',Boolean(keyboard));
     body.toggleAttribute('data-workie-stuck',stuck);
-    body.toggleAttribute('data-workie-compact',Boolean(stuck&&header&&titleBox&&titleBox.bottom<=header.bottom));
+    const chromeBottom=Math.max(header?.bottom??0,win.innerWidth>=1181?dockBox?.bottom??0:0);
+    body.toggleAttribute('data-workie-compact',Boolean(stuck&&titleBox&&titleBox.top<=chromeBottom));
     html.style.setProperty('--workie-header-height',(header?.height??0)+'px');
     html.style.setProperty('--workie-dock-height',dockSize+'px');
   }

@@ -1,36 +1,33 @@
 import {activeBudget,financialModel,prepareBatch,today} from './ledger.mjs';
 import {budgetScope,planPosition} from './product-finance.mjs';
-import {parseWtp,schemaForPrompt} from './wtp.mjs';
+import {parseWtp,schema} from './wtp.mjs';
+import {scopedTransferPrompt} from './wtp-prompt.mjs';
 
 export class TransferContextError extends Error {
   constructor(message,destination=null) {
     super(message);this.name='TransferContextError';this.destination=destination;
   }
 }
-import {prompt} from './wtp-prompt.mjs';
-
 export function budgetScopeRecords(ledger,scope) {
   return ledger.records.filter(row=>['budget_item','trip_budget_item'].includes(row.entity)&&
     budgetScope(row)===scope&&activeBudget(ledger,row));
 }
 
 export function budgetTransferContext(ledger,scope,label) {
-  const position=planPosition(financialModel(ledger),scope);
-  const obligations=new Map(position.obligations.map(row=>[row.id,row]));
-  const entity=scope===null?'budget_item':'trip_budget_item';
-  return [prompt,schemaForPrompt(),[
-    'Budget scope: '+label,
-    'Return only valid Workie Transfer Protocol JSON for changes to the supplied budget.',
-    'Use '+entity+' for new records. Use each exported entity, record_id and expected_revision for edits or deletes.',
-    scope===null?'Do not set trip_id.':'Every new item must include trip_id '+JSON.stringify(scope)+'.',
-    'Do not change scenario or assign a record to a different trip. Payment and settlement values in the context are informational.',
-  ].join('\n'),JSON.stringify({as_of:today(),scope:{type:scope===null?'VIENNA':'TRIP',trip_id:scope,label},
-    records:budgetScopeRecords(ledger,scope).map(row=>{
-      const obligation=obligations.get(row.id);
-      return {entity:row.entity,record_id:row.id,expected_revision:row.revision,data:row.data,
-        settlement:{display_currency:'HKD',paid_cents:obligation?.paid??null,remaining_cents:obligation?.cents??null,
-          completed_on:row.data.completed_on??null}};
-    })},null,2)].join('\n\n');
+  return context(scope,label,budgetScopeRecords(ledger,scope));
+}
+
+const entityFor=scope=>scope===subsidyScope?'grant':scope===null?'budget_item':'trip_budget_item';
+function fieldsFor(scope) {
+  return Object.fromEntries(Object.entries(schema[entityFor(scope)]).filter(([key])=>
+    !['scenario','completed_on'].includes(key)&&(key!=='trip_id'||scope!==null)));
+}
+function context(scope,label,rows) {
+  const entity=entityFor(scope),fields=fieldsFor(scope),batchId=crypto.randomUUID();
+  const records=rows.filter(row=>row.entity===entity).map(row=>({record_id:row.id,expected_revision:row.revision,
+    data:Object.fromEntries(Object.entries(row.data).filter(([key])=>Object.hasOwn(fields,key)))}));
+  return scopedTransferPrompt({label,entity,fields,records,batchId,example:transferExample(scope,batchId),
+    tripId:entity==='trip_budget_item'?scope:null,asOf:today()});
 }
 
 export async function prepareScopedBudgetBatch(ledger,source,scope) {
@@ -41,35 +38,32 @@ export async function prepareScopedBudgetBatch(ledger,source,scope) {
   if(proposal.operations.every(operation=>operation.entity==='grant')) {
     throw new TransferContextError('This proposal contains grants. Open Subsidy import to review it.','subsidy');
   }
-  const prepared=await prepareBatch(ledger,source);
   const allowed=new Set(budgetScopeRecords(ledger,scope).map(row=>row.id));
-  const newEntity=scope===null?'budget_item':'trip_budget_item';
+  const entity=entityFor(scope),fields=fieldsFor(scope);
   const currentScenario=scope===null?ledger.settings.scenario:ledger.records.find(row=>row.id===scope)?.data.scenario??'Base';
-  for(const [index,change] of prepared.diff.entries()) {
-    const fail=()=>{throw Error('$.operations['+index+']: change falls outside the selected budget.');};
-    if(change.op==='ADD') {
-      if(change.entity!==newEntity||budgetScope({data:change.after})!==scope||
-        change.after.scenario&&change.after.scenario!==currentScenario)fail();
-    } else {
-      if(!allowed.has(change.record_id))fail();
-      if(change.op==='UPDATE'&&(budgetScope({data:change.after})!==scope||
-        (change.after.scenario??'')!==(change.before.scenario??'')))fail();
+  for(const [index,operation] of proposal.operations.entries()) {
+    const {op,data,changes,record_id}=operation;
+    const path='$.operations['+index+']';
+    if(operation.entity!==entity||op!=='ADD'&&!allowed.has(record_id)) {
+      throw Error(path+'.entity: change falls outside the selected budget. Use '+entity+' and an ID from this export for edits.');
+    }
+    for(const key of Object.keys(data??changes??{})) {
+      const field=path+(op==='ADD'?'.data.':'.changes.')+key;
+      if(key==='scenario')throw Error(field+': change falls outside the selected budget. Remove scenario; this import targets only the currently selected plan.');
+      if(key==='trip_id'&&(op!=='ADD'||data.trip_id!==scope)) {
+        throw Error(field+': '+(scope&&op==='ADD'?'Use this trip ID: '+scope:'Leave out trip_id for this operation.'));
+      }
+      if(!Object.hasOwn(fields,key))throw Error(field+': Leave out '+key+' and record payments separately in Workie.');
     }
   }
+  const prepared=await prepareBatch(ledger,source,{budgetPlan:currentScenario});
   return {...prepared,before:planPosition(prepared.before,scope),after:planPosition(prepared.after,scope)};
 }
 
 export const subsidyScope=Symbol('subsidies');
 
 export function subsidyTransferContext(ledger) {
-  return [prompt,schemaForPrompt(),[
-    'Subsidy scope: only grant records.',
-    'Use grant for new subsidies. Use each exported record_id and expected_revision for edits or deletes.',
-    'Do not create or edit receipts, loans, cash events or any other records. Manage disbursements separately in Workie.',
-  ].join('\n'),JSON.stringify({as_of:today(),scope:{type:'SUBSIDIES'},
-    records:ledger.records.filter(row=>row.entity==='grant').map(row=>({
-      entity:row.entity,record_id:row.id,expected_revision:row.revision,data:row.data,
-    }))},null,2)].join('\n\n');
+  return context(subsidyScope,'Subsidy',ledger.records);
 }
 
 export async function prepareScopedSubsidyBatch(ledger,source) {
@@ -90,12 +84,12 @@ export async function prepareScopedSubsidyBatch(ledger,source) {
   return prepareBatch(ledger,source);
 }
 
-export function transferExample(scope) {
+export function transferExample(scope,batchId=crypto.randomUUID()) {
   const operation=scope===subsidyScope?
     {entity:'grant',data:{description:'Example grant',amount:100,currency:'HKD',status:'可申請'}}:
     {entity:scope==null?'budget_item':'trip_budget_item',
       data:{description:'Example transit ticket',amount:10,currency:'EUR',category:'TRANSPORT',priority:'MEDIUM',due_date:null,
         ...(scope==null?{}:{trip_id:scope})}};
-  return JSON.stringify({protocol:'workie-transfer',version:1,batch_id:crypto.randomUUID(),
+  return JSON.stringify({protocol:'workie-transfer',version:1,batch_id:batchId,
     operations:[{op:'ADD',...operation}]},null,2);
 }

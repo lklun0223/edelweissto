@@ -1,9 +1,64 @@
 import {recordedMovements,today} from './ledger.mjs';
-import {calendarDay,weekOf} from './lesson-time.mjs';
+import {calendarDay,wallTime,weekOf} from './lesson-time.mjs';
 import {difference,sumKnown} from './product-finance.mjs';
 
 export function confirmedWeek(ledger,week) {
   return ledger.settings.weekly_settlements?.[week]?.at(-1)??null;
+}
+
+export function latestSunday(asOf=today()) {
+  const end=calendarDay(weekOf(asOf),6);
+  return end<=asOf?end:calendarDay(end,-7);
+}
+
+function isSunday(date) {
+  return typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(Date.parse(date))&&
+    calendarDay(date)===date&&new Date(date+'T00:00:00Z').getUTCDay()===0;
+}
+
+export function sundayVersions(settings,end) {
+  const week=weekOf(end);
+  const legacy=(settings.weekly_settlements?.[week]??[])
+    .filter(row=>Number.isSafeInteger(row.observed)&&Number.isFinite(Date.parse(row.confirmed_at))&&wallTime(row.confirmed_at).date>=end)
+    .map(row=>({amount:row.observed,at:row.confirmed_at,source:'CONFIRMED'}));
+  const observation=settings.weekly_observations?.[week];
+  if(observation?.as_of===end)legacy.push({amount:observation.amount,at:null,source:'OBSERVED'});
+  return [...legacy,...(settings.sunday_savings?.[end]??[])];
+}
+
+export function saveSundaySavings(settings,end,amount,at=new Date().toISOString()) {
+  if(!isSunday(end)||end>latestSunday()||!Number.isSafeInteger(amount)) {
+    throw Error('Enter a valid amount for this Sunday or an earlier Sunday.');
+  }
+  if(sundayVersions(settings,end).at(-1)?.amount===amount)return false;
+  const days=settings.sunday_savings??={};
+  const history=days[end]??=[];
+  history.push({version:1,revision:history.length+1,amount,at,source:'MANUAL'});
+  return true;
+}
+
+export function sundayHistory(settings,asOf=today()) {
+  const ends=new Set([...Object.keys(settings.sunday_savings??{}),
+    ...[...Object.keys(settings.weekly_settlements??{}),...Object.keys(settings.weekly_observations??{})].map(week=>calendarDay(week,6))]);
+  const balances=new Map();
+  for(const end of [...ends].sort()) {
+    if(end>asOf)continue;
+    const saved=sundayVersions(settings,end).at(-1);
+    if(saved)balances.set(end,saved.amount);
+  }
+  return [...balances].map(([end,balance],index)=>{
+    const change=difference(balance,balances.get(calendarDay(end,-7))??null);
+    return {end,balance,change,status:index===0?'Baseline':change===null?'Previous Sunday missing':'Saved'};
+  });
+}
+
+export function validateSundaySavings(days) {
+  if(days===undefined)return;
+  const valid=(row,index,end)=>row?.version===1&&row.revision===index+1&&row.source==='MANUAL'&&
+    Number.isSafeInteger(row.amount)&&typeof row.at==='string'&&Number.isFinite(Date.parse(row.at))&&wallTime(row.at).date>=end;
+  if(!days||typeof days!=='object'||Array.isArray(days)||Object.entries(days).some(([end,versions])=>
+    !isSunday(end)||end>latestSunday()||!Array.isArray(versions)||!versions.length||
+    !versions.every((row,index)=>valid(row,index,end))))throw Error('Invalid Sunday Savings history.');
 }
 
 export function retainWeeklyObservation(settings,week,observation) {

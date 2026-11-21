@@ -28,6 +28,15 @@ export function withTransferHistory(current,incoming) {
 
 export function mergeBackup(current,incoming,useBackup) {
   const next=clone(current);
+  for(const [end,versions] of Object.entries(incoming.settings.sunday_savings??{})) {
+    const days=next.settings.sunday_savings??={};
+    const existing=days[end]??[];
+    if(existing.slice(0,versions.length).some((row,index)=>{
+      const other=versions[index];
+      return row.amount!==other.amount||row.at!==other.at;
+    }))throw Error('Both backups contain different Sunday Savings histories for '+end+'. Use complete-backup replacement to choose the incoming history.');
+    if(existing.length<versions.length)days[end]=clone(versions);
+  }
   for(const [week,rows] of Object.entries(incoming.settings.weekly_observation_history??{})) {
     for(const row of rows)retainWeeklyObservation(next.settings,week,row);
   }

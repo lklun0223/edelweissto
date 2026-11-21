@@ -657,7 +657,7 @@ export function billOccurrences(ledger,from=today(),days=60) {
   }
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
-export async function prepareBatch(ledger,source,{weeklyTransfer=false}={}) {
+export async function prepareBatch(ledger,source,{weeklyTransfer=false,budgetPlan=null}={}) {
   const batch=parseWtp(source,{asOf:today()}),hash=await batchHash(batch);
   const previous=ledger.batches.find(entry=>entry.id===batch.batch_id);
   if(previous) throw Error(previous.hash===hash?'This batch was already applied.':'This batch ID was used with different content.');
@@ -665,6 +665,9 @@ export async function prepareBatch(ledger,source,{weeklyTransfer=false}={}) {
     const row=ledger.records.find(record=>record.id===id && record.entity===entity);
     return row?{revision:row.revision,data:row.data}:null;
   });
+  if(budgetPlan)for(const change of diff) {
+    if(change.op==='ADD'&&['budget_item','trip_budget_item'].includes(change.entity))change.after.scenario=budgetPlan;
+  }
   if(weeklyTransfer) {
     for(const [index,change] of diff.entries()) {
       if(change.op!=='ADD')continue;

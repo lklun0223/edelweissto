@@ -46,6 +46,7 @@ html:has(body.ng-active) {
 .ng-active[data-workie-compact] #nextgen-workspace .ng-chrome-brand > .ng-compact-title {
   visibility:visible; animation:workie-title-in var(--workie-motion) var(--workie-ease) both;
 }
+.ng-active[data-workie-compact] #ng-page-title { opacity:0; }
 @keyframes workie-title-in { from { opacity:.6; translate:0 3px; } }
 #nextgen-workspace[data-route="Home"] > .ng-page-header { padding-block-start: 0; }
 #nextgen-workspace[data-route]:lang(zh-Hant) #ng-page-title {
@@ -271,9 +272,12 @@ html:has(body.ng-active) {
   border-top:1px solid var(--product-line);
   background: var(--ng-sheet);
 }
+.ng-scoped-apply .ng-button { width:100%; min-height:44px; }
+.ng-scoped-apply [hidden] { display:none; }
+.ng-budget-transfer-dialog:has(.ng-scoped-transfer) { --ng-quick-sheet-limit:min(72dvh,36rem); }
 .ng-budget-transfer-dialog #ng-transfer-preview { scroll-margin-block-start: .6rem; }
 .ng-budget-transfer-dialog .ng-diff th { overflow-wrap: normal; }
-.ng-transfer-remedies:empty { display:none; }
+.ng-transfer-remedies:empty,.ng-scoped-transfer :is(.ng-transfer-state,.ng-transfer-diagnostic,#ng-transfer-preview):empty { display:none; }
 .ng-transfer-example textarea,.ng-scoped-transfer #ng-transfer-input {
   max-width:100%; min-width:0; font: max(16px,.88rem)/1.45 ui-monospace,Consolas,monospace;
 }
@@ -301,6 +305,7 @@ html:has(body.ng-active) {
 @media(max-width: 690px) {
   .ng-pre-workspace,.ng-trips-layout { grid-template-columns: minmax(0,1fr); }
   #nextgen-workspace > .ng-masthead { padding-block-start:.23rem; display:grid; grid-template-columns:minmax(0,1fr) auto; }
+  #nextgen-workspace[data-route]:lang(zh-Hant) #ng-page-title { font-size:clamp(1.5rem,6vw,1.85rem); }
   .ng-finance-heading .ng-segment-control { min-width: 10.55rem; }
   .ng-period-summary .ng-plan-summary { grid-template-columns: repeat(3,minmax(0,1fr)); gap: .45rem; padding: .75rem; }
   .ng-period-summary .ng-plan-summary dt { min-height: 2.5em; font-size: .72rem; }
@@ -320,7 +325,7 @@ html:has(body.ng-active) {
   .ng-budget-transfer-dialog > header { padding-block:.32rem; }
 }
 @media (pointer:coarse) and (min-width:691px) and (max-height:650px) {
-  .ng-budget-transfer-dialog[open],.ng-budget-transfer-dialog.ng-quick-sheet[open] {
+  .ng-budget-transfer-dialog[open] {
     inset:auto 0 var(--ng-viewport-bottom,0px); margin:0 auto;
     width:min(34rem,100%); max-height:calc(var(--ng-viewport-height,100dvh) - .35rem);
     padding:0 0 env(safe-area-inset-bottom); border-radius:22px 22px 0 0;

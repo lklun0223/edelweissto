@@ -210,6 +210,30 @@ export class TransferSyntaxError extends Error {
     this.line=before===null?null:before.split('\n').length;
     this.column=before===null?null:before.length-before.lastIndexOf('\n');
     this.escapedArray=escaped!==null&&index===escaped;
+    const trimmed=body.trimStart();
+    if(trimmed.startsWith('{')) {
+      let depth=0,quoted=false;
+      for(let cursor=0;cursor<trimmed.length;cursor++) {
+        const char=trimmed[cursor];
+        if(quoted&&char==='\\'){cursor++;continue;}
+        if(char==='"'){quoted=!quoted;continue;}
+        if(quoted)continue;
+        if(char==='{'||char==='[')depth++;
+        if((char==='}'||char===']')&&--depth===0) {
+          const rest=trimmed.slice(cursor+1).trim();
+          if(rest) {
+            try {
+              JSON.parse(trimmed.slice(0,cursor+1));
+              this.extra=rest.startsWith('{')?'multiple':'trailing';
+            } catch { /* Keep the underlying JSON error. */ }
+          }
+          break;
+        }
+      }
+    }
+    const fences=source.match(/^[ \t]*\x60{3}(?:json)?[ \t]*\r?$/gim)?.length??0;
+    if(fences>2)this.extra='multiple';
+    else if(fences===2&&!start)this.extra='fenced';
     if(this.escapedArray) {
       const corrected=body.slice(0,escaped)+body.slice(escaped+1);
       try {
@@ -217,6 +241,19 @@ export class TransferSyntaxError extends Error {
         this.suggestion=source.slice(0,start)+corrected+source.slice(start+body.length);
       } catch { /* Multiple syntax errors require manual editing. */ }
     }
+  }
+}
+
+export class BatchIdentifierError extends Error {
+  constructor(payload) {
+    super('$.batch_id: expected a UUID');
+    this.name='BatchIdentifierError';
+    this.missing=!Object.hasOwn(payload,'batch_id');
+    this.payload=payload;
+  }
+
+  freshDraft() {
+    return JSON.stringify({...this.payload,batch_id:crypto.randomUUID()},null,2);
   }
 }
 
@@ -230,17 +267,19 @@ export function parseWtp(source, {asOf=null}={}) {
   let payload;
   try {payload=JSON.parse(body);} catch(error) {throw new TransferSyntaxError(source,error,start,body);}
   rejectDuplicateKeys(body);
-  keys(payload,'$',['protocol','version','batch_id','operations']);
+  keys(payload,'$',['protocol','version','batch_id','operations'],['protocol','version','operations']);
   if (payload.protocol!==protocol) problem('$.protocol',`expected ${protocol}`);
   if (payload.version!==version) problem('$.version',`expected ${version}`);
-  if (typeof payload.batch_id!=='string' || !uuid.test(payload.batch_id)) problem('$.batch_id','expected a UUID');
+  if (typeof payload.batch_id!=='string' || !uuid.test(payload.batch_id)) throw new BatchIdentifierError(payload);
   if (!Array.isArray(payload.operations) || !payload.operations.length || payload.operations.length>maxOperations) {
     problem('$.operations',`expected 1–${maxOperations} proposals`);
   }
   const touched=new Set();
   payload.operations.forEach((operation,i)=>{
     const path=`$.operations[${i}]`;
-    if (!object(operation) || !['ADD','UPDATE','DELETE'].includes(operation.op)) problem(`${path}.op`,'expected ADD, UPDATE or DELETE');
+    if (!object(operation))problem(path,'must be an object');
+    if(!Object.hasOwn(operation,'op'))problem(`${path}.op`,'required property missing. Use ADD for new records, UPDATE for edits or DELETE for removals.');
+    if(!['ADD','UPDATE','DELETE'].includes(operation.op))problem(`${path}.op`,'expected ADD, UPDATE or DELETE');
     if (!Object.hasOwn(schema,operation.entity)) problem(`${path}.entity`,'unsupported entity');
     const base=['op','entity'];
     if(operation.op==='ADD') {

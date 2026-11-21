@@ -1,4 +1,4 @@
-const CACHE = 'workie-nextgen-shell-336bf912f1c9cbf6';
+const CACHE = 'workie-nextgen-shell-47ef297a6fb59f94';
 const SHELL_PATHS = [
   "index.html",
   "manifest.json",
@@ -53,7 +53,20 @@ const cacheName = cachePrefix + CACHE;
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(cacheName).then(cache =>
     cache.addAll(SHELL_PATHS.map(path => new Request(url(path), {cache: 'reload'})))));
-  // An update waits for old tabs to close so they cannot mix versions.
+  // Wait for older tabs unless the only Workie tab explicitly requests the update.
+});
+self.addEventListener('message', event => {
+  if(event.data!=='workie-install-update'||!event.ports[0]||event.source?.type!=='window')return;
+  event.waitUntil((async()=>{
+    const tabs=(await self.clients.matchAll({type:'window',includeUncontrolled:true}))
+      .filter(client=>client.url.startsWith(self.registration.scope));
+    if(tabs.length!==1||tabs[0].id!==event.source.id) {
+      event.ports[0].postMessage('other-tabs');
+      return;
+    }
+    event.ports[0].postMessage('installing');
+    await self.skipWaiting();
+  })());
 });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {

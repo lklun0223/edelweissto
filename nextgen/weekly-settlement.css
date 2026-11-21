@@ -269,13 +269,15 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   margin: auto;
   width: min(31rem,calc(100vw - 2rem));
   height: max-content;
-  max-height: min(88dvh,54rem);
+  max-height: var(--ng-quick-sheet-limit,min(88dvh,54rem));
 }
 .ng-budget-transfer-dialog.ng-quick-sheet.ng-income-detailed[open] { width: min(39rem,calc(100vw - 2rem)); }
 .ng-income-modes { min-width: 0; }
 .ng-entry-form { margin-top: .65rem; }
 .ng-entry-form .ng-caption { margin-block: .3rem .4rem; }
 .ng-entry-form > button[type="submit"] { margin-top: .35rem; }
+.ng-entry-options { margin-block-start:.4rem; }
+.ng-entry-options > summary { min-height:44px; }
 .ng-entry-form :is(input,select,textarea) { min-width: 0; width: 100%; }
 .ng-entry-fields,.ng-amount-entry {
   display: grid;
@@ -305,14 +307,44 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   margin-block: .45rem;
 }
 .ng-special-earnings { font-size: 1.24rem; font-weight: 670; font-variant-numeric: tabular-nums; }
-@media(min-width:1181px) {
-  [data-workie-compact] #nextgen-workspace > .ng-masthead::before {
-    background: linear-gradient(90deg,var(--product-surface) 18%,transparent 32%,transparent 68%,var(--product-surface) 82%);
-    border-color: transparent;
-    box-shadow: none;
-  }
-  [data-workie-compact] #nextgen-workspace > .ng-masthead { top: 1.02rem; }
+.ng-sunday-savings time { font:550 .83rem/1.5 var(--ui-font); color:var(--product-muted); }
+.ng-sunday-entry { display:flex; align-items:stretch; gap:.5rem; }
+.ng-sunday-amount {
+  display:flex; align-items:center; gap:.48rem; min-width:0; flex:1; padding-inline:.8rem;
+  border:1px solid var(--product-line); border-radius:14px; background:var(--product-well);
 }
+.ng-sunday-amount:focus-within { outline:2px solid var(--ng-metal); outline-offset:2px; }
+.ng-sunday-amount>span { font:650 .8rem var(--ui-font); color:var(--product-muted); }
+#nextgen-workspace .ng-sunday-amount input {
+  width:100%; min-width:0; min-height:54px; padding:.18rem 0;
+  border:0; border-radius:0; outline:0; background:none; box-shadow:none;
+  color:var(--product-ink); font:680 clamp(1.65rem,7vw,2.6rem)/1.15 var(--ui-font);
+  font-variant-numeric:tabular-nums; letter-spacing:-.04em;
+}
+.ng-sunday-entry .ng-button { min-width:5.6rem; }
+.ng-sunday-form .ng-entry-error:empty { display:none; }
+.ng-sunday-change { display:flex; gap:.5rem 1rem; flex-wrap:wrap; align-items:center; justify-content:space-between; min-height:1.65rem; }
+.ng-sunday-change>span:first-child { font:650 .84rem var(--ui-font); }
+:is(.ng-sunday-change,.ng-week-chart-selected [data-sign])[data-sign=positive] .ng-money { color:#207451; }
+:is(.ng-sunday-change,.ng-week-chart-selected [data-sign])[data-sign=negative] .ng-money { color:#a63748; }
+.dark :is(.ng-sunday-change,.ng-week-chart-selected [data-sign])[data-sign=positive] .ng-money { color:#77d5ac; }
+.dark :is(.ng-sunday-change,.ng-week-chart-selected [data-sign])[data-sign=negative] .ng-money { color:#ff9fa9; }
+.ng-sunday-quick-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; margin-block:.55rem .8rem; }
+.ng-sunday-quick {
+  display:flex; align-items:center; gap:.5rem; width:100%; min-height:3.1rem; padding:.58rem .65rem; text-align:start;
+  color:var(--product-ink); border:1px solid var(--product-line); border-radius:15px; background:var(--product-surface);
+}
+.ng-sunday-quick:hover,.ng-sunday-quick:focus-visible { background:var(--product-well); }
+.ng-sunday-quick>svg { width:1rem; flex:none; }
+.ng-sunday-quick>span { flex:1; min-width:0; overflow-wrap:anywhere; }
+.ng-sunday-quick>span>* { display:block; }
+.ng-sunday-quick small,.ng-sunday-quick .ng-money { font-size:.77rem; color:var(--product-muted); }
+.ng-sunday-quick .ng-money { white-space:normal; }
+.ng-sunday-range { position:relative; }
+.ng-sunday-range>summary { display:flex; gap:.4rem; align-items:center; min-height:44px; padding-inline:.55rem; cursor:pointer; }
+.ng-sunday-range>summary::-webkit-details-marker { display:none; }
+.ng-sunday-range>summary svg { width:.85rem; }
+.ng-sunday-range select { position:absolute; top:100%; inset-inline-end:0; min-height:44px; z-index:1; background:var(--product-surface); }
 @media(max-width:690px) {
   .ng-weekly { gap: .48rem; }
   .ng-week-heading { gap: .4rem; }
@@ -323,15 +355,17 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   .ng-week-support { grid-template-columns: minmax(0,1fr); }
   .ng-week-transaction .ng-money { font-size: .78rem; }
   .ng-week-row-actions .ng-action-control:not(.ng-icon-action) { font-size: .7rem; padding-inline: .35rem; }
-  .ng-budget-transfer-dialog.ng-quick-sheet[open],.ng-budget-transfer-dialog.ng-quick-sheet.ng-income-detailed[open] {
-    inset: auto 0 var(--ng-viewport-bottom,0px);
-    margin: 0;
-    width: 100%;
-    max-height: min(88dvh,calc(var(--ng-viewport-height,100dvh) - .35rem));
-  }
   .ng-entry-form > button[type="submit"] { width: 100%; }
   #nextgen-workspace:lang(zh-Hant) .ng-week-heading h2 {
     font:680 clamp(1.18rem,5.3vw,1.55rem)/1.24 var(--ui-font); letter-spacing:0;
+  }
+}
+@media(max-width:690px), (pointer:coarse) and (max-height:650px) {
+  .ng-budget-transfer-dialog.ng-quick-sheet[open],.ng-budget-transfer-dialog.ng-quick-sheet.ng-income-detailed[open] {
+    inset:auto 0 var(--ng-viewport-bottom,0px);
+    margin:0 auto;
+    width:min(36rem,100%);
+    max-height:min(var(--ng-quick-sheet-limit,88dvh),calc(var(--ng-viewport-height,100dvh) - .35rem));
   }
 }
 @media(prefers-reduced-motion:reduce) {
@@ -345,27 +379,27 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   .ng-week-actions:has(> .ng-icon-action) { grid-template-columns:1fr max-content; }
   .ng-week-actions>.ng-week-bridge { grid-column:1 / -1; }
 }
-.ng-week-savings-chart { min-width:0; margin-block:.75rem 1rem; padding:clamp(.85rem,2vw,1.45rem); border-radius:22px; background:var(--v3-well); }
-.ng-week-chart-head { display:flex; align-items:center; flex-wrap:wrap; gap:.55rem 1rem; }
+.ng-week-savings-chart { min-width:0; margin-block:.55rem; padding:clamp(.66rem,1.5vw,1.15rem); border-radius:22px; background:var(--v3-well); }
+.ng-week-chart-head { display:flex; align-items:center; justify-content:space-between; gap:.35rem .6rem; }
 .ng-week-chart-head h2 { margin:0 auto 0 0; }
-.ng-week-chart-head .ng-segment-control { margin-block:0; }
-.ng-week-chart-head .ng-segment-track label { white-space:nowrap; }
+#nextgen-workspace:lang(zh-Hant) .ng-week-chart-head h2 { font:680 clamp(1.2rem,5vw,1.65rem)/1.2 var(--ui-font); }
 .ng-week-chart-body { position:relative; }
 .ng-week-chart-scroll { overflow-x:auto; margin-inline-start:1.25rem; scrollbar-width:thin; }
-.ng-week-chart-track { position:relative; display:flex; align-items:stretch; min-width:max-content; margin-block:.85rem .5rem; }
-.ng-week-chart-column { display:grid; grid-template-rows:1.85rem 7rem 1.65rem; flex:1 0 5rem; min-width:4.6rem;
+.ng-week-chart-track { position:relative; display:flex; align-items:stretch; min-width:max-content; margin-block:.25rem .4rem; }
+.ng-week-chart-column { display:grid; grid-template-rows:1.45rem 4.75rem 1.35rem; flex:1 0 4.25rem; min-width:4rem;
   color:inherit; border:0; padding:0 .3rem; border-radius:12px; background:none; text-align:center; align-items:center; }
 .ng-week-chart-column[aria-pressed=true] { background:var(--product-surface); }
-.ng-week-chart-column[data-status=Observed] .ng-week-chart-bar,
-.ng-week-chart-column[data-status=Estimate] .ng-week-chart-bar { opacity:.57; }
-.ng-week-chart-column time,.ng-week-chart-amount,.ng-week-zero,.ng-chart-gap { font-size:.73rem; }
+.ng-week-chart-column time,.ng-week-chart-amount,.ng-week-zero { font-size:.73rem; }
 .ng-week-chart-amount { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ng-week-chart-amount .ng-money { font-size:inherit; }
 .ng-week-chart-plot { height:100%; position:relative; display:flex; justify-content:center; }
 .ng-week-chart-plot::after { content:""; position:absolute; top:50%; inset-inline:-.32rem; border-top:1px solid var(--ng-rule); }
 .ng-week-chart-plot[data-sign=unknown]::after { border-top-style:dashed; }
-.ng-chart-gap { width:1.65rem; padding-top:4.8rem; text-align:center; }
-.ng-week-zero { position:absolute; top:5.8rem; inset-inline-start:0; }
+.ng-week-chart-plot:is([data-sign=baseline],[data-sign=zero])::before {
+  content:""; position:absolute; top:50%; translate:0 -50%; z-index:1;
+  width:.4rem; aspect-ratio:1; border-radius:50%; background:var(--product-muted);
+}
+.ng-week-zero { position:absolute; top:3.825rem; translate:0 -50%; inset-inline-start:0; }
 .ng-week-chart-bar { position:absolute; width:min(55%,4rem); height:calc(var(--measure) / 2);
   bottom:50%; transform-origin:bottom; background:#27845d; border-radius:5px 5px 0 0; }
 .ng-week-chart-plot[data-sign=negative] .ng-week-chart-bar { bottom:auto; top:50%; background:#b74959;
@@ -373,16 +407,7 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
 .dark .ng-week-chart-bar { background:#63c498; }
 .dark .ng-week-chart-plot[data-sign=negative] .ng-week-chart-bar { background:#ec8995; }
 .ng-week-chart-detail { border-top:1px solid var(--ng-rule); padding-top:.6rem; }
-.ng-week-chart-selected,.ng-week-chart-detail dl { display:flex; flex-wrap:wrap; align-items:center; gap:.45rem 1.2rem; }
+.ng-week-chart-selected { display:flex; flex-wrap:wrap; align-items:center; gap:.3rem .75rem; }
 .ng-week-chart-selected .ng-button { margin-inline-start:auto; }
-.ng-week-chart-detail dl { margin-block:.4rem 0; align-items:start; }
-.ng-week-chart-detail dt,.ng-week-chart-selected small { font-size:.78rem; }
-.ng-week-chart-detail dd { margin:0; }
-.ng-week-chart-detail dl>div { flex:1 0 7.5rem; }
+.ng-week-chart-selected small,.ng-week-chart-selected strong { font-size:.8rem; }
 .ng-week-dependent li { margin-block:.3rem; }
-@media(max-width:560px) {
-  .ng-week-chart-head h2 { flex-basis:100%; }
-  .ng-week-chart-head .ng-segment-control { width:auto; }
-  .ng-week-chart-head .ng-segment-track label { font-size:.73rem; }
-  .ng-week-chart-detail dl { gap:.45rem; }
-}
