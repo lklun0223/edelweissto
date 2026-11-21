@@ -34,7 +34,7 @@ export function mergeBackup(current,incoming,useBackup) {
     if(existing.slice(0,versions.length).some((row,index)=>{
       const other=versions[index];
       return row.amount!==other.amount||row.at!==other.at;
-    }))throw Error('Both backups contain different Sunday Savings histories for '+end+'. Use complete-backup replacement to choose the incoming history.');
+    }))throw Error('Both backups contain different Sunday Savings histories for '+end+'. Restore the incoming backup in a separate browser profile to review it.');
     if(existing.length<versions.length)days[end]=clone(versions);
   }
   for(const [week,rows] of Object.entries(incoming.settings.weekly_observation_history??{})) {
@@ -55,7 +55,7 @@ export function mergeBackup(current,incoming,useBackup) {
       const existing=history[week]??[];
       const common=Math.min(existing.length,versions.length);
       if(existing.slice(0,common).some((row,index)=>JSON.stringify(row)!==JSON.stringify(versions[index]))) {
-        throw Error('Both backups contain different confirmed values for '+week+'. Use the explicit complete-backup replacement if you intend to keep the incoming history.');
+        throw Error('Both backups contain different confirmed values for '+week+'. Restore the incoming backup in a separate browser profile to review it.');
       }
       if(existing.length<versions.length)history[week]=clone(versions);
     }

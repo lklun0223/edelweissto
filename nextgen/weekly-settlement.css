@@ -322,6 +322,7 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
   font-variant-numeric:tabular-nums; letter-spacing:-.04em;
 }
 .ng-sunday-entry .ng-button { min-width:5.6rem; }
+#nextgen-workspace .ng-sunday-amount input::placeholder { font-size:clamp(1rem,4.5vw,1.22rem); font-weight:550; letter-spacing:0; }
 .ng-sunday-form .ng-entry-error:empty { display:none; }
 .ng-sunday-change { display:flex; gap:.5rem 1rem; flex-wrap:wrap; align-items:center; justify-content:space-between; min-height:1.65rem; }
 .ng-sunday-change>span:first-child { font:650 .84rem var(--ui-font); }

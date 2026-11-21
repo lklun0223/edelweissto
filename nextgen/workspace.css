@@ -229,6 +229,24 @@
 .ng-welcome-review>div { display:flex; gap:.65rem; align-items:baseline; justify-content:space-between; }
 .ng-welcome-review dd { margin:0; text-align:end; font-variant-numeric:tabular-nums; }
 .ng-welcome-drop { padding:.8rem; border:1px dashed var(--product-line); border-radius:14px; background:var(--product-well); }
+.ng-local-data-status { display:grid; gap:.25rem; padding:.7rem .85rem; line-height:1.4; }
+.ng-local-data-status p { margin:0; color:var(--product-muted); font-size:.84rem; }
+.ng-restore-review .ng-sheet-body { display:grid; align-content:start; gap:.65rem; }
+.ng-restore-review .ng-sheet-body > :is(p,h3,dl) { margin:0; }
+.ng-restore-review .ng-sheet-body > .ng-entry-error:empty { display:none; }
+.ng-restore-counts { display:grid; gap:.25rem; font-variant-numeric:tabular-nums; }
+.ng-restore-counts div, .ng-reconcile-amount dl div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.65rem; }
+.ng-restore-counts dd, .ng-reconcile-amount dd { margin:0; white-space:nowrap; text-align:end; }
+.ng-reconcile-rows { display:grid; gap:.45rem; }
+.ng-reconcile-amount { min-width:0; padding:.55rem .65rem; border:1px solid var(--product-line); border-radius:12px; }
+.ng-reconcile-amount h4, .ng-reconcile-amount dl { margin:0 0 .2rem; }
+.ng-reconcile-amount dl div { grid-template-columns:auto minmax(0,1fr); }
+.ng-reconcile-amount dd { font-variant-numeric:tabular-nums; overflow-x:auto; }
+.ng-reconcile-amount .ng-money { display:inline; }
+.ng-restore-review pre,.ng-ai-example { overflow:auto; font-size:.8rem; }
+.ng-restore-footer { display:grid; gap:.4rem; grid-template-columns:minmax(0,1fr) auto; }
+.ng-restore-footer p { grid-column:1 / -1; margin:0; }
+.ng-ai-steps { display:grid; gap:.28rem; padding-inline-start:1.3rem; font-size:.88rem; }
 .ng-welcome-drop input,.ng-welcome-steps input,.ng-welcome-sheet select { min-height:44px; font-size:max(16px,1rem); }
 .ng-home-next { padding:clamp(1rem,3vw,1.5rem); }
 @keyframes ng-dialog-enter {
