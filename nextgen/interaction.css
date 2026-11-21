@@ -168,7 +168,7 @@ html:has(body.ng-active) {
 .ng-trips-portfolio { min-width: 0; }
 #nextgen-workspace .ng-trips-portfolio h2 { font-size: clamp(1.65rem,2.8vw,2.2rem); margin-top: 0; }
 .ng-recent-expenses { margin-block: 0 .65rem; box-shadow: none; }
-.ng-secondary > summary:has(> svg:last-child)::after { content: none; }
+.ng-secondary > summary::after { content:none; }
 .ng-secondary > summary { display: flex; align-items: center; gap: .6rem; list-style:none; }
 :is(.ng-secondary,.ng-final-category,.ng-linked-history,.v3-chart-data)>summary::-webkit-details-marker { display:none; }
 .ng-final-category>summary { list-style:none; }
@@ -199,7 +199,7 @@ html:has(body.ng-active) {
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: -.04em;
 }
-.ng-settings-hub { display: grid; gap: 1.2rem; max-width: 52rem; }
+.ng-settings-hub { display: grid; gap: 1.2rem; }
 .ng-settings-hub h2 {
   margin: 0 0 .42rem .8rem;
   color: var(--product-muted);

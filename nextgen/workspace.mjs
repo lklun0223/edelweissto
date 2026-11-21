@@ -3,7 +3,7 @@ import {prompt,weeklyTransferGuidance} from './wtp-prompt.mjs';
 import {exportRecordsCsv} from './csv.mjs';
 import {CATEGORIES} from './coverage.mjs';
 import {calendarDay,HONG_KONG,lessonInterval,manualTimerStart,possibleLessonTimes,wallTime,weekOf} from './lesson-time.mjs';
-import {dependentSettlements,latestSunday,retainWeeklyObservation,saveSundaySavings,settlementVersion,settlementView,sundayHistory,sundayVersions,weeklyHistory,weeklySettlement} from './weekly-settlement.mjs';
+import {dependentSettlements,latestSunday,retainWeeklyObservation,saveSundaySavings,settlementVersion,settlementView,isoWeek,sundayHistory,sundayVersions,weeklyFormula,weeklyHistory,weeklySettlement,weeklyTimeline} from './weekly-settlement.mjs';
 import {incomeTrend,weeklyIncome,studentAttendance,lessonOperations,linkConfirmedIncome} from './work-analytics.mjs';
 import {addSpecialIncome,generalReceipt,prepareOperations,setIncludedWork,workReceipt} from './work-receipts.mjs';
 import {translate} from './i18n.mjs';
@@ -405,18 +405,18 @@ function expenseCurrencies() {
 function currencyOption(currency) {
   return h('option',{value:currency},currency+({HKD:' $',EUR:' €',USD:' $',GBP:' £',JPY:' ¥'}[currency]??''));
 }
-function recordWeeklyExpense(report) {
-  transferDialog(tr('New expense'),(modal,close)=>{
+function recordWeeklyExpense(report,{specialOnly=false}={}) {
+  transferDialog(tr(specialOnly?'Add Special Expense':'New expense'),(modal,close)=>{
     const totals=ledger.records.filter(row=>row.entity==='expense'&&row.data.type==='GENERAL'&&
       row.data.entry_week===report.week&&!row.data.voided);
-    const original=totals.length===1?totals[0]:null;
+    const original=!specialOnly&&totals.length===1?totals[0]:null;
     const figure=entryAmount('amount',original?.data.amount??'',true);
     figure.min='.01';
     const currency=h('select',{name:'currency'},...expenseCurrencies().map(currencyOption));
     const defaultCurrency=ledger.settings.expense_currency??'HKD';
     currency.value=original?.data.currency??defaultCurrency;
     const description=h('input',{name:'description',maxlength:240,value:original?.data.description??''});
-    const date=h('input',{name:'date',type:'date',max:today(),value:today(),required:true});
+    const date=h('input',{name:'date',type:'date',max:today(),value:specialOnly&&report.end<today()?report.end:today(),required:true});
     const actualDate=entryField('Expense date',date);
     const fixed=h('input',{type:'checkbox',role:'switch',name:'fixed',checked:original?.data.fixed,'aria-describedby':'ng-expense-guidance'});
     const category=h('select',{name:'category'},h('option',{value:''},tr('No category')),
@@ -431,7 +431,7 @@ function recordWeeklyExpense(report) {
       tr('Counts toward cash outflow and is excluded from controllable spending.'));
     const period=h('p',{class:'ng-caption'},weekEnding(report.end));
     const ambiguity=h('p',{class:'ng-entry-error'},tr('Several totals exist. Use History / Manage to review them before adding another.'));
-    let mode='GENERAL';
+    let mode=specialOnly?'SPECIAL':'GENERAL';
     const drafts={};
     const choices=segments('type','Expense type',[['GENERAL','General'],['SPECIAL','Special']],mode,key=>{
       const height=fields.getBoundingClientRect().height;
@@ -452,7 +452,7 @@ function recordWeeklyExpense(report) {
     fixed.addEventListener('change',present);
     date.addEventListener('input',present);currency.addEventListener('change',present);
     const fields=h('div',{},actualDate,period,ambiguity);
-    const panel=h('form',{id:'ng-new-expense',class:'ng-entry-form ng-expense-composer'},choices,
+    const panel=h('form',{id:'ng-new-expense',class:'ng-entry-form ng-expense-composer'},specialOnly?null:choices,
       h('div',{class:'ng-amount-entry'},entryField('Amount',figure),entryField('Currency',currency)),fields,includedField);
     entrySubmit(panel,modal,close,'Save expense',async current=>{
       const aggregate=mode==='GENERAL';
@@ -547,6 +547,7 @@ function waterfall(model,{folio=false}={}) {
 function overview() {
   const model=planPosition(renderedModel);
   const known=model.available!==null;
+  const savings=sundayHistory(ledger.settings).at(-1);
   const hasPlan=model.obligations.length>0;
   const formatted=known?amount(model.available):'';
   const money=formatted.match(/^([-−+]?)([A-Z]{3})\s*(.+)$/);
@@ -556,6 +557,8 @@ function overview() {
       money?h('span',{class:'folio-currency'},money[2]):null,h('strong',{},money?money[1]+money[3]:formatted)):null,
     h('p',{class:'folio-balance-date'},model.base?tr('Exchange cash baseline')+' · '+compactDate(model.base.data.as_of,{day:'numeric',month:'short',year:'numeric'}):
       tr('Set the amount you have already reserved for Vienna.')),
+    savings?h('div',{class:'ng-home-savings'},h('span',{},tr('Latest Sunday savings')+' · '+compactDate(savings.end)),weeklyMoney(savings.balance),
+      h('small',{},tr('Separate from cash set aside for Vienna.'))):null,
     model.base?button(tr(known?'Cash sources':'Review available cash'),()=>cashReview(model)):
       actionButton('Set your available exchange funds','funds',()=>edit('balance',null,{scope:'EXCHANGE',as_of:today(),
         currency:'HKD',description:tr('Exchange cash')}),{kind:'primary'}));
@@ -3102,68 +3105,87 @@ function chooseSunday(end) {
   render();
   content.querySelector('#ng-sunday-title')?.focus({preventScroll:true});
 }
-function sundaySavingsPanel(end,history) {
-  const saved=history.find(row=>row.end===end);
-  const input=h('input',{id:'ng-sunday-amount',name:'sunday_savings',type:'text',inputmode:'decimal',required:true,
-    autocomplete:'off',placeholder:tr('Enter amount'),value:saved?savingsDigits(saved.balance):''});
-  const feedback=h('p',{class:'ng-entry-error',role:'alert'});
-  const label=h('span',{},tr('Save'));
-  const submit=h('button',{class:'ng-button primary ng-action-control',type:'submit','aria-label':tr('Save')},icon('Check'),label);
-  input.addEventListener('input',()=>{label.textContent=tr('Save');feedback.textContent='';});
-  const form=h('form',{class:'ng-sunday-form',onsubmit:async event=>{
-    event.preventDefault();
-    if(submit.disabled)return;
-    submit.disabled=true;feedback.textContent='';
-    try {
-      const revision=ledger.revision,next=clone(ledger);
-      if(saveSundaySavings(next.settings,end,savingsCents(input.value))) {
-        chartSelections.set('weekly-savings',end);
-        await save(next,'Save Sunday Savings '+end,revision,{announce:false});
-        content.querySelector('#ng-sunday-title')?.focus({preventScroll:true});
-        const savedForm=content.querySelector('.ng-sunday-form');
-        if(savedForm) {
-          savedForm.querySelector('button span').textContent=tr('Saved');
-          savedForm.querySelector('[role="status"]').textContent=tr('Sunday savings saved.');
-        }
-      } else feedback.textContent=tr('This amount is already saved.');
-    } catch(error) {feedback.textContent=tr(error.message);}
-    finally {submit.disabled=false;}
-  }},h('label',{for:input.id,class:'ng-screen-reader'},tr('Savings in Hong Kong dollars')),
-    h('div',{class:'ng-sunday-entry'},h('div',{class:'ng-sunday-amount'},h('span',{'aria-hidden':'true'},'HKD'),input),submit),feedback,
-    h('span',{class:'ng-screen-reader',role:'status'}));
-  const change=saved?.change??null;
-  return h('section',{class:'ng-weekly ng-sunday-savings','aria-labelledby':'ng-sunday-title','data-sunday':end},
-    h('header',{class:'ng-week-heading'},h('div',{},h('h2',{id:'ng-sunday-title',tabindex:'-1'},tr('Sunday Savings')),
-      h('time',{datetime:end},compactDate(end,{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' · '+tr('Hong Kong time'))),
-      actionButton('History','History',()=>openSundayHistory(end,history),{only:true})),
-    form,
-    h('div',{class:'ng-sunday-change','data-sign':change===null?'unknown':change<0?'negative':change>0?'positive':'zero'},
-      h('span',{},tr('Weekly savings change')),
-      change===null?h('small',{},tr(saved?.status==='Baseline'?'First saved Sunday · baseline':
-        saved?'Previous Sunday missing':'Available after two consecutive Sundays are saved')):weeklyMoney(change,{signed:true})));
+function editWeeklyFormula(report,key) {
+  const closing=key==='closing';
+  const label=closing?'This Sunday balance':'Total Expense';
+  transferDialog(tr(label),(modal,close)=>{
+    const current=closing?report.observed:report.recordedExpense;
+    const field=h('input',{name:closing?'sunday_savings':'weekly_total_expense',type:'text',inputmode:'decimal',
+      placeholder:tr('Enter amount'),required:true,value:current===null?'':savingsDigits(current)});
+    const form=h('form',{class:'ng-entry-form'},entryField('HKD',field),h('p',{class:'ng-caption'},weekEnding(report.end)));
+    if(!closing)form.append(h('p',{class:'ng-caption'},tr('Include Special Expenses in this total.')));
+    entrySubmit(form,modal,close,'Save',async currentLedger=>{
+      const value=savingsCents(field.value);
+      if(value==null||!closing&&value<0)throw Error('Enter a valid amount.');
+      const next=clone(currentLedger);
+      if(closing)saveSundaySavings(next.settings,report.end,value);
+      else (next.settings.weekly_formula_expenses??={})[report.end]=value;
+      chartSelections.set('weekly-savings',report.end);
+      return {next,reason:closing?'Save Sunday Savings '+report.end:'Save weekly expense total '+report.end,message:'Saved on this device.'};
+    },key);
+    modal.append(form);
+    if(!closing)modal.append(actionButton('Add Special Expense','Plus',async()=>{await close();recordWeeklyExpense(report,{specialOnly:true});}));
+  },{quick:true});
+}
+function weeklyFormulaPanel(report,history) {
+  const {week,end,opening,closing,observed,income,expense,recordedIncome,recordedExpense,reconciliation,general,adjustments}=report;
+  const term=(key,label,value,status,open=null)=>h(open?'button':'div',{type:open?'button':null,
+    class:'ng-formula-term'+(open?' ng-formula-edit':''),'data-entry-anchor':open?key:null,'data-formula':key,
+    'data-cents':value,onclick:open,'aria-haspopup':open?'dialog':null},
+    h('span',{},h('strong',{},tr(label)),status?h('small',{},tr(status)):null),
+    h('span',{},value===null?h('small',{},tr('Not recorded')):weeklyMoney(value,{unit:false}),open?icon('Pencil'):null));
+  const change=difference(observed,opening);
+  const scale=Math.max(1,Math.abs(income??0),Math.abs(expense??0),Math.abs(change??0));
+  const warn=report.incomplete||report.inferExpense<0||report.inferIncome<0;
+  return h('section',{class:'ng-weekly ng-weekly-formula','aria-labelledby':'ng-sunday-title','data-sunday':end},
+    h('header',{class:'ng-week-heading'},h('div',{},
+      h('h2',{id:'ng-sunday-title',tabindex:'-1'},tr('Weekly balance')),
+      h('p',{class:'ng-caption'},tr('Week')+' '+isoWeek(week)+' · '+weekDateRange(week)+' · '+tr('Hong Kong time'))),
+      actionButton('History','History',()=>openSundayHistory(end,history))),
+    h('div',{class:'ng-formula-equation'},h('small',{class:'ng-formula-unit'},'HKD'),
+      term('opening','Previous Sunday balance',opening),
+      h('div',{class:'ng-formula-line'},h('b',{'aria-hidden':'true'},'+'),
+        term('income','Income',income,income===null?'':recordedIncome===null?'Implied':'Recorded',()=>recordWeeklyIncome(report))),
+      h('div',{class:'ng-formula-line'},h('b',{'aria-hidden':'true'},'−'),
+        term('expense','Total Expense',expense,expense===null?'':recordedExpense===null?'Inferred':'Recorded',()=>editWeeklyFormula(report,'expense'))),
+      h('div',{class:'ng-week-track','aria-hidden':'true',style:'--week-positive:'+Math.max(0,(change??0)/scale)+';--week-negative:'+Math.max(0,-(change??0)/scale)},
+        h('i',{'data-side':'negative'}),h('i',{'data-side':'positive'})),
+      h('div',{class:'ng-formula-line ng-formula-result'},h('b',{'aria-hidden':'true'},'='),
+        term('closing','This Sunday balance',closing,observed!==null?(opening===null?'Baseline':'Observed'):closing!==null?'Estimated':
+          end>today()?'Sunday has not occurred':'',end<=today()?()=>editWeeklyFormula(report,'closing'):null))),
+    change===null?null:h('div',{class:'ng-sunday-change'},h('span',{},tr('Weekly savings change')),weeklyMoney(change,{signed:true})),
+    reconciliation?h('p',{class:'ng-week-changed',role:'status'},tr('Reconciliation difference')+' · ',weeklyMoney(reconciliation,{signed:true})):null,
+    general<0?h('p',{class:'ng-week-changed',role:'status'},tr('Special Expenses exceed the weekly total.')):null,
+    warn?h('p',{class:'ng-week-changed',role:'status'},tr('Review incomplete or conflicting amounts.')):null,
+    adjustments? h('details',{class:'ng-week-bridge'},h('summary',{},h('span',{},icon('ChevronDown'),tr('Other cash movements'))),
+      ...report.rows.adjustments.map(({record,cents})=>h('p',{class:'ng-caption'},record.data.description+' · ',weeklyMoney(cents,{signed:true}))),
+      h('p',{class:'ng-caption'},tr('Net adjustment')+' · ',weeklyMoney(adjustments,{signed:true}))):null);
 }
 function openSundayHistory(end,history) {
   transferDialog(tr('Savings history'),(modal,close)=>{
-    const date=h('input',{name:'sunday',type:'date',max:latestSunday(),value:end,required:true,
-      oninput:()=>date.setCustomValidity('')});
-    const open=async saved=>{await close();chooseSunday(saved);};
+    const currentEnd=calendarDay(weekOf(today()),6);
+    const date=h('input',{name:'sunday',type:'date',max:currentEnd,value:end,required:true,oninput:()=>date.setCustomValidity('')});
+    const open=async saved=>{
+      await close();chooseSunday(saved);
+      if(saved<=today())editWeeklyFormula(weeklyFormula(ledger,saved),'closing');
+    };
     modal.append(h('form',{class:'ng-entry-form',onsubmit:event=>{
       event.preventDefault();
-      if(latestSunday(date.value)!==date.value) {
-        date.setCustomValidity(tr('Choose an ending Sunday.'));date.reportValidity();return;
-      }
+      if(calendarDay(weekOf(date.value),6)!==date.value){date.setCustomValidity(tr('Choose an ending Sunday.'));date.reportValidity();return;}
       void open(date.value);
     }},entryField('Sunday ending date',date),h('button',{class:'ng-button primary',type:'submit'},tr('Open Sunday'))));
-    if(history.length)modal.append(h('ul',{class:'ng-week-history ng-sunday-history'},...[...history].reverse().map(row=>{
+    const dates=new Map(history.map(row=>[row.end,row]));
+    dates.set(end,dates.get(end)??{end,balance:null,change:null});
+    dates.set(currentEnd,dates.get(currentEnd)??{end:currentEnd,balance:null,change:null});
+    const timeline=weeklyTimeline([...dates.values()].sort((a,b)=>a.end.localeCompare(b.end)).map(row=>({...row,week:weekOf(row.end)})));
+    modal.append(h('ul',{class:'ng-week-history ng-sunday-history'},...timeline.map(row=>{
       const versions=sundayVersions(ledger.settings,row.end);
       return h('li',{},h('button',{class:'ng-study-row',type:'button',onclick:()=>open(row.end)},
-        icon('CalendarDays'),h('span',{},compactDate(row.end,{day:'numeric',month:'short',year:'numeric'})),
-        weeklyMoney(row.balance),icon('ChevronRight')),
+        icon(row.end<=today()?'Pencil':'CalendarDays'),h('span',{},h('strong',{},tr('Week')+' '+isoWeek(row.week)),
+          h('small',{},weekDateRange(row.week))),h('span',{},row.balance==null?tr('Not recorded'):weeklyMoney(row.balance),
+          row.change==null?null:h('small',{},weeklyMoney(row.change,{signed:true}))),icon('ChevronRight')),
         versions.length>1?h('details',{class:'ng-week-bridge'},h('summary',{},h('span',{},icon('ChevronDown'),tr('Corrections'))),
-          ...versions.map(version=>h('div',{class:'ng-week-bridge-row'},
-            h('span',{},tr(version.source==='CONFIRMED'?'Original confirmation':version.source==='OBSERVED'?'Historical Sunday observation':'Saved balance'),
-              version.at?' · '+new Intl.DateTimeFormat(ledger.settings.language==='zh-Hant'?'zh-HK':'en-HK',
-                {timeZone:HONG_KONG,dateStyle:'medium',timeStyle:'short'}).format(new Date(version.at)):null),
+          ...versions.map(version=>h('div',{class:'ng-week-bridge-row'},h('span',{},version.at??tr('Historical Sunday observation')),
             weeklyMoney(version.amount)))):null);
     })));
     modal.append(h('details',{class:'ng-entry-options ng-week-bridge'},
@@ -3626,7 +3648,7 @@ function changeWorkReceipt(earning,currentReceipt=null) {
     modal.append(panel);
   },{quick:true});
 }
-function weeklyTransactionList(report,key) {
+function weeklyTransactionList(report,key,formula=false) {
   const income=key==='income';
   const entries=report.rows[income?'income':'expenses'].toSorted((a,b)=>b.date.localeCompare(a.date));
   const line=(label,meta,total,actions,id)=>h('li',{class:'ng-week-transaction','data-record-id':id},
@@ -3663,9 +3685,9 @@ function weeklyTransactionList(report,key) {
     [actionButton('Edit','Pencil',()=>edit('expense',row)),actionButton('Delete','Trash2',()=>remove(row),{kind:'danger'})],row.id)));
   const addIncome=actionButton('New income','income',()=>recordWeeklyIncome(report),{kind:'primary'});
   addIncome.dataset.entryAnchor='income';
-  const panel=h('section',{id:'ng-week-detail',class:'ng-week-detail',tabindex:'-1','aria-labelledby':'ng-week-detail-title'},
-    h('div',{class:'ng-week-detail-heading'},h('h3',{id:'ng-week-detail-title'},tr(income?'Weekly income':'Weekly expenses')),income?addIncome:null),
-    h('p',{class:'ng-week-detail-total'},tr(income?'Recorded income':'Recorded expenses'),' ',weeklyMoney(income?report.income:report.expense)),
+  const panel=h('section',{id:formula?'ng-week-detail-'+key:'ng-week-detail',class:'ng-week-detail',tabindex:'-1','aria-labelledby':formula?'ng-records-title-'+key:'ng-week-detail-title'},
+    h('div',{class:'ng-week-detail-heading'},h('h3',{id:formula?'ng-records-title-'+key:'ng-week-detail-title'},tr(income?'Weekly income':'Weekly expenses')),formula?null:income?addIncome:null),
+    formula?null:h('p',{class:'ng-week-detail-total'},tr(income?'Recorded income':'Recorded expenses'),' ',weeklyMoney(income?report.income:report.expense)),
     entries.length||details.length?list:h('p',{class:'ng-caption'},tr(income?'No receipts recorded for this week.':'No expenses recorded for this week.')));
   if(income) {
     const posted=ledger.records.filter(row=>row.entity==='income_entry'&&!row.data.period);
@@ -3708,7 +3730,8 @@ function weeklyChart(end,history) {
     const byDate=new Map(chartHistory.map(row=>[row.end,row]));
     const latest=latestSunday();
     const currentObservation=provisional.find(row=>row.end===calendarDay(weekOf(today()),6));
-    const anchor=(weeklyChartRange==='all'||end===latest)?(currentObservation?.end??latest):end;
+    const last=currentObservation?.end??latest;
+    const anchor=weeklyChartRange==='all'||end>=calendarDay(last,-7*(Number(weeklyChartRange)-1))?last:end;
     const limit=weeklyChartRange==='all'?chartHistory[0].end:calendarDay(anchor,-7*(Number(weeklyChartRange)-1));
     const first=chartHistory[0].end;
     const from=first>limit&&first<=anchor?first:limit;
@@ -3791,13 +3814,13 @@ function preDeparture() {
   }
   const end=selectedSunday??latestSunday();
   const history=sundayHistory(ledger.settings);
-  const report=weeklySettlement(ledger,weekOf(end),{asOf:end});
-  const quick=(kind,label,total,hasRecords,open)=>h('button',{class:'ng-sunday-quick',type:'button','aria-haspopup':'dialog',
-    'data-entry-anchor':kind,onclick:()=>open(report)},icon(actionIcons[kind]),h('span',{},h('strong',{},tr(label)),
-    hasRecords?weeklyMoney(total):h('small',{},tr('Not recorded'))),icon('Plus'));
-  content.append(sundaySavingsPanel(end,history),weeklyChart(end,history),
-    h('div',{class:'ng-sunday-quick-row'},quick('income','Income',report.income,report.rows.income.length,recordWeeklyIncome),
-      quick('expense','Expense',report.expense,report.rows.expenses.length,recordWeeklyExpense)),
+  const report=weeklyFormula(ledger,end);
+  const breakdown=h('section',{class:'ng-formula-records','aria-label':tr('Weekly records')},h('h2',{},tr('Weekly records')),
+    report.general!==null&&report.general>=0?h('div',{class:'ng-general-remainder','data-general-cents':report.general},
+      h('span',{},h('strong',{},tr('General Expense')),h('small',{},tr('Calculated from the weekly balance'))),weeklyMoney(report.general)):null,
+    sectionDisclosure('formula-income','Income records',host=>host.append(weeklyTransactionList(report,'income',true)),'income'),
+    sectionDisclosure('formula-expenses','Expense records',host=>host.append(weeklyTransactionList(report,'expense',true)),'expense'));
+  content.append(weeklyFormulaPanel(report,history),weeklyChart(end,history),breakdown,
     h('div',{class:'ng-pre-stream'},
       sectionDisclosure('subsidy','Subsidy',subsidies,'subsidy',tr('Grants and receipts')),
       sectionDisclosure('income','Income management',incomePanel,'income',

@@ -1,5 +1,5 @@
 import {clone,emptyLedger,migrateLegacy,validateRelations} from './ledger.mjs';
-import {validateSettlementHistory,validateSundaySavings} from './weekly-settlement.mjs';
+import {validateSettlementHistory,validateSundaySavings,validateWeeklyFormulaExpenses} from './weekly-settlement.mjs';
 import {inspectLedger,stageLegacy,verifySnapshot} from './legacy-vault.mjs';
 
 export async function digest(value) {
@@ -34,6 +34,7 @@ export async function commitLedger(expectedRevision,next,reason) {
   validateSettlementHistory(next.settings.weekly_settlements,next.settings.weekly_openings,next.settings.weekly_observations,
     next.settings.weekly_observation_history);
   validateSundaySavings(next.settings.sunday_savings);
+  validateWeeklyFormulaExpenses(next.settings.weekly_formula_expenses);
   const db=await open();
   try {
     return await new Promise((resolve,reject)=>{
@@ -206,5 +207,6 @@ export async function inspectBackup(source) {
   validateSettlementHistory(state.settings.weekly_settlements,state.settings.weekly_openings,state.settings.weekly_observations,
     state.settings.weekly_observation_history);
   validateSundaySavings(state.settings.sunday_savings);
+  validateWeeklyFormulaExpenses(state.settings.weekly_formula_expenses);
   return state;
 }

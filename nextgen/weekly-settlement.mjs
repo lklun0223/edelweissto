@@ -1,4 +1,4 @@
-import {recordedMovements,today} from './ledger.mjs';
+import {convert,includedExpenseDetails,recordedMovements,today} from './ledger.mjs';
 import {calendarDay,wallTime,weekOf} from './lesson-time.mjs';
 import {difference,sumKnown} from './product-finance.mjs';
 
@@ -59,6 +59,55 @@ export function validateSundaySavings(days) {
   if(!days||typeof days!=='object'||Array.isArray(days)||Object.entries(days).some(([end,versions])=>
     !isSunday(end)||end>latestSunday()||!Array.isArray(versions)||!versions.length||
     !versions.every((row,index)=>valid(row,index,end))))throw Error('Invalid Sunday Savings history.');
+}
+
+export function validateWeeklyFormulaExpenses(totals) {
+  if(totals===undefined)return;
+  if(!totals||typeof totals!=='object'||Array.isArray(totals)||Object.entries(totals).some(([end,value])=>
+    !isSunday(end)||!Number.isSafeInteger(value)||value<0))throw Error('Invalid weekly expense totals.');
+}
+
+export function isoWeek(week) {
+  const thursday=calendarDay(week,3);
+  const start=weekOf(thursday.slice(0,4)+'-01-04');
+  return 1+Math.round((Date.parse(week)-Date.parse(start))/604800000);
+}
+
+// A formula total is a balance explanation. The recorded movements remain the
+// sole source of actual cash transactions.
+export function weeklyFormula(ledger,end,asOf=today()) {
+  const week=weekOf(end);
+  const report=weeklySettlement(ledger,week,{asOf:end});
+  const opening=sundayVersions(ledger.settings,calendarDay(end,-7)).at(-1)?.amount??null;
+  const observed=end<=asOf?sundayVersions(ledger.settings,end).at(-1)?.amount??null:null;
+  const weeklyIncome=report.rows.income.filter(({record:r})=>(r.data.entry_week??r.data.receipt_week)===week&&!r.data.work_income_id);
+  const recordedIncome=weeklyIncome.length===1?report.income:null;
+  const amounts=ledger.settings.weekly_formula_expenses??{};
+  const explicit=amounts[end]??report.confirmed?.entered_expense??null;
+  const ids=new Map(ledger.records.map(row=>[row.id,row]));
+  const ordinary=report.rows.expenses.filter(({record})=>ids.get(record.data.budget_item_id)?.data.kind!=='SECURITY_DEPOSIT');
+  const nonConsumption=report.rows.expenses.filter(entry=>!ordinary.includes(entry));
+  const adjustments=sumKnown([report.adjustments,...nonConsumption.map(row=>row.cents)]);
+  const included=includedExpenseDetails(ledger,end);
+  const special=sumKnown([
+    ...ordinary.filter(({record})=>record.entity==='expense'&&record.data.type==='SPECIAL').map(row=>difference(0,row.cents)),
+    ...ledger.records.filter(row=>included.has(row.id)&&row.data.date>=week&&row.data.date<=end&&
+      ids.get(row.data.budget_item_id)?.data.kind!=='SECURITY_DEPOSIT').map(row=>convert(ledger,row.data.amount,row.data.currency,row.data.date)),
+  ]);
+  const oldTotal=ordinary.some(({record})=>record.data.type==='GENERAL'&&record.data.entry_week===week)?
+    difference(0,sumKnown(ordinary.map(row=>row.cents))):null;
+  const recordedExpense=explicit??oldTotal;
+  const inferExpense=recordedExpense===null?difference(sumKnown([opening,recordedIncome,adjustments]),observed):null;
+  const inferIncome=weeklyIncome.length===0?difference(sumKnown([observed,recordedExpense]),sumKnown([opening,adjustments])):null;
+  const income=recordedIncome??(inferIncome>=0?inferIncome:null);
+  const expense=recordedExpense??(inferExpense>=0?inferExpense:null);
+  const estimate=difference(sumKnown([opening,recordedIncome,adjustments]),recordedExpense);
+  const closing=observed??estimate;
+  const reconciliation=difference(observed,estimate);
+  const general=difference(expense,special);
+  return {...report,opening,observed,expense,income,closing,adjustments,special,general,reconciliation,
+    recordedIncome,recordedExpense,estimate,inferExpense,inferIncome,
+    incomplete:weeklyIncome.length>1||weeklyIncome.length===1&&recordedIncome===null||adjustments===null};
 }
 
 export function retainWeeklyObservation(settings,week,observation) {

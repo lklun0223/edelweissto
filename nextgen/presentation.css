@@ -189,8 +189,6 @@
   cursor:pointer; min-height:48px; display:flex; align-items:center; justify-content:space-between;
   padding:.7rem .25rem; color:var(--ui-ink); border-bottom:1px solid var(--folio-rule); font-weight:650;
 }
-.ng-secondary>summary::after { content:"⌄"; font-size:1.15rem; }
-.ng-secondary[open]>summary::after { rotate:180deg; }
 .ng-secondary-body { padding:.75rem 0 1rem; }
 .ng-plan-summary {
   display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9.4rem),1fr)); gap:1rem;

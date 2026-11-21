@@ -1,4 +1,11 @@
 export const translations={
+  'Weekly balance':'每週結餘','Previous Sunday balance':'上週日結餘','This Sunday balance':'本週日結餘',
+  'Total Expense':'總支出','General Expense':'一般支出','Add Special Expense':'新增特別支出',
+  'Include Special Expenses in this total.':'請將特別支出計入這個總額。','Calculated from the weekly balance':'按每週結餘計算',
+  'Inferred':'推算','Implied':'推算','Recorded':'已記錄','Estimated':'預計','Sunday has not occurred':'本週日尚未到達',
+  'Special Expenses exceed the weekly total.':'特別支出超出每週支出總額。','Review incomplete or conflicting amounts.':'請檢視未完整或有衝突的金額。',
+  'Reconciliation difference':'對帳差額','Weekly records':'每週紀錄','Income records':'收入紀錄','Expense records':'支出紀錄',
+  'Latest Sunday savings':'最近週日儲蓄','Separate from cash set aside for Vienna.':'此金額獨立於維也納專用資金。','Net adjustment':'淨調整金額',
   'Welcome back':'歡迎回來','Your workspace is on this device':'你的工作區已儲存在此裝置','records':'筆紀錄',
   'record':'筆紀錄','saved Sunday':'個已儲存週日','saved Sundays':'個已儲存週日','Data sources':'資料來源','Saved in Workie':'儲存於 Workie',
   'Gen 1 JSON':'第一代 JSON','Workie backup':'Workie 備份','Continue to Workie':'返回 Workie','Review an import':'檢視匯入',

@@ -28,6 +28,12 @@ export function withTransferHistory(current,incoming) {
 
 export function mergeBackup(current,incoming,useBackup) {
   const next=clone(current);
+  for(const [end,value] of Object.entries(incoming.settings.weekly_formula_expenses??{})) {
+    const totals=next.settings.weekly_formula_expenses??={};
+    if(Object.hasOwn(totals,end)&&totals[end]!==value)
+      throw Error('Backups contain different weekly expense totals for '+end+'. Review the incoming backup in a separate browser profile.');
+    totals[end]=value;
+  }
   for(const [end,versions] of Object.entries(incoming.settings.sunday_savings??{})) {
     const days=next.settings.sunday_savings??={};
     const existing=days[end]??[];

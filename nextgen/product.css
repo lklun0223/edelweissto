@@ -159,6 +159,3 @@ body.ng-active:has(#nextgen-workspace[data-route]) {
   .ng-final-budget-summary .ng-actions { display:grid; grid-template-columns:1.2fr 1fr 1fr; }
   #nextgen-workspace .ng-final-budget-summary .ng-actions>.ng-button { min-width:0; padding-inline:.35rem; font-size:.76rem; }
 }
-@media(min-width:691px) {
-  .ng-final-budget-summary,.ng-budget-chapters,.ng-trip-list,.ng-period-dashboard { max-width:60rem; }
-}

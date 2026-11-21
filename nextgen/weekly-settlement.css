@@ -7,6 +7,38 @@
   display: grid;
   gap: .62rem;
 }
+.ng-weekly-formula .ng-week-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.3rem .55rem; }
+.ng-weekly-formula .ng-week-heading>div { display:contents; }
+.ng-weekly-formula .ng-week-heading>.ng-button { grid-column:2; grid-row:1; }
+.ng-weekly-formula .ng-week-heading p { grid-column:1/-1; grid-row:2; margin:0; }
+.ng-formula-equation { display:grid; gap:.3rem; min-width:0; padding:.65rem; border-radius:16px; background:var(--product-well); }
+.ng-formula-unit { justify-self:end; margin-inline-end:.48rem; letter-spacing:.08em; }
+.ng-formula-line { display:grid; grid-template-columns:1.25rem minmax(0,1fr); align-items:center; gap:.32rem; }
+.ng-formula-line>b { text-align:center; color:var(--product-muted); }
+.ng-formula-term {
+  display:flex; align-items:center; justify-content:space-between; min-width:0; gap:.45rem; padding:.44rem .52rem;
+  text-align:start; color:var(--product-ink); border-radius:10px;
+}
+.ng-formula-equation>.ng-formula-term { margin-inline-start:1.57rem; }
+.ng-formula-term>span:first-child { display:grid; min-width:0; line-height:1.25; }
+.ng-formula-term>span:last-child { display:flex; align-items:center; justify-content:end; gap:.35rem; min-width:0; text-align:end; }
+.ng-formula-term .ng-money { font:650 clamp(.88rem,4vw,1.39rem)/1.12 var(--ui-font); font-variant-numeric:tabular-nums; }
+.ng-formula-term svg { flex:none; width:.9rem; height:.9rem; }
+.ng-formula-edit { min-height:46px; background:var(--product-surface); border:1px solid var(--product-line); }
+.ng-formula-edit:hover,.ng-formula-edit:focus-visible { border-color:var(--ng-metal); }
+.ng-formula-result .ng-formula-edit { box-shadow:inset 0 0 0 1px var(--product-line); }
+.ng-formula-records { display:grid; gap:.45rem; margin-block:.7rem; }
+.ng-formula-records>h2 { margin:0; }
+.ng-general-remainder { display:flex; align-items:center; justify-content:space-between; gap:.45rem; padding:.65rem .85rem;
+  border:1px solid var(--product-line); border-radius:14px; background:var(--product-surface); }
+.ng-general-remainder small { display:block; color:var(--product-muted); }
+.ng-home-savings { display:grid; justify-items:start; gap:.15rem; margin:.65rem 0; }
+.ng-home-savings small { color:var(--product-muted); }
+@media(max-width:390px) {
+  .ng-formula-term { padding-inline:.38rem; }
+  .ng-formula-line { grid-template-columns:.8rem minmax(0,1fr); }
+  .ng-formula-equation>.ng-formula-term { margin-inline-start:1.12rem; }
+}
 .ng-week-heading,.ng-week-toolbar,.ng-week-controls,.ng-week-detail-heading {
   display: flex;
   align-items: center;
@@ -344,6 +376,7 @@ button.ng-week-term:hover,button.ng-week-term[aria-expanded="true"] {
 .ng-sunday-range { position:relative; }
 .ng-sunday-range>summary { display:flex; gap:.4rem; align-items:center; min-height:44px; padding-inline:.55rem; cursor:pointer; }
 .ng-sunday-range>summary::-webkit-details-marker { display:none; }
+.ng-sunday-range>summary::after { content:none; }
 .ng-sunday-range>summary svg { width:.85rem; }
 .ng-sunday-range select { position:absolute; top:100%; inset-inline-end:0; min-height:44px; z-index:1; background:var(--product-surface); }
 @media(max-width:690px) {
