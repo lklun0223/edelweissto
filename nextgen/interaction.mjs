@@ -67,6 +67,8 @@ export function adaptiveChrome(doc,win) {
     }
     const keyboard=focused&&viewport&&viewport.scale<=1.05&&
       Math.max(restingHeight-win.innerHeight,win.innerHeight-viewport.height-viewport.offsetTop)>90;
+    const obscured=viewport&&viewport.scale<=1.05&&!keyboard?
+      Math.max(0,win.innerHeight-viewport.height-viewport.offsetTop):0;
     const stuck=win.scrollY>8;
     body.toggleAttribute('data-workie-keyboard',Boolean(keyboard));
     body.toggleAttribute('data-workie-stuck',stuck);
@@ -74,6 +76,7 @@ export function adaptiveChrome(doc,win) {
     body.toggleAttribute('data-workie-compact',Boolean(stuck&&titleBox&&titleBox.top<=chromeBottom));
     html.style.setProperty('--workie-header-height',(header?.height??0)+'px');
     html.style.setProperty('--workie-dock-height',dockSize+'px');
+    html.style.setProperty('--workie-viewport-bottom',obscured+'px');
   }
   function queue() {
     if(!frame)frame=win.requestAnimationFrame(update);

@@ -1,5 +1,5 @@
 import {allocateWaterfall} from './coverage.mjs';
-import {convert,isSnapshotSettlement,recordedMovements,today} from './ledger.mjs';
+import {convert,financialModel,isSnapshotSettlement,recordedMovements,today} from './ledger.mjs';
 
 export function sumKnown(values) {
   if(values.some(value=>!Number.isSafeInteger(value)))return null;
@@ -23,6 +23,27 @@ export function planPosition(model,scope=null) {
     planned:allocateWaterfall(model.expected,obligations),
     cashPosition:difference(model.available,total),
     expectedPosition:difference(model.expected,total)};
+}
+
+export function homeFundingPosition(ledger,model,reference,asOf=today(),valuationLedger=ledger) {
+  if(model.base&&model.base.data.scope!=='EXCHANGE')model=financialModel(ledger,asOf,valuationLedger,{exchangeOverrideOnly:true});
+  const movements=reference&&!model.base?recordedMovements(ledger,asOf,{includeLegacyWeeklyEstimate:false})
+    .filter(row=>row.date>reference.end&&row.kind!=='savings'):[];
+  const available=model.base?model.available:reference?sumKnown([reference.balance,...movements.map(row=>row.cents)]):null;
+  const approved=model.missing?null:model.approved;
+  const expected=sumKnown([available,approved]);
+  return planPosition({...model,available,approved,expected});
+}
+
+export function potentialBudgetDuplicates(records) {
+  const groups=new Map();
+  for(const record of records) {
+    const name=record.data.description.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+    if(!name)continue;
+    const group=groups.get(name)??[];
+    group.push(record);groups.set(name,group);
+  }
+  return [...groups.values()].filter(group=>group.length>1);
 }
 
 export function travelCapacity(model,trips) {

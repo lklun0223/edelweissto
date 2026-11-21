@@ -81,7 +81,7 @@ export function weeklyFormula(ledger,end,asOf=today()) {
   const opening=sundayVersions(ledger.settings,calendarDay(end,-7)).at(-1)?.amount??null;
   const observed=end<=asOf?sundayVersions(ledger.settings,end).at(-1)?.amount??null:null;
   const weeklyIncome=report.rows.income.filter(({record:r})=>(r.data.entry_week??r.data.receipt_week)===week&&!r.data.work_income_id);
-  const recordedIncome=weeklyIncome.length===1?report.income:null;
+  const recordedIncome=weeklyIncome.length<=1&&report.rows.income.length?report.income:null;
   const amounts=ledger.settings.weekly_formula_expenses??{};
   const explicit=amounts[end]??report.confirmed?.entered_expense??null;
   const ids=new Map(ledger.records.map(row=>[row.id,row]));
@@ -98,7 +98,7 @@ export function weeklyFormula(ledger,end,asOf=today()) {
     difference(0,sumKnown(ordinary.map(row=>row.cents))):null;
   const recordedExpense=explicit??oldTotal;
   const inferExpense=recordedExpense===null?difference(sumKnown([opening,recordedIncome,adjustments]),observed):null;
-  const inferIncome=weeklyIncome.length===0?difference(sumKnown([observed,recordedExpense]),sumKnown([opening,adjustments])):null;
+  const inferIncome=report.rows.income.length===0?difference(sumKnown([observed,recordedExpense]),sumKnown([opening,adjustments])):null;
   const income=recordedIncome??(inferIncome>=0?inferIncome:null);
   const expense=recordedExpense??(inferExpense>=0?inferExpense:null);
   const estimate=difference(sumKnown([opening,recordedIncome,adjustments]),recordedExpense);

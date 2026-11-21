@@ -292,11 +292,11 @@ html:has(body.ng-active) {
 :is(.ng-trip-row,.folio-budget-money) :is(.ng-money,.ng-money-unit) { display: inline; }
 @media(max-width: 1180px) {
   .ng-active #nextgen-workspace:is([data-route],[data-folio]) {
-    padding-block-end:calc(var(--workie-dock-height,3.6rem) + var(--workie-dock-edge) + .85rem);
+    padding-block-end:calc(var(--workie-dock-height,3.6rem) + var(--workie-dock-edge) + var(--workie-viewport-bottom,0px) + .85rem);
   }
-  html:has(body.ng-active) { scroll-padding-block-end:calc(var(--workie-dock-height,3.6rem) + max(.59rem,env(safe-area-inset-bottom)) + .65rem); }
-  .ng-active #ng-mobile-navigation { transition: opacity var(--workie-motion),scale var(--workie-motion) var(--workie-ease); }
-  .ng-active[data-workie-compact] #ng-mobile-navigation:not(:has(:focus-visible)) { scale: .89 1; }
+  html:has(body.ng-active) { scroll-padding-block-end:calc(var(--workie-dock-height,3.6rem) + max(.59rem,env(safe-area-inset-bottom)) + var(--workie-viewport-bottom,0px) + .65rem); }
+  .ng-active #ng-mobile-navigation { transition:opacity var(--workie-motion),width var(--workie-motion) var(--workie-ease); }
+  .ng-active[data-workie-compact] #ng-mobile-navigation { --dock-shrink:1.4rem; }
   .ng-active[data-workie-stuck] #ng-mobile-navigation { background:var(--product-surface); }
   #ng-mobile-navigation .ng-button[data-ng-view="Pre-departure"] .ng-nav-label { display: none; }
   #ng-mobile-navigation .ng-nav-short { display: inline; font-size: .68rem; }

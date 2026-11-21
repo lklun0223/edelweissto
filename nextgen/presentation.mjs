@@ -65,6 +65,6 @@ export function fundingInstrument({h,button,chart,amount,tr,selected,onSelect,on
       h('span',{},h('i',{'aria-hidden':'true','data-swatch':String(index)}),tr(label)))),
     h('div',{class:'v3-chart-plot','data-chart-known':String(known)},columns,
       !known?h('p',{class:'v3-chart-empty'},tr(chart.complete?'Add planned costs to see the waterfall.':'Review the plan and assign categories to see the waterfall.')):null),
-    chart.partial?h('p',{class:'ng-caption'},tr('Preview for classified items only. Unclassified items remain in the Vienna total.')):null,
+    chart.partial?h('p',{class:'ng-caption'},tr('The chart shows known costs. Review missing amounts, exchange rates or categories to see the funding split.')):null,
     detail,data);
 }

@@ -246,8 +246,9 @@ export function recordedMovements(ledger,asOf=today(),{includeLegacyWeeklyEstima
     return {id:row.id,date:row.data.date,kind,cents:value===null?null:direction*value};
   });
 }
-export function financialModel(ledger,asOf=today(),valuationLedger=ledger) {
-  const balances=ledger.records.filter(row=>row.entity==='balance' && row.data.scope!=='ACCOUNT' && row.data.as_of<=asOf).reverse()
+export function financialModel(ledger,asOf=today(),valuationLedger=ledger,{exchangeOverrideOnly=false}={}) {
+  const balances=ledger.records.filter(row=>row.entity==='balance' && row.data.scope!=='ACCOUNT' &&
+    (!exchangeOverrideOnly||row.data.scope==='EXCHANGE') && row.data.as_of<=asOf).reverse()
     .sort((a,b)=>b.data.as_of.localeCompare(a.data.as_of));
   const base=balances[0]??null, issues=[], historyReview=[],changes=[],applied=[];
   const cashRecords=actuals(ledger,asOf);
@@ -293,6 +294,7 @@ export function financialModel(ledger,asOf=today(),valuationLedger=ledger) {
     const approved=cents(row.data.amount);
     const received=sum(receipts.map(receipt=>convertUnits(ledger,receipt.data.amount,receipt.data.currency,row.data.currency,receipt.data.date)));
     return {id:row.id,status:row.data.status,
+      receivedCents:received===null?null:convert(ledger,received/100,row.data.currency,asOf),
       outstandingCents:approved===null || received===null?null:
         convert(ledger,Math.max(0,approved-received)/100,row.data.currency,asOf)};
   });

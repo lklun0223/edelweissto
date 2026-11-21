@@ -27,9 +27,16 @@ export async function setIncludedWork(ledger,receiptId,workId,included=true) {
   return next;
 }
 
-export async function addSpecialIncome(ledger,data,receiptId) {
+export async function addSpecialIncome(ledger,data,receiptId,{receipt=null}={}) {
   const {next}=await prepareOperations(ledger,[{op:'ADD',entity:'lesson',data}]);
   const lesson=next.records.at(-1);
   linkConfirmedIncome(next,lesson.id);
+  if(receipt) {
+    const {next:withReceipt}=await prepareOperations(next,[{op:'ADD',entity:'cash_event',data:{
+      ...receipt,kind:'INCOME',description:data.description,amount:data.income,currency:data.currency,
+      lesson_date:data.date,student_id:data.student_id,work_income_id:lesson.id,
+    }}]);
+    return withReceipt;
+  }
   return receiptId?setIncludedWork(next,receiptId,lesson.id):next;
 }

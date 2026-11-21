@@ -5,17 +5,18 @@ import {allocateWaterfall} from './coverage.mjs';
  * for display without recomputing which category receives money.
  */
 export function allocationView(model,{classifiedPreview=false}={}) {
-  const partial=classifiedPreview&&model.waterfall.unclassified.length>0;
   const unclassified=new Set(model.waterfall.unclassified);
-  const known=partial?model.obligations.filter(item=>!unclassified.has(item.id)):null;
-  const actual=known?allocateWaterfall(model.available,known):model.waterfall;
-  const projected=known?allocateWaterfall(model.expected,known):model.planned;
+  const unpriced=model.obligations.filter(item=>item.cents===null);
+  const partial=classifiedPreview&&(unclassified.size>0||unpriced.length>0);
+  const known=partial?model.obligations.filter(item=>item.cents!==null&&!unclassified.has(item.id)):null;
+  const actual=known?allocateWaterfall(null,known):model.waterfall;
+  const projected=known?actual:model.planned;
   const rows=actual.rows;
   const total=rows.reduce((sum,row)=>sum+(row.target??0),0);
   const drawable=!actual.unclassified.length&&rows.every(row=>row.target!==null)&&Number.isSafeInteger(total);
   const complete=drawable&&!partial;
   let start=0;
-  return {complete,drawable,partial,unclassifiedCount:unclassified.size,total:drawable?total:null,rows:rows.map((row,index)=>{
+  return {complete,drawable,partial,unclassifiedCount:unclassified.size,unpricedCount:unpriced.length,total:drawable?total:null,rows:rows.map((row,index)=>{
     const expected=projected.rows[index].covered;
     const grant=expected===null||row.covered===null?null:Math.max(0,expected-row.covered);
     const width=drawable&&total>0?row.target/total*100:0;
