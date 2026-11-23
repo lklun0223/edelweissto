@@ -1,4 +1,5 @@
-import {prepareBatch} from './ledger.mjs';
+import {convert,prepareBatch} from './ledger.mjs';
+import {calendarDay,weekOf} from './lesson-time.mjs';
 import {linkConfirmedIncome} from './work-analytics.mjs';
 
 export const prepareOperations=(ledger,operations)=>prepareBatch(ledger,JSON.stringify({
@@ -15,6 +16,54 @@ export function workReceipt(ledger,earning) {
   const related=id=>id===expected||key(ledger.records.find(row=>row.id===id))===expected;
   return ledger.records.find(row=>row.entity==='cash_event'&&row.data.kind==='INCOME'&&!row.data.voided&&
     (row.data.work_income_id&&related(row.data.work_income_id)||row.data.included_work_ids?.some(related)));
+}
+
+export function unconfirmedLegacyReceipts(ledger,from,to) {
+  return ledger.records.filter(row=>row.entity==='income_entry'&&row.origin&&!row.data.period&&
+    row.data.date>=from&&row.data.date<=to&&row.data.amount>0&&!workReceipt(ledger,row));
+}
+export function includeReceiptInWeeklyTotal(ledger,receipt) {
+  const end=calendarDay(weekOf(receipt.data.date),6);
+  const totals=ledger.settings.weekly_formula_incomes;
+  if(!totals||!Object.hasOwn(totals,end))return false;
+  if(typeof totals[end]==='number')totals[end]={amount:totals[end],included:[]};
+  if(!totals[end].included.includes(receipt.id))totals[end].included.push(receipt.id);
+  return true;
+}
+
+export async function confirmLegacyReceipts(ledger,earnings) {
+  const changes=new Map(),operations=[];
+  for(const row of earnings) {
+    if(workReceipt(ledger,row))continue;
+    const week=weekOf(row.data.date);
+    const aggregates=ledger.records.filter(receipt=>generalReceipt(receipt)&&
+      (receipt.data.entry_week??receipt.data.receipt_week)===week);
+    if(aggregates.length>1)throw Error('Resolve multiple weekly income totals before confirming these receipts.');
+    const aggregate=aggregates[0];
+    if(!aggregate){
+      operations.push({op:'ADD',entity:'cash_event',data:{description:row.data.description,kind:'INCOME',
+        amount:row.data.amount,currency:row.data.currency,date:row.data.date,lesson_date:row.data.date,work_income_id:row.id}});
+      continue;
+    }
+    const included=changes.get(aggregate)??new Set(aggregate.data.included_work_ids??[]);
+    included.add(row.id);
+    changes.set(aggregate,included);
+  }
+  for(const [row,included] of changes) {
+    const total=convert(ledger,row.data.amount,row.data.currency,row.data.date);
+    const amounts=[...included].map(id=>{
+      const earning=ledger.records.find(record=>record.id===id);
+      return earning?convert(ledger,earning.data.amount??earning.data.income,earning.data.currency,earning.data.date):null;
+    });
+    if(total===null||amounts.includes(null)||amounts.reduce((sum,value)=>sum+value,0)>total)
+      throw Error('Historical receipts exceed the existing weekly income total or require an exchange rate.');
+    operations.push({op:'UPDATE',entity:'cash_event',record_id:row.id,expected_revision:row.revision,
+      changes:{included_work_ids:[...included]}});
+  }
+  if(!operations.length)return ledger;
+  const {next}=await prepareOperations(ledger,operations);
+  for(const row of next.records.slice(ledger.records.length))includeReceiptInWeeklyTotal(next,row);
+  return next;
 }
 
 export async function setIncludedWork(ledger,receiptId,workId,included=true) {

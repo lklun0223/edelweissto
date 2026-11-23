@@ -25,14 +25,19 @@ export function planPosition(model,scope=null) {
     expectedPosition:difference(model.expected,total)};
 }
 
-export function homeFundingPosition(ledger,model,reference,asOf=today(),valuationLedger=ledger) {
-  if(model.base&&model.base.data.scope!=='EXCHANGE')model=financialModel(ledger,asOf,valuationLedger,{exchangeOverrideOnly:true});
-  const movements=reference&&!model.base?recordedMovements(ledger,asOf,{includeLegacyWeeklyEstimate:false})
+export function planningModel(ledger,reference,asOf=today(),valuationLedger=ledger) {
+  const model=financialModel(ledger,asOf,valuationLedger,{exchangeOverrideOnly:true});
+  const exchangeOverride=model.base;
+  const base=ledger.settings.planning_basis==='EXCHANGE'&&!exchangeOverride?.requiresReconciliation?exchangeOverride:null;
+  const movements=reference&&!base?recordedMovements(ledger,asOf,{includeLegacyWeeklyEstimate:false})
     .filter(row=>row.date>reference.end&&row.kind!=='savings'):[];
-  const available=model.base?model.available:reference?sumKnown([reference.balance,...movements.map(row=>row.cents)]):null;
-  const approved=model.missing?null:model.approved;
-  const expected=sumKnown([available,approved]);
-  return planPosition({...model,available,approved,expected});
+  const available=base?model.available:reference?sumKnown([reference.balance,...movements.map(row=>row.cents)]):null;
+  const approved=model.approved;
+  const expected=model.missing?null:sumKnown([available,approved]);
+  return {...model,base,exchangeOverride,reference,available,approved,expected,
+    cashIssue:available!==null?null:base?'Review the cash sources for this allocation.':
+      reference?'Add the missing dated exchange rate.':'Enter a Sunday balance to calculate available cash.',
+    waterfall:allocateWaterfall(available,model.obligations),planned:allocateWaterfall(expected,model.obligations)};
 }
 
 export function potentialBudgetDuplicates(records) {
@@ -50,7 +55,8 @@ export function travelCapacity(model,trips) {
   const vienna=planPosition(model);
   const selected=new Set(trips.filter(row=>row.data.status!=='CANCELLED').map(row=>row.id));
   const tripsOutstanding=sumKnown(model.obligations.filter((_,index)=>selected.has(budgetScope(model.budgetRows[index]))).map(row=>row.cents));
-  return {cash:vienna.cashPosition,expected:vienna.expectedPosition,tripsOutstanding,
+  return {available:model.available,approved:model.approved,funding:model.expected,vienna:vienna.total,
+    cash:vienna.cashPosition,expected:vienna.expectedPosition,tripsOutstanding,
     cashAfter:difference(vienna.cashPosition,tripsOutstanding),expectedAfter:difference(vienna.expectedPosition,tripsOutstanding)};
 }
 

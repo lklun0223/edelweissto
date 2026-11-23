@@ -28,6 +28,13 @@ export function withTransferHistory(current,incoming) {
 
 export function mergeBackup(current,incoming,useBackup) {
   const next=clone(current);
+  const incomeKey=value=>JSON.stringify(typeof value==='number'?[value,[]]:[value.amount,[...value.included].sort()]);
+  for(const [end,value] of Object.entries(incoming.settings.weekly_formula_incomes??{})) {
+    const totals=next.settings.weekly_formula_incomes??={};
+    if(Object.hasOwn(totals,end)&&incomeKey(totals[end])!==incomeKey(value))
+      throw Error('Backups contain different weekly income totals for '+end+'. Review the incoming backup in a separate browser profile.');
+    totals[end]=clone(value);
+  }
   for(const [end,value] of Object.entries(incoming.settings.weekly_formula_expenses??{})) {
     const totals=next.settings.weekly_formula_expenses??={};
     if(Object.hasOwn(totals,end)&&totals[end]!==value)
