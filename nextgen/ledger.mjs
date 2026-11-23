@@ -208,6 +208,7 @@ export function quote(ledger,currency,asOf=today()) {
 export function convert(ledger,amount,currency,asOf=today()) {
   const rate=quote(ledger,currency,asOf)?.rate;
   const value=cents(amount);
+  if(value===0)return 0;
   if(!rate || value===null) return null;
   const result=Math.round(value*rate);
   return Number.isSafeInteger(result)?result:null;
@@ -299,10 +300,10 @@ export function financialModel(ledger,asOf=today(),valuationLedger=ledger,{excha
       receipt.data.related_id===row.id && receipt.data.kind==='INCOME' && receipt.data.date<=asOf);
     const approved=cents(row.data.amount);
     const received=sum(receipts.map(receipt=>convertUnits(ledger,receipt.data.amount,receipt.data.currency,row.data.currency,receipt.data.date)));
-    return {id:row.id,status:row.data.status,
-      receivedCents:received===null?null:convert(ledger,received/100,row.data.currency,asOf),
-      outstandingCents:approved===null || received===null?null:
-        convert(ledger,Math.max(0,approved-received)/100,row.data.currency,asOf)};
+    const outstanding=approved===null||received===null?null:Math.max(0,approved-received);
+    return {id:row.id,status:row.data.status,receivedNative:received,outstandingNative:outstanding,receiptCount:receipts.length,
+      receivedCents:sum(receipts.map(receipt=>convert(ledger,receipt.data.amount,receipt.data.currency,receipt.data.date))),
+      outstandingCents:outstanding===null?null:convert(valuationLedger,outstanding/100,row.data.currency,asOf)};
   });
   const coverage=expectedCoverage(available,grants);
   const budgetRows=ledger.records.filter(row=>['budget_item','trip_budget_item'].includes(row.entity) && activeBudget(ledger,row));
@@ -331,12 +332,17 @@ export function financialModel(ledger,asOf=today(),valuationLedger=ledger,{excha
       ...payments.map(payment=>convert(ledger,payment.data.amount,payment.data.currency,payment.data.date)),
       ...refunds.map(refund=>{const value=convert(ledger,refund.data.amount,refund.data.currency,refund.data.date);return value===null?null:-value;}),
     ]);
-    return {id:row.id,category:row.data.category,planned:required===null?null:convert(valuationLedger,required/100,row.data.currency,asOf),
-      original:original===null?null:convert(valuationLedger,original/100,row.budgetBaseline?.currency??row.data.currency,asOf),
+    const currency=row.data.currency,originalCurrency=row.budgetBaseline?.currency??currency;
+    const remaining=complete?0:required===null||paidAgainstPlan===null||unlinkedPaid?null:
+      Math.max(0,required-Math.max(0,paidAgainstPlan));
+    return {id:row.id,category:row.data.category,currency,originalCurrency,
+      required,originalNative:original,remaining,paidNative:paidAgainstPlan,unlinkedPaid,
+      missingQuote:!quote(valuationLedger,currency,asOf),missingOriginalQuote:!quote(valuationLedger,originalCurrency,asOf),
+      planned:required===null?null:convert(valuationLedger,required/100,currency,asOf),
+      original:original===null?null:convert(valuationLedger,original/100,originalCurrency,asOf),
       linkedPayments:payments.length,paymentIds:payments.map(payment=>payment.id),refundIds:refunds.map(refund=>refund.id),
       paid:actualPaid,complete,deposit,
-      cents:complete?0:required===null||paidAgainstPlan===null||unlinkedPaid?null:
-        convert(valuationLedger,Math.max(0,required-Math.max(0,paidAgainstPlan))/100,row.data.currency,asOf)};
+      cents:remaining===null?null:convert(valuationLedger,remaining/100,currency,asOf)};
   });
   const waterfall=allocateWaterfall(available,obligations);
   const planned=allocateWaterfall(coverage.expected,obligations);
@@ -473,6 +479,12 @@ export function validateRelations(ledger, operations=new Map()) {
       (reference.currency!=='EUR'||!Number.isFinite(reference.rate)||reference.rate<=0||reference.rate>1e9||
         !/^\d{4}-\d{2}-\d{2}$/.test(reference.date)||!Number.isFinite(Date.parse(reference.updated_at))||
         typeof reference.source!=='string'))throw Error('Exchange-rate settings are invalid.');
+  }
+  if(settings.manual_eur_rate!==undefined) {
+    const {rate,date}=settings.manual_eur_rate??{};
+    const instant=new Date(date+'T00:00:00Z');
+    if(!Number.isFinite(rate)||rate<=0||rate>1e9||!/^\d{4}-\d{2}-\d{2}$/.test(date)||
+      !Number.isFinite(instant.getTime())||instant.toISOString().slice(0,10)!==date)throw Error('The manual planning rate is invalid.');
   }
   if(settings.theme!==undefined&&!['light','dark'].includes(settings.theme))throw Error('The appearance setting is invalid.');
   if(settings.language!==undefined&&!['en','zh-Hant'].includes(settings.language))throw Error('The interface language is invalid.');

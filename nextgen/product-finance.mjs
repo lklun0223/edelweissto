@@ -15,6 +15,26 @@ export function budgetScope(row) {
   return row.data.trip_id||null;
 }
 
+export function budgetBreakdown(obligations,key) {
+  const [native,currency,missingQuote]={
+    planned:['required','currency','missingQuote'],
+    original:['originalNative','originalCurrency','missingOriginalQuote'],
+    cents:['remaining','currency','missingQuote'],
+  }[key];
+  const known=[],byCurrency=new Map();
+  let needsReview=false;
+  for(const item of obligations) {
+    if(item[key]!==null)known.push(item[key]);
+    else if(item[native]>0&&item[missingQuote]) {
+      const values=byCurrency.get(item[currency])??[];
+      values.push(item[native]);byCurrency.set(item[currency],values);
+    } else needsReview=true;
+  }
+  const subtotal=sumKnown(known);
+  return {subtotal,needsReview,unconverted:[...byCurrency].map(([code,values])=>[code,sumKnown(values)]),
+    incomplete:needsReview||byCurrency.size>0||subtotal===null};
+}
+
 export function planPosition(model,scope=null) {
   const obligations=model.obligations.filter((_,index)=>budgetScope(model.budgetRows[index])===scope);
   const total=sumKnown(obligations.map(item=>item.cents));
@@ -54,9 +74,10 @@ export function potentialBudgetDuplicates(records) {
 export function travelCapacity(model,trips) {
   const vienna=planPosition(model);
   const selected=new Set(trips.filter(row=>row.data.status!=='CANCELLED').map(row=>row.id));
-  const tripsOutstanding=sumKnown(model.obligations.filter((_,index)=>selected.has(budgetScope(model.budgetRows[index]))).map(row=>row.cents));
+  const tripObligations=model.obligations.filter((_,index)=>selected.has(budgetScope(model.budgetRows[index])));
+  const tripsOutstanding=sumKnown(tripObligations.map(row=>row.cents));
   return {available:model.available,approved:model.approved,funding:model.expected,vienna:vienna.total,
-    cash:vienna.cashPosition,expected:vienna.expectedPosition,tripsOutstanding,
+    cash:vienna.cashPosition,expected:vienna.expectedPosition,tripsOutstanding,tripObligations,
     cashAfter:difference(vienna.cashPosition,tripsOutstanding),expectedAfter:difference(vienna.expectedPosition,tripsOutstanding)};
 }
 

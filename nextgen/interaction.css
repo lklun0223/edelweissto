@@ -200,6 +200,94 @@ html:has(body.ng-active) {
   letter-spacing: -.04em;
 }
 .ng-settings-hub { display: grid; gap: 1.2rem; }
+.ng-settings-list > .ng-secondary > summary { min-height: 48px; }
+.ng-settings-list > .ng-secondary > summary .ng-section-value {
+  max-width: 54%;
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+.ng-settings-hub { padding-bottom: 1rem; }
+.ng-budget-dependencies {
+  margin-block: .65rem;
+  padding: .85rem 1rem;
+  border: 1px solid var(--product-line);
+  border-radius: var(--workie-radius);
+  background: var(--product-surface);
+}
+.ng-budget-dependencies p { margin: 0 0 .4rem; }
+.ng-budget-dependency-title { font-weight: 650; }
+.ng-budget-partial + .ng-budget-partial { margin-top: .65rem; }
+.ng-budget-partial dl,.ng-grant-detail dl { margin: .15rem 0 .4rem; }
+.ng-budget-partial dl div,.ng-grant-detail dl div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .12rem .6rem;
+}
+.ng-budget-partial dd,.ng-grant-detail dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ng-budget-partial dt,.ng-grant-detail dt { color: var(--product-muted); }
+.ng-grant-detail { padding-block: .65rem; border-block-start: 1px solid var(--product-line); }
+.ng-grant-detail h3 { margin: 0 0 .35rem; }
+.ng-budget-rate-status:empty { display: none; }
+@media (max-width: 600px) {
+  #nextgen-workspace .ng-budget-fx-actions {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  #nextgen-workspace .ng-budget-fx-actions > button { width: 100%; min-width: 0; max-width: none; }
+}
+.ng-budget-print { display: none; }
+
+@media print {
+  @page workie-budget { size: A4; margin: 15mm; }
+  body:has(.ng-budget-print) {
+    page: workie-budget;
+    background: #fff !important;
+    color: #151515 !important;
+  }
+  body:has(.ng-budget-print) > :not(.app-shell),
+  .app-shell:has(.ng-budget-print) > :not(#views-root),
+  #views-root:has(.ng-budget-print) > :not(#nextgen-workspace),
+  #nextgen-workspace:has(.ng-budget-print) > :not(#ng-content),
+  #ng-content:has(.ng-budget-print) > :not(.ng-budget-print),
+  body:has(.ng-budget-print)::before,body:has(.ng-budget-print)::after { display: none !important; }
+  .app-shell:has(.ng-budget-print),#views-root:has(.ng-budget-print),
+  body #nextgen-workspace:has(.ng-budget-print),#nextgen-workspace #ng-content:has(.ng-budget-print) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  #nextgen-workspace .ng-budget-print {
+    display: block;
+    color: #151515;
+    font: 10pt/1.35 Arial,sans-serif;
+  }
+  #nextgen-workspace .ng-budget-print h1 { color: inherit; margin: 2mm 0 4mm; font: bold 22pt/1.1 Arial,sans-serif; }
+  #nextgen-workspace .ng-budget-print h2 { color: inherit; margin: 4mm 0 1mm; font: bold 13pt/1.2 Arial,sans-serif; break-after: avoid; }
+  .ng-budget-print p { margin: 0; }
+  .ng-budget-print article,.ng-budget-print .ng-print-totals,.ng-budget-print .ng-budget-dependencies { break-inside: avoid; }
+  .ng-budget-print article {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 6mm;
+    padding: 2.4mm 0;
+    border-top: .25mm solid #aaa;
+    overflow-wrap: anywhere;
+  }
+  .ng-budget-print article div:last-child { text-align: right; white-space: nowrap; }
+  .ng-print-totals { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3mm; padding: 0; }
+  .ng-print-totals dd { margin: 0; font-weight: bold; }
+  .ng-budget-print .ng-budget-dependencies { border: .3mm solid #777; background: none; border-radius: 2mm; box-shadow: none; }
+  .ng-budget-print .ng-budget-partial dt,.ng-budget-print .ng-caption { color: #262626 !important; }
+}
 .ng-settings-hub h2 {
   margin: 0 0 .42rem .8rem;
   color: var(--product-muted);

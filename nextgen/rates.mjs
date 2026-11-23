@@ -17,15 +17,19 @@ export async function fetchReferenceRate({fetcher=fetch,now=today(),signal}={}) 
   }
   return {currency:'EUR',rate:row.rate,date:row.date,source,updated_at:new Date().toISOString()};
 }
+function planningQuote({auto_fx:automatic,manual_eur_rate:manual},asOf) {
+  if(automatic?.enabled&&automatic.reference?.date<=asOf)return automatic.reference;
+  if(manual?.date<=asOf)return {...manual,currency:'EUR',source:'Manual planning rate'};
+  return null;
+}
+
 export function displayQuote(ledger,currency,asOf=today()) {
-  const automatic=ledger.settings.auto_fx;
-  return currency==='EUR'&&automatic?.enabled&&automatic.reference?.date<=asOf?
-    automatic.reference:quote(ledger,currency,asOf);
+  return (currency==='EUR'?planningQuote(ledger.settings,asOf):null)??quote(ledger,currency,asOf);
 }
 export function valuationLedger(ledger,asOf=today()) {
-  const automatic=ledger.settings.auto_fx;
-  if(!automatic?.enabled||!automatic.reference||automatic.reference.date>asOf)return ledger;
-  const {currency,rate,source}=automatic.reference;
+  const estimate=planningQuote(ledger.settings,asOf);
+  if(!estimate)return ledger;
+  const {currency,rate,source}=estimate;
   // This quote lives only in the estimate model. Recorded dated conversions
   // still resolve through the original ledger and its manual quote records.
   return {...ledger,records:[...ledger.records,{entity:'fx_quote',data:{currency,rate,source,date:asOf}}]};

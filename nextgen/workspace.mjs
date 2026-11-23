@@ -10,7 +10,7 @@ import {translate} from './i18n.mjs';
 import {backupChanges,mergeBackup,withTransferHistory} from './backup-merge.mjs';
 import {allocationView,allocationDeltas} from './allocation-view.mjs';
 import {fundingInstrument} from './presentation.mjs';
-import {budgetScope,difference,planningModel,periodMoney,planPosition,potentialBudgetDuplicates,sumKnown,travelCapacity,tripActual} from './product-finance.mjs';
+import {budgetBreakdown,budgetScope,difference,planningModel,periodMoney,planPosition,potentialBudgetDuplicates,sumKnown,travelCapacity,tripActual} from './product-finance.mjs';
 import {budgetTransferContext,prepareScopedBudgetBatch,subsidyScope,subsidyTransferContext,prepareScopedSubsidyBatch,TransferContextError,transferExample} from './budget-transfer.mjs';
 import {actionIcons,adaptiveChrome,movementCurve,resizePanel,tweenNumbers} from './interaction.mjs';
 import {displayQuote,fetchReferenceRate,rateIsStale,valuationLedger} from './rates.mjs';
@@ -215,6 +215,43 @@ function moneyText(cents,currency=null) {
   const prefix=text.match(/^(-?)([A-Z]{3})(?=\s)/);
   return h('span',{class:'ng-money','data-size':figureSize(text)},prefix?
     [prefix[1],h('span',{class:'ng-money-unit'},prefix[2]),text.slice(prefix[0].length)]:text);
+}
+const availableMoney=value=>value===null?tr('Unavailable'):amount(value);
+
+function budgetDependencies(views,{print=false,historical=false}={}) {
+  const incomplete=views.map(([label,obligations,key])=>({label,...budgetBreakdown(obligations,key)}))
+    .filter(view=>view.incomplete);
+  if(!incomplete.length&&!historical)return !print&&views.some(([,obligations])=>
+    obligations.some(item=>item.currency==='EUR'||item.originalCurrency==='EUR'))?budgetRateStatus():null;
+  const [first,second]=incomplete;
+  if(views[0][0]==='Planned expenditure'&&second&&!first.needsReview&&!second.needsReview&&
+    first.subtotal===second.subtotal&&JSON.stringify(first.unconverted)===JSON.stringify(second.unconverted)) {
+    first.label='Planned and still to pay';incomplete.pop();
+  }
+  const currencies=new Set(incomplete.flatMap(view=>view.unconverted.map(([currency])=>currency)));
+  const needsEUR=currencies.has('EUR');
+  return h('section',{class:'ng-budget-dependencies','aria-label':tr('Incomplete budget totals')},
+    needsEUR?h('p',{class:'ng-budget-dependency-title'},tr('EUR/HKD exchange rate needed to complete your budget total.')):null,
+    [...currencies].filter(currency=>currency!=='EUR').map(currency=>h('p',{},currency+'/HKD · '+tr('Exchange rate needed.'))),
+    ...incomplete.map(view=>h('div',{class:'ng-budget-partial'},
+      h('strong',{},tr(view.label)),h('dl',{},
+        h('div',{},h('dt',{},tr('Known HKD subtotal')),h('dd',{},view.subtotal===null?tr('Unavailable'):amount(view.subtotal,'HKD'))),
+        ...view.unconverted.map(([currency,value])=>h('div',{},h('dt',{},tr('Unconverted subtotal')),
+          h('dd',{},value===null?currency+' · '+tr('Unavailable'):amount(value,currency))))),
+      view.needsReview?h('p',{class:'ng-caption'},tr('Review incomplete item amounts and linked payments for this total.')):null)),
+    historical?h('p',{class:'ng-caption'},tr('A recorded payment needs review. Check its linked record and the exchange rate on its payment date.')):null,
+    print?null:h('div',{class:'ng-actions ng-budget-fx-actions'},needsEUR?[
+      actionButton('Use automatic reference rate','RefreshCw',useAutomaticRate),
+      actionButton('Enter manual EUR/HKD rate','Pencil',enterManualRate),
+    ]:null,([...currencies].some(currency=>currency!=='EUR')||historical)?
+      actionButton('Exchange rates','rates',()=>showSection('Settings','exchange-rates')):null),
+    needsEUR&&!print?h('output',{'data-fx-status':'',class:'ng-caption',role:'status'},fxStatus):null);
+}
+
+function budgetRateStatus() {
+  const rate=displayQuote(ledger,'EUR');
+  return rate&&ledger.settings.auto_fx?.enabled?h('output',{'data-fx-status':'',class:'ng-caption ng-budget-rate-status',role:'status'},
+    fxStatus||(rateIsStale(rate)?eurRateSummary(rate):'')):null;
 }
 function chartControls(name,output,choices) {
   const select=(choice,announce=true)=>{
@@ -578,9 +615,9 @@ function overview() {
     }),weeklyMoney(savings.balance),
       h('small',{},tr(model.base?'Separate from cash set aside for Vienna.':'Default planning reference'))):null,
     model.base?button(tr('Cash sources'),()=>cashReview(model)):null);
-  const position=(label,value,key)=>h('div',{},h('dt',{},tr(label)),h('dd',{'data-finance-metric':key,'data-shortfall':String(value!==null&&value<0)},amount(value)));
+  const position=(label,value,key)=>h('div',{},h('dt',{},tr(label)),h('dd',{'data-finance-metric':key,'data-shortfall':String(value!==null&&value<0)},availableMoney(value)));
   const summary=h('dl',{class:'ng-metrics ng-home-position'},
-    position(model.missing?'Approved outstanding with known rates':'Approved outstanding',model.approved,'approved'),
+    position(model.missing&&model.approved>0?'Approved outstanding with known rates':'Approved outstanding',approvedDisplay(model),'approved'),
     position('Expected funding',model.expected,'expected'),
     hasPlan?position('Vienna still to pay',model.total,'remaining'):null,
     model.cashPosition===null?null:position(model.cashPosition<0?'Cash shortfall':'Cash surplus',model.cashPosition,'cash-position'),
@@ -591,7 +628,8 @@ function overview() {
     sundayHistory(ledger.settings).length?null:actionButton('Add your first Sunday savings','Wallet',()=>{
       navigate('Pre-departure',{scroll:0});content.querySelector('[data-formula=closing]')?.focus();
     }),
-    model.grants.length?actionButton('Subsidy','subsidy',()=>showSection('Pre-departure','subsidy')):null);
+    model.grants.length?actionButton('Subsidy','subsidy',()=>showSection('Pre-departure','subsidy')):null,
+    model.approved===0||model.missing?actionButton('Funding details','CircleHelp',grantDiagnostics):null);
   const instrument=hasPlan?fundingInstrument({h,button,chart:allocationView(model,{classifiedPreview:true}),amount,tr,selected:selectedAllocation,
     onSelect:id=>{selectedAllocation=id;},
     onOpenCategory:id=>navigate('Budget',{query:'',filterEntity:'',filterCategory:id,scroll:0}),
@@ -601,13 +639,58 @@ function overview() {
       actionButton('Open Vienna Budget','budget',()=>navigate('Budget')));
   const stage=h('div',{class:'v3-overview'+(firstOverview?' v3-reveal':'')},
     h('div',{class:'v3-overview-summary'},hero,summary,access,
-      model.missing?h('p',{class:'ng-caption'},tr('Add a dated exchange rate to include the remaining approved funding.'),' ',
-        button(tr('Exchange rates'),()=>showSection('Settings','exchange-rates'))):null,
+      model.missing?h('p',{class:'ng-caption'},tr('Approved funding needs review. Open Funding details to see which grant is incomplete.')):null,
+      budgetDependencies([['Vienna still to pay',model.obligations,'cents']]),
       model.base&&model.historyReview.length?h('div',{class:'ng-funding-review'},actionButton(model.historyReview.length?
         model.historyReview.length+' '+tr(model.historyReview.length===1?'historical payment needs review':'historical payments need review'):
         'Review available cash','CircleAlert',()=>cashReview(model))):null),instrument);
   firstOverview=false;
   content.append(stage);
+}
+function approvedDisplay(model) {
+  return model.missing&&model.approved===0?null:model.approved;
+}
+
+function grantDiagnostics() {
+  const saved=ledger.records.filter(row=>row.entity==='grant');
+  const names=new Map();
+  for(const group of potentialBudgetDuplicates(saved))for(const row of group)names.set(row.id,group.length);
+  const items=new Map(renderedModel.grants.map(grant=>[grant.id,grant]));
+  const approved=renderedModel.grants.filter(grant=>grant.status==='已批核等待發放');
+  const overview=!saved.length?'No grant is saved in this browser’s ledger.':
+    !approved.length?'No saved grant has the approved, awaiting payment status.':
+    renderedModel.missing?'One or more approved grants have an amount, receipt or conversion that needs review.':
+    renderedModel.approved===0?'The approved grants have no outstanding amount.':
+    'Approved amounts still due are included in expected funding.';
+  transferDialog(tr('Funding details'),modal=>modal.append(
+    h('p',{class:'ng-caption'},tr('Read-only · This browser only.'),' ',tr('Cloud sync is off. Reload to check the latest saved records in this profile.')),
+    h('p',{},tr(overview)),
+    h('p',{},tr('Approved outstanding'),' · ',availableMoney(approvedDisplay(renderedModel))),
+    h('p',{class:'ng-caption'},tr('Grant records'),' · '+saved.length+' · '+tr('Local revision')+' '+ledger.revision),
+    ...saved.map(row=>{
+      const {description,status,amount:value,currency}=row.data;
+      const grant=items.get(row.id);
+      const ref=displayQuote(ledger,currency);
+      const explanation=status!=='已批核等待發放'?'This saved status does not project an outstanding grant.':
+        value==null?'An approved amount has not been entered.':
+        grant.receivedNative===null?'A linked receipt needs its dated exchange rate.':
+        grant.outstandingNative===0?'Nothing remains outstanding.':
+        !ref?'An exchange rate is needed to project the outstanding amount.':
+        grant.outstandingCents===null?'The converted amount is outside the supported range.':
+        'Only the outstanding part is included in expected funding.';
+      return h('section',{class:'ng-grant-detail'},h('h3',{},description),
+        h('dl',{},...[['Saved status',status],['Saved amount',value==null?tr('Missing amount'):amount(cents(value),currency)],
+          ['Linked receipts',grant?String(grant.receiptCount):'—'],
+          ['Received',grant?.receivedNative!=null?amount(grant.receivedNative,currency):tr('Unavailable')],
+          [status==='已批核等待發放'?'Outstanding':'Unreceived amount',
+            grant?.outstandingNative!=null?amount(grant.outstandingNative,currency):tr('Unavailable')],
+          ['Planning rate',currency==='HKD'?'HKD · '+tr('Base currency'):
+            ref?(currency+'/HKD · '+ref.rate+' · '+ref.date):tr('Exchange rate needed.')]]
+          .map(([label,detail])=>h('div',{},h('dt',{},tr(label)),h('dd',{},detail)))),
+        h('p',{class:'ng-caption'},tr(explanation)),names.has(row.id)?h('p',{class:'ng-caption'},
+          tr('Other saved grants share this name. Compare them before deciding whether one is a duplicate or has been superseded.')):null);
+    }),
+    saved.length?h('p',{class:'ng-caption'},tr('Check the saved grant in this profile. Workie does not infer which grant is current.')):null));
 }
 function planningControls() {
   const model=renderedModel;
@@ -684,7 +767,7 @@ const historyPreference='workie_financial_history_seen';
 function establishedWorkspace() {
   return Boolean(ledger.revision||ledger.legacy||ledger.records.length||ledger.batches.length||ledger.settings.setup_complete||
     Object.entries(ledger.settings).some(([key,value])=>value!=null&&
-      !['currency','scenario','theme','language','auto_fx','expense_currency'].includes(key)&&
+      !['currency','scenario','theme','language','auto_fx','manual_eur_rate','expense_currency'].includes(key)&&
       (typeof value!=='object'||Object.keys(value).length>0)));
 }
 function completeBackupAction() {
@@ -1002,7 +1085,8 @@ function recordRow(row,folio=false) {
   }
   if(folio===true) {
     const during=Boolean(ledger.settings.departure_date&&today()>=ledger.settings.departure_date);
-    const state=remaining?.complete?'Complete':!remaining?.linkedPayments?'Unpaid':remaining.cents===0?'Paid':'Partly paid';
+    const state=remaining?.complete?'Complete':remaining?.unlinkedPaid||remaining?.paidNative===null?'Payment needs review':
+      !remaining?.linkedPayments?'Unpaid':remaining.cents===0?'Paid':'Partly paid';
     const metadata=[data.due_date?tr('Due')+' '+compactDate(data.due_date):null,data.subcategory,
       data.frequency&&data.frequency!=='ONCE'?tr(optionLabels[data.frequency]??data.frequency):null].filter(Boolean);
     const actions=h('div',{class:'ng-budget-row-actions'},
@@ -1018,7 +1102,7 @@ function recordRow(row,folio=false) {
           metadata.length?h('small',{},metadata.join(' · ')):null,flags.length?h('small',{class:'folio-record-flag'},flags.map(tr).join(' · ')):null),
         h('span',{class:'folio-budget-money'},
           h('strong',{},during&&remaining?moneyText(remaining.paid):value),
-          remaining?h('small',{},tr(state)+' · '+tr('Left')+' ',moneyText(remaining.cents)):null)),
+          remaining?h('small',{},tr(state)+' · '+tr('Left')+' ',remaining.cents===null?tr('Unavailable'):moneyText(remaining.cents)):null)),
       actions,remaining?budgetPaymentHistory(row,remaining):null);
   }
   return h('article',{class:'ng-record','data-record-id':row.id,'data-urgency':String(due.rank)},
@@ -1438,12 +1522,19 @@ function budgetWorkspace(trip=null) {
     [['Actual expenditure',actual],['Original budget',original],['Still to pay',position.total],
       ['Savings / overspend',difference(original,sumKnown([actual,position.total]))]]:
     [['Planned expenditure',sumKnown(position.obligations.map(item=>item.planned))],['Paid so far',actual],['Still to pay',position.total]];
+  const dependencies=[
+    [labels[during||trip?1:0][0],position.obligations,during||trip?'original':'planned'],
+    ['Still to pay',position.obligations,'cents'],
+  ];
+  const paymentReview=actual===null;
   const add=category=>edit(entity,null,{...defaults,category});
   const summary=h('section',{class:'ng-final-budget-summary','data-budget-scope':key??'vienna','data-budget-phase':during?'actual':'planned'},
     trip?h('h2',{},trip.data.description):null,
-    h('dl',{class:'ng-plan-summary'},...labels.map(([label,value])=>h('div',{},h('dt',{},tr(label)),h('dd',{},moneyText(value))))),
+    h('dl',{class:'ng-plan-summary'},...labels.map(([label,value])=>h('div',{},h('dt',{},tr(label)),h('dd',{},value===null?tr('Unavailable'):moneyText(value))))),
+    budgetDependencies(dependencies,{historical:paymentReview}),
     h('div',{class:'ng-actions ng-budget-command'},actionButton('Add budget item','budget',()=>add(trip?undefined:filterCategory||undefined),{kind:'primary',display:'Add item'}),
-      actionButton('Import with AI','import',()=>importBudgetFromAI(key,trip?.data.description??tr('Vienna Budget')))));
+      actionButton('Import with AI','import',()=>importBudgetFromAI(key,trip?.data.description??tr('Vienna Budget'))),
+      actionButton('Print budget','Printer',()=>window.print())));
   const chapters=h('div',{class:'ng-budget-chapters',id:'ng-records'});
   if(!budgetDisclosures.has(key))budgetDisclosures.set(key,new Set([filterCategory||CATEGORIES[0].id]));
   const expanded=budgetDisclosures.get(key);
@@ -1451,10 +1542,11 @@ function budgetWorkspace(trip=null) {
   for(const category of CATEGORIES) {
     const rows=records.filter(row=>row.data.category===category.id);
     const obligations=position.obligations.filter(item=>item.category===category.id);
+    const subtotal=sumKnown(obligations.map(item=>item.cents));
     const section=h('details',{class:'ng-final-category','data-budget-category':category.id,open:expanded.has(category.id),
       ontoggle:event=>{if(event.target.open)expanded.add(category.id);else expanded.delete(category.id);}},
       h('summary',{},h('span',{},h('b',{},category.label),tr(category.name)),
-        h('strong',{},moneyText(sumKnown(obligations.map(item=>item.cents)))),icon('ChevronDown')),
+        h('strong',{},subtotal===null?tr('Unavailable'):moneyText(subtotal)),icon('ChevronDown')),
       ...rows.map(row=>recordRow(row,true)),
       rows.length?null:h('p',{class:'ng-caption'},tr('No items in this category.')));
     chapters.append(section);
@@ -1477,7 +1569,32 @@ function budgetWorkspace(trip=null) {
           display:row.data.description+' · '+amount(cents(row.data.amount),row.data.currency)+
             (row.data.due_date?' · '+compactDate(row.data.due_date):''),
         })))))), 'ListFilter',String(duplicateGroups.length)));
-  content.append(chapters);
+  content.append(chapters,budgetPrint(trip,records,position,labels,dependencies,paymentReview));
+}
+function budgetPrint(trip,records,position,labels,dependencies,paymentReview) {
+  const obligations=new Map(position.obligations.map(item=>[item.id,item]));
+  const categories=[...CATEGORIES,{id:null,name:'Items needing a category'}];
+  const knownCategories=new Set(CATEGORIES.map(category=>category.id));
+  return h('section',{class:'ng-budget-print'},
+    h('header',{},h('p',{},'Workie · '+today()),h('h1',{},trip?.data.description??tr('Vienna Budget'))),
+    h('dl',{class:'ng-print-totals'},...labels.map(([label,value])=>h('div',{},h('dt',{},tr(label)),
+      h('dd',{},value===null?tr('Unavailable'):amount(value,'HKD'))))),
+    budgetDependencies(dependencies,{print:true,historical:paymentReview}),
+    ...categories.map(category=>{
+      const rows=records.filter(row=>category.id===null?!knownCategories.has(row.data.category):row.data.category===category.id);
+      if(!rows.length)return null;
+      return h('section',{},h('h2',{},tr(category.name)),
+        ...rows.map(row=>{
+          const item=obligations.get(row.id), data=row.data, base=cents(data.amount);
+          const payment=item.complete?'Complete':item.unlinkedPaid||item.paidNative===null?'Payment needs review':
+            item.paidNative<=0?'Unpaid':item.remaining===0?'Paid':'Partly paid';
+          return h('article',{},h('div',{},h('strong',{},data.description),
+            h('p',{},[data.subcategory,data.kind==='SECURITY_DEPOSIT'?tr('Refundable security deposit'):null,data.due_date].filter(Boolean).join(' · '))),
+            h('div',{},h('strong',{},base===null?tr('Unavailable'):amount(base,data.currency)),
+              h('p',{},tr(payment)),item.required!==null&&item.required!==base?
+                h('p',{},tr('Planned expenditure')+' · '+amount(item.required,data.currency)):null));
+        }));
+    }));
 }
 function classifyBudget(rows,vienna) {
   const revision=ledger.revision;
@@ -1538,25 +1655,31 @@ function tripWorkspace() {
     return;
   }
   const capacity=travelCapacity(renderedModel,trips);
+  const vienna=planPosition(renderedModel);
   const limit=Math.max(1,Math.abs(capacity.cashAfter??0),Math.abs(capacity.expectedAfter??0));
   const capacityScale=(label,key)=>{
     const value=capacity[key];
     return h('div',{class:'ng-capacity-result'},
-      h('div',{},h('dt',{},tr(label)),h('dd',{'data-travel-metric':key,'data-shortfall':String(value!==null&&value<0)},moneyText(value))),
+      h('div',{},h('dt',{},tr(label)),h('dd',{'data-travel-metric':key,'data-shortfall':String(value!==null&&value<0)},
+        value===null?tr('Unavailable'):moneyText(value))),
       h('div',{class:'ng-capacity-track','aria-hidden':'true','data-known':String(value!==null)},
         value===null?null:h('span',{'data-negative':String(value<0),style:'--travel-span:'+Math.abs(value)/limit*50+'%'})));
   };
   const capacityPanel=h('section',{class:'ng-travel-capacity'},h('h2',{},tr('Travel capacity')),
     h('dl',{class:'ng-plan-summary'},...[
-      ['Cash available now','available'],[renderedModel.missing?'Approved outstanding with known rates':'Approved outstanding','approved'],
+      ['Cash available now','available'],[renderedModel.missing&&renderedModel.approved>0?'Approved outstanding with known rates':'Approved outstanding','approved'],
       ['Expected funding','funding'],['Vienna still to pay','vienna'],
       ['Cash after Vienna','cash'],['With approved grants','expected'],['Selected trips outstanding','tripsOutstanding'],
-    ].map(([label,key])=>h('div',{},h('dt',{},tr(label)),
-      h('dd',{'data-travel-metric':key,'data-shortfall':String(capacity[key]!==null&&capacity[key]<0)},moneyText(capacity[key]))))),
+    ].map(([label,key])=>{
+      const value=key==='approved'?approvedDisplay(renderedModel):capacity[key];
+      return h('div',{},h('dt',{},tr(label)),h('dd',{'data-travel-metric':key,'data-shortfall':String(value!==null&&value<0)},
+        value===null?tr('Unavailable'):moneyText(value)));
+    })),
     h('dl',{class:'ng-capacity-scale','aria-label':tr('Remaining capacity after selected trips')},
       capacityScale('Cash after trips','cashAfter'),capacityScale('With grants after trips','expectedAfter')),
-    renderedModel.missing?h('p',{class:'ng-caption'},tr('Add a dated exchange rate to include the remaining approved funding.'),' ',
-      button(tr('Exchange rates'),()=>showSection('Settings','exchange-rates'))):null,
+    budgetDependencies([['Vienna still to pay',vienna.obligations,'cents'],['Selected trips outstanding',capacity.tripObligations,'cents']]),
+    renderedModel.missing?h('p',{class:'ng-caption'},tr('Approved funding needs review.'),' ',
+      button(tr('Funding details'),grantDiagnostics)):null,
     renderedModel.cashIssue?h('p',{class:'ng-caption'},tr(renderedModel.cashIssue),' ',
       button(tr(renderedModel.reference?'Review funding':'Enter a Sunday balance'),()=>renderedModel.reference?navigate('Home'):onboarding('history'))):null,
     h('div',{class:'ng-actions'},actionButton('Add trip','trip',()=>edit('trip',null,{status:'PLANNED'}),{kind:'primary'})));
@@ -1567,8 +1690,8 @@ function tripWorkspace() {
       tr(({PLANNED:'Selected',CONFIRMED:'Reserved',CANCELLED:'Cancelled'})[row.data.status]??'Selected')].filter(Boolean).join(' · ');
     list.append(h('button',{type:'button',class:'ng-trip-row','data-trip-id':row.id,onclick:()=>openTrip(row.id)},
       h('span',{},h('strong',{},row.data.description),h('small',{},meta)),
-      h('span',{'data-trip-amounts':''},h('strong',{},moneyText(plan.total)),h('small',{},tr('Outstanding')),
-        h('small',{},tr('Spent')+' ',moneyText(spent))),
+      h('span',{'data-trip-amounts':''},h('strong',{},plan.total===null?tr('Unavailable'):moneyText(plan.total)),h('small',{},tr('Outstanding')),
+        h('small',{},tr('Spent')+' ',spent===null?tr('Unavailable'):moneyText(spent))),
       icon('ChevronRight')??h('b',{'aria-hidden':'true'},'›')));
   }
   if(!trips.length)list.append(h('p',{class:'ng-empty'},tr('Add a trip to give it a separate budget.')));
@@ -2692,7 +2815,7 @@ function settings() {
   const panels=h('div',{},
     h('section',{class:'ng-surface'},h('h2',{},tr('Appearance')),themes,
       h('label',{class:'ng-field'},h('span',{},tr('Language')),language),
-      h('h3',{},tr('Display currency')),
+      h('div',{'data-display-currency':''},h('h3',{},tr('Display currency')),
       h('div',{class:'ng-actions ng-segmented'},...['HKD','EUR'].map(currency=>{
         const choice=button(currency,()=>run(async()=>{
         if(!displayQuote(ledger,currency))throw Error('Add a dated '+currency+' exchange rate before switching.');
@@ -2705,9 +2828,7 @@ function settings() {
         }
         return choice;
       })),
-      displayQuote(ledger,'EUR')?null:h('p',{id:'ng-rate-choice-hint',class:'ng-caption'},tr('Add a dated EUR rate to enable euro display.')),
-      h('h3',{},tr('Offline storage')),h('p',{class:'ng-caption'},navigator.onLine?'Local records ready.':'Offline · local records ready.'),
-      h('p',{class:'ng-caption'},ledger.records.length+' records · revision '+ledger.revision),
+      displayQuote(ledger,'EUR')?null:h('p',{id:'ng-rate-choice-hint',class:'ng-caption'},tr('Add a dated EUR rate to enable euro display.'))),
       h('label',{class:'ng-field'},h('span',{},tr('Default expense currency')),
         h('select',{onchange:event=>run(async()=>{
           const next=clone(ledger);next.settings.expense_currency=event.target.value;
@@ -2731,7 +2852,6 @@ function settings() {
         actionButton('Export records as CSV','Table2',()=>download(exportRecordsCsv(ledger.records),'workie-records-'+today()+'.csv','text/csv;charset=utf-8'),{display:'Export CSV'})),
       h('label',{class:'ng-field'},h('span',{},tr('Import verified backup')),file),
       importFeedback,
-      actionButton('Restore Gen 1 data','import',chooseLegacyBackup),
       ledger.legacy?button(tr('Export original legacy source'),()=>download(ledger.legacy.original?.raw??ledger.legacy.raw,'workie-original-'+today()+'.json')):null,
       h('h3',{},tr('Restore points')),h('p',{class:'ng-caption'},'The latest 20 changes are available for restore. The initial legacy source stays in complete exports.'),recoveries),
     h('section',{class:'ng-surface'},h('h2',{},tr('Exchange rates')),automaticRateSettings(),
@@ -2743,14 +2863,11 @@ function settings() {
           'Recorded quote · '+rate.rate+' · '+rate.date+' · '+rate.source+' · '+age+' days old':'Rate needed';
         return h('p',{},currency+' · '+provenance);
       }),
-      button('Add manual rate',()=>edit('fx_quote',null,{currency:'EUR',date:today()}))),
+      actionButton('Add dated payment rate','Pencil',()=>edit('fx_quote',null,{currency:'EUR',date:today()}))),
     syncSettings(),
     h('section',{class:'ng-surface'},h('h2',{},tr('Migration records')),
       h('p',{class:'ng-caption'},ledger.legacy?'Original source checksum '+ledger.legacy.sourceHash:'Started with an empty local ledger.'),
       ...(ledger.legacy?.warnings??[]).map(message=>h('p',{class:'ng-warning'},message)),
-      legacyChanges().changed?button(tr('Review legacy changes'),()=>run(async()=>{
-        renderMigrationPreview(await migrationPreview(localStorage));
-      })):null,
       h('details',{class:'ng-legacy-directory'},h('summary',{},tr('Find preserved workflows')),legacyEntries()),
       button(tr('Open legacy workspace'),()=>openLegacy())));
   const audit=h('div',{class:'ng-audit'},
@@ -2759,6 +2876,7 @@ function settings() {
       h('pre',{},JSON.stringify({records:entry.changes??[],...(entry.settings_before!==undefined?
         {settings_before:entry.settings_before,settings_after:entry.settings_after}:{})},null,2)))));
   const [appearance,backup,rates,sync,migrationRecords]=panels.children;
+  rates.append(appearance.querySelector('[data-display-currency]'));
   const dates=h('div',{class:'ng-setting-fields'});
   const origin=appearance.querySelector('[data-settings-dates]');
   while(origin.nextSibling)dates.append(origin.nextSibling);
@@ -2771,32 +2889,89 @@ function settings() {
   const settingsGroup=(label,...rows)=>h('section',{class:'ng-settings-group','aria-label':tr(label)},
     h('h2',{},tr(label)),h('div',{class:'ng-settings-list'},...rows));
   content.append(h('div',{class:'ng-settings-hub'},
-    settingsGroup('Preferences',
-      actionButton('Welcome and setup','Sparkles',()=>onboarding()),
-      actionButton('Review weekly history','history',()=>onboarding('history')),
-      group('appearance','Appearance',appearance,'appearance',tr(theme==='dark'?'Dark':'Light')+' · '+(language.value==='en'?'English':'繁體中文')),
+    settingsGroup('General',
+      group('appearance','Appearance and language',appearance,'appearance',tr(theme==='dark'?'Dark':'Light')+' · '+(language.value==='en'?'English':'繁體中文')),
       group('exchange-dates','Exchange dates',dates,'dates',ledger.settings.departure_date?compactDate(ledger.settings.departure_date):tr('Set dates')),
+      group('exchange-rates','Exchange rates',rates,'rates',eurRateSummary(displayQuote(ledger,'EUR')))),
+    settingsGroup('Data',
+      group('backups','Backup and restore',backup,'backup'),
+      sectionDisclosure('welcome-settings','Welcome and weekly history',host=>host.append(
+        establishedWorkspace()?workspaceStatus():null,
+        actionButton('Welcome and setup','Sparkles',()=>onboarding()),
+        actionButton('Review weekly history','history',()=>onboarding('history'))),'history'),
+      sectionDisclosure('gen1','Gen 1 import and review',host=>host.append(
+        actionButton('Restore Gen 1 data','import',chooseLegacyBackup),
+        ledger.legacy?actionButton('Review imported Gen 1 data','migration',reviewImportedExpenses):null,
+        legacyChanges().changed?actionButton('Review legacy changes','migration',()=>run(async()=>{
+          renderMigrationPreview(await migrationPreview(localStorage));
+        })):null),'migration'),
+      group('sync','Sync and handoff',sync,'sync','LOCAL_ONLY')),
+    settingsGroup('Advanced',
       sectionDisclosure('cash-planning','Planning cash source',host=>host.append(planningControls()),'funds'),
-      group('exchange-rates','Exchange rates',rates,'rates',ledger.settings.currency??'HKD')),
-    settingsGroup('Data and recovery',
-      establishedWorkspace()?workspaceStatus():null,
-      group('backups','Backups & handoff',backup,'backup'),group('sync','Sync and handoff',sync,'sync',tr('Local only')),
-      sectionDisclosure('app-update','Build version',appUpdatePanel,'sync',document.querySelector('meta[name="workie-build"]')?.content),
       sectionDisclosure('transfer','Advanced transfer',transfer,'transfer'),
-      ledger.legacy?actionButton('Review imported Gen 1 data','migration',reviewImportedExpenses):null,
-      group('migration','Migration records',migrationRecords,'migration'),group('audit','Change history',audit,'history')),
-    settingsGroup('Exchange administration',
-      sectionDisclosure('preparation','Exchange preparation',host=>listView('Administration',host),'calendar'))));
+      sectionDisclosure('diagnostics','Diagnostics and migration audit',host=>host.append(
+        h('p',{class:'ng-caption'},ledger.records.length+' '+tr('local records')+' · '+tr('Local revision')+' '+ledger.revision),
+        actionButton('Funding details','CircleHelp',grantDiagnostics),
+        group('migration','Migration records',migrationRecords,'migration'),group('audit','Change history',audit,'history')),'CircleHelp'),
+      sectionDisclosure('preparation','Exchange preparation',host=>listView('Administration',host),'calendar'),
+      sectionDisclosure('app-update','Build version',appUpdatePanel,'sync',document.querySelector('meta[name="workie-build"]')?.content))));
+}
+function eurRateSummary(rate) {
+  return rate?'EUR/HKD '+rate.rate+' · '+rate.date+(rateIsStale(rate)?' · '+tr('Stale'):''):tr('EUR/HKD rate needed');
+}
+function useAutomaticRate() {
+  return run(async()=>{
+    const config=ledger.settings.auto_fx??{};
+    if(!config.enabled) {
+      const next=clone(ledger);
+      next.settings.auto_fx={...config,enabled:true};
+      await save(next,'Enable the automatic EUR/HKD reference');
+    }
+    await refreshReferenceRate();
+  });
+}
+function enterManualRate() {
+  transferDialog(tr('Manual EUR/HKD rate'),(modal,close)=>{
+    const field=h('input',{name:'rate',type:'number',inputmode:'decimal',step:'any',max:'1000000000',required:true,
+      value:ledger.settings.manual_eur_rate?.rate??''});
+    const submit=h('button',{type:'submit',class:'ng-button ng-primary'},tr('Save planning rate'));
+    const feedback=h('p',{role:'alert',class:'ng-entry-error'});
+    modal.append(h('form',{onsubmit:async event=>{
+      event.preventDefault();
+      if(!Number.isFinite(field.valueAsNumber)||field.valueAsNumber<=0) {
+        feedback.textContent=tr('Enter a positive EUR/HKD rate.');field.focus();return;
+      }
+      submit.disabled=true;
+      try {
+        const next=clone(ledger);
+        next.settings.manual_eur_rate={rate:field.valueAsNumber,date:today()};
+        next.settings.auto_fx={...next.settings.auto_fx,enabled:false};
+        fxStatus='';
+        await save(next,'Set a manual EUR/HKD planning rate');
+        await close(document.querySelector('#ng-page-title'));
+      } catch(error) {
+        feedback.textContent=tr(error.message);submit.disabled=false;
+      }
+    }},h('label',{class:'ng-field'},h('span',{},tr('HKD per 1 EUR')),field),
+      h('p',{class:'ng-caption'},tr('Applies to planning estimates. Recorded payments keep their dated rates.')),
+      feedback,submit));
+  },{quick:true});
+}
+function reportRate(message) {
+  fxStatus=message;
+  for(const node of document.querySelectorAll('[data-fx-status]'))node.textContent=fxStatus;
 }
 function automaticRateSettings() {
   const config=ledger.settings.auto_fx??{enabled:false};
   const ref=config.reference;
-  const detail=h('output',{id:'ng-rate-status',class:'ng-caption',role:'status'},
+  const current=displayQuote(ledger,'EUR');
+  const detail=h('output',{'data-fx-status':'',class:'ng-caption',role:'status'},
     fxStatus||(!navigator.onLine?tr('Offline · using the last valid rate where available.'):
-      ref&&rateIsStale(ref)?tr('Last reference rate is stale.'):config.enabled?tr('Automatic refresh enabled.'):tr('Manual rates selected.')));
+      config.enabled?tr('Automatic refresh enabled.'):tr('Manual rates selected.')));
   const toggle=h('input',{type:'checkbox',onchange:event=>run(async()=>{
     const next=clone(ledger);
     next.settings.auto_fx={...config,enabled:event.target.checked};
+    fxStatus='';
     await save(next,'Change exchange rate refresh preference');
     if(event.target.checked)void refreshReferenceRate();
   })});
@@ -2805,20 +2980,19 @@ function automaticRateSettings() {
   refresh.disabled=!config.enabled||!navigator.onLine;
   return h('div',{class:'ng-rate-settings'},
     h('label',{class:'ng-check'},toggle,h('span',{},tr('Refresh EUR/HKD automatically'))),
-    ref?h('p',{'data-rate':'EUR/HKD'},'EUR 1 · HKD '+ref.rate+' · '+ref.date+' · '+ref.source+
-      ' · '+tr('Updated')+' '+ref.updated_at.slice(0,16).replace('T',' ')+' UTC'):null,
-    detail,refresh,
-    h('p',{class:'ng-caption'},tr('Automatic rates apply to estimates and display. Disable automatic refresh to use the dated manual rate. Historical cash conversions use their recorded dates.')));
+    h('p',{'data-rate':'EUR/HKD'},eurRateSummary(current),current?' · '+tr(current.source):null),
+    ref&&ref!==current?h('p',{class:'ng-caption'},tr('Cached reference')+' · '+eurRateSummary(ref)):null,
+    detail,h('div',{class:'ng-actions'},refresh,actionButton('Enter manual EUR/HKD rate','Pencil',enterManualRate)),
+    h('p',{class:'ng-caption'},tr('Planning rates apply to estimates and display. Recorded payments keep their dated rates.')));
 }
 async function refreshReferenceRate() {
-  if(!navigator.onLine||!ledger?.settings.auto_fx?.enabled||fxLoading)return;
+  if(!ledger?.settings.auto_fx?.enabled||fxLoading)return;
+  if(!navigator.onLine) {
+    reportRate(tr('Offline · using the last valid rate where available.')+' '+eurRateSummary(displayQuote(ledger,'EUR')));
+    return;
+  }
   fxLoading=true;
-  const report=message=>{
-    fxStatus=tr(message);
-    const node=document.querySelector('#ng-rate-status');
-    if(node)node.textContent=fxStatus;
-  };
-  report('Checking EUR/HKD…');
+  reportRate(tr('Checking EUR/HKD…'));
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),6500);
   try {
@@ -2828,10 +3002,14 @@ async function refreshReferenceRate() {
     if(previous&&previous.date>reference.date)throw Error('The provider returned an older rate. Kept the last valid rate.');
     const next=clone(ledger);
     next.settings.auto_fx.reference=reference;
-    report(rateIsStale(reference)?'Reference rate updated but is stale.':'Reference rate updated.');
+    reportRate(eurRateSummary(reference));
     await save(next,'Refresh EUR/HKD reference rate');
   } catch {
-    report('Exchange-rate refresh failed. Kept the last valid rate.');
+    if(ledger.settings.auto_fx?.enabled) {
+      const valid=displayQuote(ledger,'EUR');
+      reportRate(tr(valid?'Exchange-rate refresh failed. Kept the last valid rate.':'Exchange-rate refresh failed. Enter a manual rate or try again online.')+
+        (valid?' '+eurRateSummary(valid):''));
+    }
   } finally {
     clearTimeout(timer);fxLoading=false;
   }
