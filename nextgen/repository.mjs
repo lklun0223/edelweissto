@@ -1,4 +1,4 @@
-import {clone,emptyLedger,migrateLegacy,validateRelations} from './ledger.mjs';
+import {clone,emptyLedger,isSnapshotSettlement,migrateLegacy,validateRelations} from './ledger.mjs';
 import {validateSettlementHistory,validateSundaySavings,validateWeeklyFormulaExpenses,validateWeeklyFormulaIncomes} from './weekly-settlement.mjs';
 import {inspectLedger,stageLegacy,verifySnapshot} from './legacy-vault.mjs';
 
@@ -111,7 +111,92 @@ export async function migrationPreview(storage,backup=null) {
     next.legacy.original={sourceHash:localHash,raw:localRaw};
   return {next,counts,sourceHash,localHash,fromBackup:backup!==null};
 }
-export async function activateMigration(preview,storage) {
+export const legacyImportGroups=Object.freeze([
+  {id:'students',label:'Students',selected:true},
+  {id:'work',label:'Tutoring lessons and income',selected:true},
+  {id:'expenses',label:'Individual Special Expenses',selected:true},
+  {id:'summaries',label:'Monthly spending summaries',selected:false},
+  {id:'vienna',label:'Old Vienna Budget',selected:false},
+  {id:'other',label:'Wallet snapshots and other legacy data',selected:false},
+]);
+
+function migrationGroup(row,scenario) {
+  if(row.entity==='student')return 'students';
+  if(['lesson','income_entry','lesson_series'].includes(row.entity))return 'work';
+  if(isSnapshotSettlement(row))return 'summaries';
+  if(row.entity==='expense'&&row.origin.path.startsWith('expenses/')&&row.data.type!=='GENERAL')return 'expenses';
+  if(row.entity==='budget_item'&&!row.data.trip_id&&row.data.scenario===scenario)return 'vienna';
+  return 'other';
+}
+
+// Source IDs are stable across previews. The current ledger wins every
+// collision, including edited or deliberately removed records.
+export function selectiveMigration(preview,current,groups,excluded=new Set()) {
+  const source=preview.next, hash=source.legacy.sourceHash;
+  const next=current?clone(current):emptyLedger();
+  const key=source.legacy.migrationVersion+':'+hash;
+  if(!next.legacy)next.legacy=clone(source.legacy);
+  else if(next.legacy.sourceHash!==hash||next.legacy.migrationVersion!==source.legacy.migrationVersion) {
+    (next.legacy.derivationSources??={})[key]={version:source.legacy.migrationVersion,hash,raw:source.legacy.raw};
+  }
+  const sourceKey=next.legacy.sourceHash===hash&&next.legacy.migrationVersion===source.legacy.migrationVersion?null:key;
+  const seen=new Set(next.legacy.selectively_seen?.[key]??[]);
+  const deleted=new Set(next.audit.flatMap(entry=>(entry.changes??[]).filter(change=>change.op==='DELETE').map(change=>change.record_id)));
+  const existing=new Set(next.records.map(row=>row.id));
+  const nameAmountKey=row=>JSON.stringify([row.entity,row.data.description?.normalize('NFKC').trim().toLowerCase(),
+    row.data.date??row.data.due_date??null,row.data.amount,row.data.currency]);
+  const relevant=row=>['expense','budget_item','cash_event'].includes(row.entity);
+  const comparable=new Set(next.records.filter(relevant).map(nameAmountKey));
+  const candidates=source.records.map(row=>({row,group:migrationGroup(row,source.settings.scenario)}));
+  const eligibleIds=new Set([...existing,...candidates.filter(({row,group})=>groups.has(group)&&!excluded.has(row.id)&&
+    !deleted.has(row.id)&&!seen.has(row.id)&&['students','work'].includes(group)).map(({row})=>row.id)]);
+  for(const {row} of candidates)if(row.entity==='lesson_series'&&!existing.has(row.id)&&!eligibleIds.has(row.data.student_id))eligibleIds.delete(row.id);
+  const counts=Object.fromEntries(legacyImportGroups.map(({id})=>[id,candidates.filter(entry=>entry.group===id).length]));
+  const report={add:0,existing:0,archive:0,duplicates:[],suggested:[],orphaned:[],legacyItems:[],counts};
+  for(const {row,group} of candidates){
+    if(!groups.has(group)||excluded.has(row.id)){report.archive++;continue;}
+    if(existing.has(row.id)||seen.has(row.id)||deleted.has(row.id)){report.existing++;continue;}
+    if(row.entity==='lesson_series'&&!eligibleIds.has(row.id)){report.archive++;continue;}
+    // Other historical budgets and trips remain in the source; only the
+    // selected old Vienna plan can be brought into the final workspace.
+    if(group==='other'&&['trip','budget_item','trip_budget_item','balance','cash_event','expense','loan','grant'].includes(row.entity)){
+      report.archive++;continue;
+    }
+    if(relevant(row)&&comparable.has(nameAmountKey(row))){
+      report.duplicates.push(row);
+      continue;
+    }
+    const incoming=clone(row);
+    if(sourceKey)incoming.origin.sourceKey=sourceKey;
+    if(group==='vienna'&&incoming.data.scenario!==next.settings.scenario){
+      incoming.data.scenario=next.settings.scenario;
+      incoming.origin.scenario=next.settings.scenario;
+    }
+    if(group==='expenses'&&!incoming.data.type){
+      (next.settings.legacy_expense_classes??={})[incoming.id]='SPECIAL';
+      report.suggested.push(incoming);
+    }
+    for(const field of ['student_id','source_id','series_id']) {
+      const value=incoming.data[field];
+      if(group==='work'&&value&&!eligibleIds.has(value)) {
+        (incoming.origin.detached_links??={})[field]=value;
+        incoming.data[field]=field==='student_id'?'':null;
+      }
+    }
+    if(group==='work'&&(
+      incoming.entity==='income_entry'&&!incoming.data.source_id||
+      incoming.entity==='lesson'&&!incoming.data.student_id))report.orphaned.push(incoming);
+    next.records.push(incoming);
+    report.legacyItems.push(incoming);
+    if(relevant(row))comparable.add(nameAmountKey(row));
+    seen.add(row.id);
+    report.add++;
+  }
+  (next.legacy.selectively_seen??={})[key]=[...seen];
+  return {next,report};
+}
+
+export async function activateMigration(preview,storage,{selective=false}={}) {
   if(await readLedger()) throw Error('This browser already has a NextGen ledger.');
   const current=storage.getItem('tutoring_data');
   if((current===null?null:await digest(current))!==(preview.fromBackup?preview.localHash:preview.sourceHash))
@@ -119,7 +204,7 @@ export async function activateMigration(preview,storage) {
   if(current!==null)await stageLegacy(storage);
   if(storage.getItem('tutoring_data')!==current)throw Error('Legacy records changed. Preview migration again.');
   // The raw source is committed in the same transaction as all migrated records.
-  return commitLedger(0,preview.next,'Activate legacy migration');
+  return commitLedger(0,preview.next,selective?'Activate selective legacy migration':'Activate legacy migration');
 }
 export async function restorePoints() {
   const db=await open();
@@ -188,6 +273,14 @@ export async function inspectBackup(source) {
       const source=sourceRows?.get(row.origin.sourceRecordId??row.id);
       let expected=source?.data;
       if(source?.entity==='budget_item'&&row.origin.scenario)expected={...expected,scenario:row.origin.scenario};
+      if(row.origin.detached_links){
+        expected={...expected};
+        for(const [field,id] of Object.entries(row.origin.detached_links)){
+          if(!['student_id','source_id','series_id'].includes(field)||source?.data[field]!==id)
+            throw Error('A migrated link does not match its preserved source.');
+          expected[field]=field==='student_id'?'':null;
+        }
+      }
       if(!source || source.entity!==row.entity || JSON.stringify(expected)!==JSON.stringify(row.data)) {
         throw Error('A migrated legacy record does not match its preserved source.');
       }

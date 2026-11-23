@@ -1,4 +1,4 @@
-import {convert,includedExpenseDetails,isSnapshotSettlement,recordedMovements,today} from './ledger.mjs';
+import {convert,expenseClassification,includedExpenseDetails,isSnapshotSettlement,recordedMovements,today} from './ledger.mjs';
 import {calendarDay,wallTime,weekOf} from './lesson-time.mjs';
 import {difference,sumKnown} from './product-finance.mjs';
 
@@ -107,7 +107,7 @@ export function weeklyFormula(ledger,end,asOf=today(),draft={}) {
   const ids=new Map(ledger.records.map(record=>[record.id,record]));
   const rows={income:[],expenses:[]};
   const deposit=record=>record.data.kind==='SECURITY_PAYMENT'||ids.get(record.data.budget_item_id)?.data.kind==='SECURITY_DEPOSIT';
-  const specialOutflow=record=>deposit(record)||record.entity==='expense'&&record.data.type==='SPECIAL';
+  const specialOutflow=record=>deposit(record)||record.entity==='expense'&&expenseClassification(ledger,record)==='SPECIAL';
   for(const movement of recordedMovements(ledger,cutoff,{includeLegacyWeeklyEstimate:false})) {
     if(movement.date<week||movement.kind==='savings')continue;
     const record=ids.get(movement.id);

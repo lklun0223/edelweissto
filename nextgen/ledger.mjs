@@ -187,6 +187,12 @@ export function isSnapshotSettlement(row) {
   return row.entity==='expense'&&row.origin?.raw&&
     (/-tracked$/.test(String(row.origin.raw.id))||/[（(]來自追蹤[）)]/.test(String(row.origin.raw.purpose)));
 }
+export function expenseClassification(ledger,row) {
+  const saved=row.entity==='expense'&&row.origin?ledger.settings.legacy_expense_classes?.[row.id]:null;
+  if(saved==='ARCHIVE'&&(row.data.budget_item_id||row.data.trip_id||row.data.included_in_general_id||row.representedBy))
+    return row.data.type??null;
+  return saved??row.data.type??null;
+}
 function cashDirection(row) {
   if(isSnapshotSettlement(row))return 0;
   if(['expense','bill_payment'].includes(row.entity)) return -1;
@@ -225,7 +231,7 @@ export function reconcileBalance(ledger,id) {
 function actuals(ledger,asOf,includeLegacyWeeklyEstimate=true) {
   const week=weekOf(asOf);
   const details=includedExpenseDetails(ledger,asOf);
-  return ledger.records.filter(row=>cashDirection(row)!==0 && (row.data.date<=asOf||
+  return ledger.records.filter(row=>cashDirection(row)!==0 && expenseClassification(ledger,row)!=='ARCHIVE' && (row.data.date<=asOf||
     includeLegacyWeeklyEstimate&&!row.data.entry_week&&row.entity==='cash_event'&&row.data.kind==='INCOME'&&row.data.receipt_week===week&&row.data.date===calendarDay(week,6)) &&
     !row.data.voided&&!details.has(row.id) && (!row.representedBy || !ledger.records.some(record=>record.id===row.representedBy && !record.data.voided)));
 }
@@ -719,6 +725,9 @@ export async function prepareBatch(ledger,source,{weeklyTransfer=false,budgetPla
   const newIds=diff.map(()=>crypto.randomUUID());
   diff.forEach((change,index)=>{
     const original=next.records.findIndex(row=>row.id===change.record_id);
+    if(change.entity==='expense'&&next.settings.legacy_expense_classes&&
+      (change.op==='DELETE'||Object.hasOwn(batch.operations[index].changes??{},'type')))
+      delete next.settings.legacy_expense_classes[change.record_id];
     if(change.op==='DELETE') next.records.splice(original,1);
     else if(change.op==='ADD') next.records.push({id:newIds[index],revision:1,entity:change.entity,data:change.after});
     else {

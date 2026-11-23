@@ -10,9 +10,13 @@ export function backupChanges(current,incoming) {
   for(const id of new Set([...existing.keys(),...added.keys()])) {
     const before=existing.get(id),after=added.get(id);
     const fileChanged=current.attachments?.[id]!==incoming.attachments?.[id];
+    const beforeClass=current.settings.legacy_expense_classes?.[id]??null;
+    const afterClass=incoming.settings.legacy_expense_classes?.[id]??null;
+    const classificationChanged=beforeClass!==afterClass;
     if(before?.entity===after?.entity&&JSON.stringify(before?.data)===JSON.stringify(after?.data)&&
-      financialContext(before)===financialContext(after)&&!fileChanged)continue;
-    changes.push({id,before,after,fileChanged,op:!before?'ADD':!after?'DELETE':'CONFLICT'});
+      financialContext(before)===financialContext(after)&&!fileChanged&&!classificationChanged)continue;
+    changes.push({id,before,after,fileChanged,classificationChanged,beforeClass,afterClass,
+      op:!before?'ADD':!after?'DELETE':'CONFLICT'});
   }
   return changes;
 }
@@ -88,6 +92,9 @@ export function mergeBackup(current,incoming,useBackup) {
         ...clone(incomingSource.derivationSources??{}),
         [sourceKey]:{version,hash,raw:incomingSource.raw},
       };
+      const seen=next.legacy.selectively_seen??={};
+      for(const [source,ids] of Object.entries(incomingSource.selectively_seen??{}))
+        seen[source]=[...new Set([...(seen[source]??[]),...ids])];
     }
   }
   for(const change of backupChanges(current,incoming)) {
@@ -99,6 +106,10 @@ export function mergeBackup(current,incoming,useBackup) {
     const index=next.records.findIndex(record=>record.id===row.id);
     if(index>=0)next.records[index]=row;
     else next.records.push(row);
+    if(row.entity==='expense'&&change.classificationChanged){
+      if(change.afterClass)(next.settings.legacy_expense_classes??={})[row.id]=change.afterClass;
+      else if(next.settings.legacy_expense_classes)delete next.settings.legacy_expense_classes[row.id];
+    }
     delete next.attachments[row.id];
     if(incoming.attachments?.[row.id])next.attachments[row.id]=incoming.attachments[row.id];
   }
