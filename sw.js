@@ -1,4 +1,4 @@
-const CACHE = 'workie-nextgen-shell-2a7709beb045b710';
+const CACHE = 'workie-nextgen-shell-d5ad105b0160a214';
 const SHELL_PATHS = [
   "index.html",
   "manifest.json",
@@ -35,6 +35,10 @@ const SHELL_PATHS = [
   "nextgen/repository.mjs",
   "nextgen/tailwind-3.4.17.js",
   "nextgen/weekly-settlement.css",
+  "nextgen/sync-firebase.mjs",
+  "nextgen/sync-shared.mjs",
+  "nextgen/sync-snapshot.mjs",
+  "nextgen/sync-ui.mjs",
   "nextgen/weekly-settlement.mjs",
   "nextgen/work-analytics.mjs",
   "nextgen/work-data.mjs",

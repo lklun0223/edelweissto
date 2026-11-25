@@ -2864,7 +2864,6 @@ function settings() {
         return h('p',{},currency+' · '+provenance);
       }),
       actionButton('Add dated payment rate','Pencil',()=>edit('fx_quote',null,{currency:'EUR',date:today()}))),
-    syncSettings(),
     h('section',{class:'ng-surface'},h('h2',{},tr('Migration records')),
       h('p',{class:'ng-caption'},ledger.legacy?'Original source checksum '+ledger.legacy.sourceHash:'Started with an empty local ledger.'),
       ...(ledger.legacy?.warnings??[]).map(message=>h('p',{class:'ng-warning'},message)),
@@ -2875,7 +2874,7 @@ function settings() {
       h('summary',{},entry.at+' · '+entry.reason+' · '+(entry.changes?.length??0)+' records'),
       h('pre',{},JSON.stringify({records:entry.changes??[],...(entry.settings_before!==undefined?
         {settings_before:entry.settings_before,settings_after:entry.settings_after}:{})},null,2)))));
-  const [appearance,backup,rates,sync,migrationRecords]=panels.children;
+  const [appearance,backup,rates,migrationRecords]=panels.children;
   rates.append(appearance.querySelector('[data-display-currency]'));
   const dates=h('div',{class:'ng-setting-fields'});
   const origin=appearance.querySelector('[data-settings-dates]');
@@ -2905,7 +2904,7 @@ function settings() {
         legacyChanges().changed?actionButton('Review legacy changes','migration',()=>run(async()=>{
           renderMigrationPreview(await migrationPreview(localStorage));
         })):null),'migration'),
-      group('sync','Sync and handoff',sync,'sync','LOCAL_ONLY')),
+      sectionDisclosure('sync','Sync and handoff',host=>host.append(syncSettings()),'sync','LOCAL_ONLY')),
     settingsGroup('Advanced',
       sectionDisclosure('cash-planning','Planning cash source',host=>host.append(planningControls()),'funds'),
       sectionDisclosure('transfer','Advanced transfer',transfer,'transfer'),
@@ -3014,10 +3013,25 @@ async function refreshReferenceRate() {
     clearTimeout(timer);fxLoading=false;
   }
 }
+let syncController;
+function syncControllerReady() {
+  return syncController??=import('./sync-ui.mjs').then(({mountSync})=>mountSync({
+    h,button,dialog:transferDialog,blocked:()=>migrationRequired,
+    draftOpen:()=>Boolean(document.querySelector('dialog[open]')),
+    lang:()=>ledger.settings.language,
+    adopt:async()=>{
+      const current=await readLedger();
+      if(current){ledger=current;channel?.postMessage(current.revision);render();}
+    },
+  }));
+}
 function syncSettings() {
-  return h('section',{class:'ng-surface'},h('h2',{},tr('Sync and handoff')),
-    h('p',{class:'ng-caption'},tr('Local only · cloud sync is off.')),
-    h('p',{class:'ng-caption'},tr('Use a verified backup to move the complete Workie ledger between devices.')));
+  const host=h('div',{class:'ng-sync-status'});
+  void syncControllerReady().then(controller=>controller.attach(host)).catch(error=>{
+    host.replaceChildren(h('p',{role:'alert'},tr(error.message)));
+  });
+  host.append(h('p',{class:'ng-caption'},tr('Local only · cloud sync is off.')));
+  return host;
 }
 function appUpdatePanel(host) {
   const service=navigator.serviceWorker;
@@ -4546,12 +4560,14 @@ async function start() {
     }
   });
   channel?.addEventListener('message',async()=>{
+    window.dispatchEvent(new Event('workie-ledger-change'));
     if(dialog.open) {say('Another tab changed the data. Finish or cancel your draft, then reload before saving.',true);return;}
     const saved=await readLedger();
     if(saved){ledger=saved;migrationRequired=false;render();}
   });
   if(ledger)markActive();
   ledger??=emptyLedger();
+  if(localStorage.getItem('workie-sync-auto'))void syncControllerReady().catch(()=>{});
   const startButton=button(tr('Review existing records'),()=>run(async()=>{
     renderMigrationPreview(await migrationPreview(localStorage));
   }),'primary');

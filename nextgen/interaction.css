@@ -200,6 +200,15 @@ html:has(body.ng-active) {
   letter-spacing: -.04em;
 }
 .ng-settings-hub { display: grid; gap: 1.2rem; }
+.ng-sync-review { display: grid; gap: .6rem; }
+.ng-sync-review section,.ng-sync-week { padding-block: .55rem; border-block-start: 1px solid var(--product-line); }
+.ng-sync-compare > div {
+  display: grid;
+  grid-template-columns: minmax(0,.7fr) repeat(2,minmax(0,1fr));
+  gap: .4rem;
+  padding-block: .32rem;
+  overflow-wrap: anywhere;
+}
 .ng-settings-list > .ng-secondary > summary { min-height: 48px; }
 .ng-settings-list > .ng-secondary > summary .ng-section-value {
   max-width: 54%;

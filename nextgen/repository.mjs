@@ -79,7 +79,10 @@ export async function commitLedger(expectedRevision,next,reason) {
           store.put(saved,'current');
         } catch(caught) {error=caught;tx.abort();}
       };
-      tx.oncomplete=()=>resolve(saved);
+      tx.oncomplete=()=>{
+        if(typeof window!=='undefined')window.dispatchEvent(new Event('workie-ledger-change'));
+        resolve(saved);
+      };
       tx.onabort=()=>{
         const failure=error??tx.error;
         if(failure?.name==='QuotaExceededError') {
