@@ -87,6 +87,20 @@ export const schema = {
     status:enumerated(['SHORTLISTED','APPLIED','RESERVED','CONFIRMED','CANCELLED']),
     source:{...note},source_date:optionalDate,address:{...note},note},
 };
+export const importModules=Object.freeze({
+  budget:['budget_item'],trips:['trip','trip_budget_item'],
+  finance:['income_entry','expense','cash_event','grant','loan','savings_deposit','balance','account','account_transfer','fixed_bill_rule','bill_payment','fx_quote'],
+  schedule:['student','lesson','lesson_series'],preparation:['task','course','housing_option','document'],
+});
+const relationships=new Set(['trip_id','student_id','budget_item_id','rule_id','account_id','from_account_id','to_account_id',
+  'balance_id','series_id','owner_id','source_id','related_id','work_income_id','included_in_general_id','included_work_ids']);
+export const importRegistry=Object.freeze(Object.fromEntries(Object.entries(importModules).flatMap(([module,entities])=>
+  entities.map(entity=>[entity,Object.freeze({module,fields:schema[entity],
+    references:Object.keys(schema[entity]).filter(field=>relationships.has(field))})]))));
+const localReference=/^[a-z][a-z0-9_-]{0,39}$/;
+export const importActions=Object.freeze({
+  ADD:['entity','data'],UPDATE:['entity','record_id','expected_revision','changes'],
+});
 export function validateRecord(entity,data,{asOf=null}={}) {
   if (!Object.hasOwn(schema,entity)) problem('entity','unsupported entity');
   validateFields(data,entity,entity,false,asOf);
@@ -275,7 +289,7 @@ export function parseWtp(source, {asOf=null}={}) {
   if (!Array.isArray(payload.operations) || !payload.operations.length || payload.operations.length>maxOperations) {
     problem('$.operations',`expected 1–${maxOperations} proposals`);
   }
-  const touched=new Set();
+  const touched=new Set(),aliases=new Set();
   payload.operations.forEach((operation,i)=>{
     const path=`$.operations[${i}]`;
     if (!object(operation))problem(path,'must be an object');
@@ -284,7 +298,12 @@ export function parseWtp(source, {asOf=null}={}) {
     if (!Object.hasOwn(schema,operation.entity)) problem(`${path}.entity`,'unsupported entity');
     const base=['op','entity'];
     if(operation.op==='ADD') {
-      keys(operation,path,[...base,'data']);
+      keys(operation,path,[...base,'data',...(Object.hasOwn(operation,'local_ref')?['local_ref']:[])]);
+      if(Object.hasOwn(operation,'local_ref')) {
+        if(typeof operation.local_ref!=='string'||!localReference.test(operation.local_ref)||aliases.has(operation.local_ref))
+          problem(path+'.local_ref','expected a unique lowercase batch-local alias');
+        aliases.add(operation.local_ref);
+      }
       validateFields(operation.data,operation.entity,path+'.data',false,asOf);
       return;
     }
@@ -324,7 +343,7 @@ export function previewWtp(batch, lookup) {
   });
 }
 
-export const schemaForPrompt = (entities=Object.keys(schema)) => JSON.stringify({protocol,version,maxOperations,
+export const schemaForPrompt = (entities=Object.keys(schema),{ai=false}={}) => JSON.stringify({protocol,version,maxOperations,
   value_rules:{
     currency:'ISO 4217 uppercase currency code. Amounts preserve their original currency.',
     currencies:[...validCurrency],
@@ -335,6 +354,6 @@ export const schemaForPrompt = (entities=Object.keys(schema)) => JSON.stringify(
     fx_quote:'rate is HKD per one unit of currency, with a recorded date and source.',
     shares:'participants is an array of {name, share, self}. share ranges from 0 to 1, totals 1, and exactly one participant has self:true.',
   },
-  operations:{ADD:['entity','data'],UPDATE:['entity','record_id','expected_revision','changes'],
-    DELETE:['entity','record_id','expected_revision']},
-  fields:Object.fromEntries(entities.map(key=>[key,schema[key]]))},null,2);
+  operations:ai?{...importActions,optional_ADD:['local_ref']}:{...importActions,DELETE:['entity','record_id','expected_revision']},
+  fields:Object.fromEntries(entities.map(key=>[key,ai?importRegistry[key].fields:schema[key]])),
+  ...(ai?{reference_fields:Object.fromEntries(entities.map(key=>[key,importRegistry[key].references]))}:{})},null,2);

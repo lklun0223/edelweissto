@@ -11,6 +11,15 @@ const utf8=new TextEncoder();
 export const limit=700*1024;
 const sourceId=legacy=>(legacy.migrationVersion??1)+':'+legacy.sourceHash;
 const sorted=rows=>[...rows].sort(([a],[b])=>a<b?-1:a>b?1:0);
+function sameSyncValue(a,b) {
+  // Two devices can confirm the same WTP batch at different local times.
+  if(a?.id?.startsWith('wtp:')&&a.id===b?.id&&a.data?.entry_week&&b.data?.entry_week) {
+    const withoutSaveTime=row=>({...row,data:{...row.data,entry_created_at:null}});
+    return equal(withoutSaveTime(a),withoutSaveTime(b));
+  }
+  return equal(a,b);
+}
+const sameSyncRows=(a,b)=>a.size===b.size&&[...a].every(([key,value])=>b.has(key)&&sameSyncValue(value,b.get(key)));
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const safeKey=key=>key&&!['__proto__','constructor','prototype'].includes(key);
 const recordsExist=rows=>[...rows.keys()].some(key=>key.startsWith('record/')||key.startsWith('sunday_savings/')||
@@ -175,7 +184,7 @@ export function createSnapshotSync(transport,checkpoints,repository) {
         const other=cloud.get(key);
         if(key.startsWith('batch/')&&other&&other.hash!==localValue.hash)effectiveChoices.delete(key);
       }
-      const merged=mergeRows(candidates,cloud,mergeBase,effectiveChoices);
+      const merged=mergeRows(candidates,cloud,mergeBase,effectiveChoices,sameSyncValue);
       for(const conflict of merged.conflicts) {
         const {key,device,cloud:other}=conflict;
         conflict.keepBoth=key.startsWith('record/')&&device?.entity==='task'&&other?.entity==='task';
@@ -206,13 +215,13 @@ export function createSnapshotSync(transport,checkpoints,repository) {
         .filter(([family,date])=>weekSettings.has(family)&&family!=='legacy_expense_classes'&&/^\d{4}-\d{2}-\d{2}$/.test(date))
         .map(([,date])=>calendarDay(weekOf(date),6)))].sort();
       const plan={revision:ledger.revision,cloudRevision:remote.revision,cloudHash:remote.checksum,conflicts,first:!saved?.rows,
-        uploads:!equal(sorted(merged.values),sorted(cloud)),localCount:ledger.records.length,cloudCount:cloudLedger?.records.length??0,
+        uploads:!sameSyncRows(merged.values,cloud),localCount:ledger.records.length,cloudCount:cloudLedger?.records.length??0,
         weekly:changedWeeks,deviceLedger:ledger,cloudLedger};
       plan.empty=!remote.revision&&!recordsExist(merged.values);
       if(!conflicts.length&&!plan.empty) {
         const next=await hydrate(ledger,merged.values);
         plan.next=next;
-        plan.hasChanges=!equal(sorted(local),sorted(merged.values));
+        plan.hasChanges=!sameSyncRows(local,merged.values);
         issued.set(plan,{next,ledger,local,remote,saved,values:merged.values});
       }
       return Object.freeze(plan);

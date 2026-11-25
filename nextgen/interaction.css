@@ -200,6 +200,8 @@ html:has(body.ng-active) {
   letter-spacing: -.04em;
 }
 .ng-settings-hub { display: grid; gap: 1.2rem; }
+.ng-scoped-transfer .ng-transfer-example li { overflow-wrap: anywhere; }
+.ng-scoped-transfer .ng-difference td { overflow-wrap: anywhere; }
 .ng-sync-review { display: grid; gap: .6rem; }
 .ng-sync-review section,.ng-sync-week { padding-block: .55rem; border-block-start: 1px solid var(--product-line); }
 .ng-sync-compare > div {

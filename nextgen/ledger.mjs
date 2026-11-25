@@ -1,5 +1,5 @@
 import {allocateWaterfall,expectedCoverage} from './coverage.mjs';
-import {schema,parseWtp,validateRecord,batchHash,previewWtp} from './wtp.mjs';
+import {schema,parseWtp,validateRecord,batchHash,previewWtp,importActions,importRegistry} from './wtp.mjs';
 import {calendarDay,lessonInterval,weekOf} from './lesson-time.mjs';
 import {migrateWorkDetails} from './legacy-work.mjs';
 
@@ -706,13 +706,56 @@ export function billOccurrences(ledger,from=today(),days=60) {
   }
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
-export async function prepareBatch(ledger,source,{weeklyTransfer=false,budgetPlan=null}={}) {
+export async function prepareAIImport(ledger,source) {
+  const prepared=await prepareBatch(ledger,source,{weeklyTransfer:true,aiImport:true});
+  prepared.next.batches.push({id:prepared.batch.batch_id,hash:prepared.hash,at:new Date().toISOString()});
+  return prepared;
+}
+
+export async function prepareBatch(ledger,source,{weeklyTransfer=false,budgetPlan=null,aiImport=false}={}) {
   const batch=parseWtp(source,{asOf:today()}),hash=await batchHash(batch);
   const previous=ledger.batches.find(entry=>entry.id===batch.batch_id);
   if(previous) throw Error(previous.hash===hash?'This batch was already applied.':'This batch ID was used with different content.');
+  for(const [index,{op}] of batch.operations.entries()) {
+    if(aiImport&&!Object.hasOwn(importActions,op))throw Error('$.operations['+index+'].op: AI Import supports ADD and UPDATE. Remove records manually in Workie.');
+  }
   const diff=previewWtp(batch,(entity,id)=>{
     const row=ledger.records.find(record=>record.id===id && record.entity===entity);
     return row?{revision:row.revision,data:row.data}:null;
+  });
+  const newIds=batch.operations.map((operation,index)=>operation.op==='ADD'?
+    aiImport?'wtp:'+batch.batch_id+':'+(index+1):crypto.randomUUID():null);
+  const aliases=new Map(batch.operations.flatMap((operation,index)=>operation.local_ref?[[operation.local_ref,newIds[index]]]:[]));
+  const trips=new Map(ledger.records.filter(row=>row.entity==='trip').map(row=>[row.id,row.data]));
+  diff.forEach((change,index)=>{
+    const {op,entity}=change;
+    if(op==='DELETE')return;
+    const fields=batch.operations[index].data??batch.operations[index].changes;
+    const resolve=(value,key)=>{
+      if(typeof value!=='string'||!value.startsWith('$ref:'))return value;
+      const location='$.operations['+index+'].'+(op==='ADD'?'data':'changes')+'.'+key;
+      const id=aliases.get(value.slice(5));
+      if(!id)throw Error(location+': Unknown batch-local reference '+value);
+      if(id===newIds[index])throw Error(location+': A record cannot link to itself.');
+      return id;
+    };
+    for(const key of importRegistry[entity].references) {
+      if(!Object.hasOwn(fields,key))continue;
+      const value=fields[key];
+      change.after[key]=Array.isArray(value)?value.map(item=>resolve(item,key)):resolve(value,key);
+    }
+    if(entity==='trip')trips.set(newIds[index]??change.record_id,change.after);
+  });
+  if(aiImport)diff.forEach((change,index)=>{
+    const data=change.after;
+    const trip=trips.get(data.trip_id);
+    if(change.op==='ADD') {
+      change.record_id=newIds[index];
+      if(['budget_item','trip_budget_item'].includes(change.entity)&&!data.scenario)
+        data.scenario=data.trip_id?trip?.scenario??'Base':ledger.settings.scenario;
+    }
+    if(change.entity==='trip_budget_item'&&data.trip_id&&trip?.status==='CANCELLED')
+      throw Error('$.operations['+index+'].'+(change.op==='ADD'?'data':'changes')+'.trip_id: Choose an active trip.');
   });
   if(budgetPlan)for(const change of diff) {
     if(change.op==='ADD'&&['budget_item','trip_budget_item'].includes(change.entity))change.after.scenario=budgetPlan;
@@ -734,7 +777,6 @@ export async function prepareBatch(ledger,source,{weeklyTransfer=false,budgetPla
     }
   }
   const next=clone(ledger);
-  const newIds=diff.map(()=>crypto.randomUUID());
   diff.forEach((change,index)=>{
     const original=next.records.findIndex(row=>row.id===change.record_id);
     if(change.entity==='expense'&&next.settings.legacy_expense_classes&&
@@ -758,6 +800,16 @@ export async function prepareBatch(ledger,source,{weeklyTransfer=false,budgetPla
   for(const id of Object.keys(next.attachments??{})) if(!existingIds.has(id)) delete next.attachments[id];
   const operations=new Map(diff.map((change,index)=>[change.op==='ADD'?newIds[index]:change.record_id,{index,op:change.op}]));
   validateRelations(next,operations);
+  if(aiImport) {
+    const byId=new Map(next.records.map(row=>[row.id,row]));
+    for(const [index,change] of diff.entries()) {
+      const {trip_id,budget_item_id,source_id}=change.after;
+      if(change.entity==='task'&&trip_id&&budget_item_id&&byId.get(budget_item_id)?.data.trip_id!==trip_id)
+        throw Error('$.operations['+index+'].budget_item_id: Choose a planned cost from the same trip.');
+      if(change.entity==='income_entry'&&source_id&&!['student','lesson'].includes(byId.get(source_id)?.entity))
+        throw Error('$.operations['+index+'].source_id: Choose an existing student or lesson.');
+    }
+  }
   const warnings=[];
   for(const change of diff.filter(change=>change.op==='ADD')) {
     if(change.entity==='document') warnings.push('Attach the local file for '+change.after.description+' after importing its metadata.');

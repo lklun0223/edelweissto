@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="theme-color" content="#f7f1e7">
-<meta name="workie-build" content="2026.11.25-sync.2">
+<meta name="workie-build" content="2026.11.26-import.1">
 <script>
 (function(){
  const root=document.documentElement;
@@ -1657,7 +1657,6 @@ details[open]>summary>.ui-chevron-down{rotate:-90deg}
 <link rel="stylesheet" href="./nextgen/weekly-settlement.css">
 <script type="module" src="./nextgen/workspace.mjs"></script>
 <script type="module" src="./nextgen/legacy-vault.mjs"></script>
-<script type="module" src="./nextgen/wtp-expenses.mjs"></script>
 </head>
 <body class="min-h-screen selection:bg-brand/30">
 <a class="skip-content-link" href="#views-root">跳到主要內容</a>
@@ -1913,24 +1912,7 @@ details[open]>summary>.ui-chevron-down{rotate:-90deg}
 </div>
 <section id="workie-transfer" class="settings-subsection nextgen-transfer" lang="en" aria-labelledby="wtp-title">
   <h3 id="wtp-title">Workie Transfer</h3>
-  <p class="ui-caption">Use an external chatbot, then bring back proposed changes. This build supports new HKD expense records. Nothing is sent from Workie.</p>
-  <button type="button" class="neu-btn" id="wtp-copy-prompt">Copy Chatbot Instructions</button>
-  <details><summary>Select records to share</summary>
-    <p class="ui-caption">The chatbot is a separate service. Share only the amounts and descriptions you choose.</p>
-    <button type="button" class="ui-button-text" id="wtp-refresh">Refresh list</button>
-    <div id="wtp-choices"></div>
-    <button type="button" class="neu-btn" id="wtp-copy-records">Copy Selected Records</button>
-  </details>
-  <textarea id="wtp-copy-output" aria-label="Text prepared for copying" class="neu-input" rows="4" readonly hidden></textarea>
-  <label class="form-label" for="wtp-source">Paste JSON changes</label>
-  <textarea id="wtp-source" class="neu-input" rows="5" spellcheck="false"></textarea>
-  <div class="settings-actions">
-    <button type="button" class="neu-btn" id="wtp-preview">Preview changes</button>
-  </div>
-  <p class="ui-caption" id="wtp-status" role="status"></p>
-  <div id="wtp-review" tabindex="-1" aria-label="Proposed changes"></div>
-  <div><button type="button" class="neu-btn-primary" id="wtp-apply" disabled>Confirm and save</button></div>
-  <details><summary>Recent transfers</summary><ul id="wtp-history"></ul></details>
+  <button type="button" class="neu-btn" id="legacy-ai-import">Import from AI</button>
 </section>
 <div class="settings-subsection" id="legacy-sync-status"><h3>跨裝置交接</h3><p class="sync-status-text">資料只儲存在此瀏覽器。請匯出完整備份以在另一部裝置還原。</p></div></section><details class="context-details advanced-settings"><summary><i data-lucide="archive" aria-hidden="true"></i>舊版資料維護</summary><p class="ui-caption">查看／維護舊版估算；與目前交換目標分開。</p><button type="button" class="neu-btn" data-legacy-edit>編輯舊版參數</button><section class="legacy-result"><h3>唯讀歷史結果</h3><p class="home-nature">歷史估算，並非銀行餘額、可用現金或交換預算。</p>
 <p id="dash-currency-note" class="ui-caption">舊版估算 · HKD</p><dl class="home-legacy-values"><div><dt>舊版來源推算</dt><dd id="dash-current-total"></dd></div><div><dt>已記收入</dt><dd id="dash-earned-total"></dd></div><div><dt>舊版估算目標</dt><dd id="dash-goal-text"></dd></div><div><dt>舊版估算差額</dt><dd id="dash-remaining-text"></dd></div></dl><span id="dash-progress-text" hidden></span><div id="dash-progress-bar" hidden></div><details class="context-details"><summary>舊版算法</summary><p id="overview-legacy-note"></p></details>

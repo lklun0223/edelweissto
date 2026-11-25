@@ -1,19 +1,73 @@
-// Canonical WTP v1 prompt extracted verbatim from section C of the specification.
-export const prompt = "You are a budget discussion and structured-data assistant for **Workie**, an entirely offline-capable Exchange Budget & Journey Planner. You have **no direct access** to Workie's data. Your output will be inspected, corrected and explicitly approved by the user before the website saves it.\n\nAsk concise clarification questions only when essential information is missing. You can talk with the user normally in English or Cantonese/Traditional Chinese. Do **not** immediately output JSON while the user is still planning.\n\nEvery budget item belongs to one of four fixed main categories, in this exact order: **行 / TRANSPORT → 住 / HOUSING → 食 / FOOD → 樂 / LEISURE**. Each item has **what** it is, **how much** in a stated currency, **when** (date or unknown), and importance **HIGH/MEDIUM/LOW**. Show urgent/overdue items prominently, but do not reorder the four main categories. Do not hallucinate quotes, exchange rates or payment dates.\n\nExpenses have only **GENERAL** and **SPECIAL** top-level types. `fixed: true` can tag rent, utilities, internet and other bills, but is not a third expense type. A budget estimate is not proof that payment occurred. A scheduled recurring bill is not a paid transaction.\n\n**Savings deposits** transfer already-owned money into the exchange fund; don't double count them as new income. **Housing security deposits** are refundable outflows, not savings deposits. A grant has exactly one of: `可申請`, `已申請等待批核`, `已批核等待發放`, `已發放`. Approved-awaiting-disbursement is not already available cash; loans are not grants. Do **not** introduce separate recorded-tutoring-income versus cash-received tracking.\n\nWhen asked to create Workie changes, output **one JSON object only**, using protocol `workie-transfer`, version `1`, unique `batch_id`, `operations` array with `ADD`, `UPDATE`, `DELETE`, and exactly the field names shown in the latest copy of Workie's schema/instructions. `ADD` creates a new record. `UPDATE` must include a valid existing `record_id` and `expected_revision`, with only the fields to change. `DELETE` requires the exact existing record ID and revision. Never invent IDs. If an ID is unavailable, request **Copy Selected Records** from Workie, or provide a non-executable discussion summary instead.\n\nNever output JavaScript, SQL, shell commands, HTML, explanatory Markdown fences or commentary around the final JSON. Never silently convert incomplete plans into paid expenses. Do not invent financial amounts, dates, payments, refunds, grant approvals, exchange rates or citation sources. If a nonessential date is unknown, use `null` when the schema permits it. Follow the supplied schema strictly. Workie will validate the JSON offline, show an exact before/after preview and require confirmation.\n\nContinue discussion until the user explicitly requests **“Export Workie changes”** or equivalent.";
-export const weeklyTransferGuidance = 'For a new unlinked General expense, use the Hong Kong period-ending Sunday as date and its Monday as entry_week. Use SPECIAL for an individually dated expense. Budget and Trip linked payments keep their actual payment date. For a weekly General income receipt, use cash_event INCOME with its Monday entry_week and Sunday date. Workie records entry_created_at itself. Preserve existing historical dates when editing a record.';
+import {importModules,importRegistry,schemaForPrompt} from './wtp.mjs';
 
-export function scopedTransferPrompt({label,entity,fields,records,example,batchId,tripId,asOf}) {
+const date='2026-01-04';
+const money={amount:10,currency:'HKD'};
+const plan={...money,category:'TRANSPORT',priority:'MEDIUM',due_date:null,confidence:'ESTIMATE'};
+const samples={
+  budget_item:['Campus transit',plan],trip:['Example visit',{destination:'Brno',status:'PLANNED'},'trip'],
+  trip_budget_item:['Rail estimate',{...plan,trip_id:'$ref:trip'},null,['trip']],
+  income_entry:['Reported income',{...money,date}],
+  expense:['Confirmed expense',{...money,date,type:'SPECIAL'}],
+  cash_event:['Confirmed receipt',{...money,date,kind:'INCOME'}],grant:['Potential subsidy',{...money,status:'可申請'}],
+  loan:['Loan offer',money],savings_deposit:['Confirmed deposit',{...money,date}],
+  balance:['Observed balance',{...money,as_of:date}],
+  account:['Wallet A',{kind:'CASH',currency:'HKD'},'account'],
+  account_transfer:['Confirmed transfer',{...money,date,from_account_id:'$ref:account',to_account_id:'$ref:other'},null,['account','other']],
+  fixed_bill_rule:['Rent schedule',{...money,due_date:date,frequency:'MONTHLY',bill:'rent'},'bill'],
+  bill_payment:['Confirmed rent payment',{...money,date,period_date:date,rule_id:'$ref:bill'},null,['fixed_bill_rule']],
+  fx_quote:['Documented rate',{currency:'EUR',rate:8,date,source:'Synthetic reference'}],
+  student:['Example student',{rate:10,currency:'HKD'},'student'],
+  lesson:['Planned class',{student_id:'$ref:student',date,start_time:'10:00',duration:1,status:'PLANNED',currency:'HKD'},null,['student']],
+  lesson_series:['Saturday class',{student_id:'$ref:student',weekday:6,start_time:'10:00',duration:1,currency:'HKD',
+    effective_from:date,active:true},null,['student']],
+  task:['Check itinerary',{done:false,trip_id:'$ref:trip',group:'PACKING'},null,['trip']],
+  course:['Example course',{credits:3,home_approval:'PENDING',host_approval:'PENDING'}],
+  housing_option:['Example residence',{...money,security_deposit:null,status:'SHORTLISTED'}],
+  document:['Document metadata',{file_name:'example.pdf',media_type:'application/pdf'}],
+  other:['Wallet B',{kind:'CASH',currency:'HKD'},'other'],
+};
+export const importScopes=Object.freeze({
+  all:'All Workie data',budget:'Vienna Budget',trips:'Trips and planned costs',
+  finance:'Income, expenses and funding',subsidy:'Subsidies',schedule:'Students and schedules',preparation:'Exchange preparation',
+});
+const scopeEntities=scope=>scope==='all'?Object.keys(importRegistry):
+  scope==='subsidy'?['grant']:importModules[scope]??Object.keys(importRegistry);
+
+function sampleBatch(entities,batch_id) {
+  const operations=new Map();
+  const add=key=>{
+    if(operations.has(key))return;
+    const [description,data,alias,dependencies=[]]=samples[key];
+    for(const dependency of dependencies)add(dependency);
+    operations.set(key,{op:'ADD',entity:key==='other'?'account':key,...(alias?{local_ref:alias}:{}),data:{description,...data}});
+  };
+  for(const entity of entities)add(entity);
+  return {protocol:'workie-transfer',version:1,batch_id,operations:[...operations.values()]};
+}
+export function transferExample(scope='all',batchId=crypto.randomUUID()) {
+  return JSON.stringify(sampleBatch(scopeEntities(scope),batchId),null,2);
+}
+
+export function importInstructions(scope='all',{tripId=null}={}) {
+  const entities=scopeEntities(scope),batchId=crypto.randomUUID();
+  const example=sampleBatch(entities,batchId);
+  const described=[...new Set(example.operations.map(operation=>operation.entity))];
   return [
-    'A · Plan my '+label+' with me. Discuss options and confirm the final choices before preparing changes. Use only '+entity+'. Ask about missing amounts or currencies. Never invent facts or paid transactions.',
-    'B · When I say “Export Workie Changes”, return exactly one JSON object for me to copy into this Workie screen’s Import from AI. No Markdown, backslashes before array brackets, or prose. Use the supplied batch_id '+batchId+' once. For another batch, ask me to export a new prompt.',
-    'ADD needs op, entity and data with every required field. Omit IDs for ADD. UPDATE needs op, entity, record_id, expected_revision and changes with only fields to edit. DELETE needs op, entity, record_id and expected_revision. For edits or deletions, copy the exact ID and revision from Existing records. Use 1–100 operations.',
-    tripId?'Use trip_id '+JSON.stringify(tripId)+' on ADD. Leave trip_id out of UPDATE.':
-      entity==='grant'?'Use the exact status text below. A status never creates a cash receipt.':
-        'Use the final Vienna plan. Leave out scenario, trip_id and payment fields.',
-    'Amounts are JSON numbers in the original currency, non-negative with up to two decimal places. Use an uppercase supported ISO currency code. Dates are YYYY-MM-DD. Use null only for nullable fields. Optional fields may be omitted.'+
-      (entity==='grant'?'':' For participants, use {name,share,self} entries whose shares total 1, with one self:true.'),
-    'Field rules\n'+JSON.stringify(fields),
-    'JSON example (replace its sample data)\n'+example,
-    'Existing records (as of '+asOf+')\n'+JSON.stringify(records,null,2),
-  ].join('\n\n');
+    'A. Discuss and confirm my choices before exporting. Planning scope: '+importScopes[scope]+
+      '. Ask about missing required information. Never invent dates, bookings, facts, costs, income, grants, rates or payments.',
+    'B. When I say "Export Workie Changes", return exactly one JSON object and no surrounding prose or Markdown. '+
+      'Use workie-transfer version 1 and the supplied batch_id once. Request a new prompt for a new batch.',
+    'Use ADD for confirmed new records and UPDATE for edits with the exact existing record_id and expected_revision. '+
+      'Ask me to copy selected records if more context is needed. AI Import does not delete records.',
+    'For a new related record, put a unique lowercase local_ref on its ADD and use "$ref:alias" in a relationship field. '+
+      'For existing records use their exact IDs. These are relationship references, never update targets.',
+    tripId&&scope==='trips'?'The existing trip selected in Workie has trip_id '+JSON.stringify(tripId)+
+      '. Use it for costs for that trip. For a new trip use a batch-local reference.':null,
+    'Use amounts in their original currency and never silently convert them. Use confidence ESTIMATE for estimates where supported. '+
+      'Planned costs and grant status do not record actual payments. Only include actual cash movements explicitly confirmed by the user.',
+    scope==='all'||scope==='finance'?'An unlinked General expense or weekly income total uses its Hong Kong week-ending Sunday. '+
+      'Use Special for an individually dated expense, and the actual date for linked payments. Workie records creation metadata.':null,
+    'Supported fields and actions\n'+schemaForPrompt(described,{ai:true}),
+    'Synthetic example. Replace its sample facts; include only the records I confirm.\n'+JSON.stringify(example,null,2),
+  ].filter(Boolean).join('\n\n');
 }

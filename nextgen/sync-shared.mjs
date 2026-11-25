@@ -2,16 +2,16 @@ export const canonical = value => Array.isArray(value) ? value.map(canonical) :
   value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
 export const equal = (a,b) => JSON.stringify(canonical(a??null)) === JSON.stringify(canonical(b??null));
 
-export function mergeRows(local,remote,base,choices=new Map()) {
+export function mergeRows(local,remote,base,choices=new Map(),same=equal) {
   const values=new Map(),conflicts=[];
   for(const key of new Set([...local.keys(),...remote.keys(),...(base?.keys()??[])])) {
     const a=local.get(key)??null,b=remote.get(key)??null, before=base?.get(key)??null;
     let value;
-    if(equal(a,b))value=a;
+    if(same(a,b))value=a;
     else if(!base&&a===null)value=b;
     else if(!base&&b===null)value=a;
-    else if(base&&equal(a,before))value=b;
-    else if(base&&equal(b,before))value=a;
+    else if(base&&same(a,before))value=b;
+    else if(base&&same(b,before))value=a;
     else if(choices.get(key)==='device')value=a;
     else if(choices.get(key)==='cloud')value=b;
     else {conflicts.push({key,device:a,cloud:b});continue;}

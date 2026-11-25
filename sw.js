@@ -1,4 +1,4 @@
-const CACHE = 'workie-nextgen-shell-d5ad105b0160a214';
+const CACHE = 'workie-nextgen-shell-54ccab594254ecbe';
 const SHELL_PATHS = [
   "index.html",
   "manifest.json",
@@ -7,7 +7,6 @@ const SHELL_PATHS = [
   "nextgen/allocation-view.mjs",
   "nextgen/backup-merge.mjs",
   "nextgen/budget-plans.mjs",
-  "nextgen/budget-transfer.mjs",
   "nextgen/calendar-export.js",
   "nextgen/chart-4.4.9.js",
   "nextgen/cormorant-garamond.ttf",
@@ -45,7 +44,6 @@ const SHELL_PATHS = [
   "nextgen/work-receipts.mjs",
   "nextgen/workspace.css",
   "nextgen/workspace.mjs",
-  "nextgen/wtp-expenses.mjs",
   "nextgen/wtp-prompt.mjs",
   "nextgen/wtp.mjs"
 ];
